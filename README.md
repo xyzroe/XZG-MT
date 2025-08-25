@@ -1,9 +1,8 @@
-# <div align="center">
+# 🚀 XZG Multi-tool
 
-  <img src="favicon/logo.png" alt="XZG Multi-tool Logo" style="height:80px;margin-bottom:16px;" />
+<div align="center">
+  <img src="favicon/logo.png" alt="XZG Multi-tool" style="height:200px;margin-bottom:16px;" />
 </div>
-
-# 🚀 XZG Multi-tool Web
 
 **A simple online tool to flash TI CC2538/CC26x2 devices right in your browser!**
 
@@ -55,11 +54,10 @@
 
 ---
 
-## Contact & Support
+## Community
 
-- 💬 [Telegram channel](https://t.me/xzg_fw)
+- 💬 [Telegram chat](https://t.me/xzg_fw)
 - 🗨️ [Discord](https://discord.gg/A5ge3cYRKW)
-- 🐙 [Author's GitHub](https://github.com/xyzroe)
 
 ---
 
