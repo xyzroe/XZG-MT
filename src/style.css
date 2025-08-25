@@ -1,0 +1,246 @@
+:root {
+  --bg: #ffffff;
+  --fg: #212529;
+  --section-bg: #ffffff;
+  --border: #e1e4e8;
+  --console-bg: #f8f9fa;
+  --console-fg: #212529;
+  --input-bg: #ffffff;
+  --input-fg: #212529;
+  --input-border: #ced4da;
+  --input-focus: #86b7fe;
+  --muted: #6c757d;
+  --progress-track: #e9ecef;
+  --progress-text: #ffffff;
+
+  /* Tooltip */
+  --tooltip-bg: #212529;
+  --tooltip-fg: #ffffff;
+
+}
+
+html.dark {
+  --bg: #0b0f14;
+  --fg: #c9d1d9;
+  --section-bg: #0f141a;
+  --border: #22303c;
+  /* keep console as dark */
+  --console-bg: #0d1117;
+  --console-fg: #c9d1d9;
+  --input-bg: #0f141a;
+  --input-fg: #e6edf3;
+  --input-border: #2b3a48;
+  --input-focus: #3b82f6;
+  --muted: #8b949e;
+  --progress-track: #1f2a33;
+  --progress-text: #c9d1d9;
+
+  /* Tooltip */
+  --tooltip-bg: #e6edf3;
+  --tooltip-fg: #0f141a;
+
+}
+
+/* Fallback for non-Bootstrap tooltip implementations */
+.tooltip .tooltip-inner { background-color: var(--tooltip-bg); color: var(--tooltip-fg); }
+
+/* Bootstrap tooltip theming override: ensure arrow matches background */
+.tooltip {
+  --bs-tooltip-bg: var(--tooltip-bg);
+  --bs-tooltip-color: var(--tooltip-fg);
+  --bs-tooltip-opacity: 1;
+  --bs-tooltip-arrow-color: var(--tooltip-bg);
+}
+
+body {
+  padding: 16px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.section {
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  background: var(--section-bg);
+}
+
+.console-wrap {
+  resize: vertical;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--console-bg);
+  height: 220px;
+}
+
+/* Hide RX/TX lines when toggles are off */
+.console-wrap.hide-rx .log-rx { display: none; }
+.console-wrap.hide-tx .log-tx { display: none; }
+
+#log {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--console-fg);
+  padding: 8px;
+}
+
+.log-line { white-space: pre; }
+
+/* Log colors - light default */
+.log-app { color: #0d6efd; }
+.log-rx  { color: #198754; }
+.log-tx  { color: #b8860b; }
+
+/* Log colors - dark overrides */
+html.dark .log-app { color: #9cdcfe; }
+html.dark .log-rx  { color: #7ee787; }
+html.dark .log-tx  { color: #e3b341; }
+
+.form-readonly input { background: var(--input-bg); color: var(--input-fg); }
+
+.btn { display: inline-flex; align-items: center; white-space: nowrap; }
+.btn .bi { line-height: 1; }
+
+/* Lightweight modal */
+.modal-backdrop-lite {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 1050;
+}
+
+.modal-card-lite {
+  background: var(--section-bg);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  width: min(640px, calc(100vw - 32px));
+  max-width: 70vw;
+  max-height: 70vh;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+
+.modal-card-lite .modal-header { padding: .75rem 1rem; border-bottom: 1px solid var(--border); }
+.modal-card-lite .modal-body   { padding: 1rem; }
+.modal-card-lite .modal-footer { padding: .75rem 1rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: .5rem; }
+
+/* Theme toggle icons */
+.theme-icon-moon { display: none; }
+html.dark .theme-icon-sun { display: none; }
+html.dark .theme-icon-moon { display: inline; }
+
+/* Inputs/selects in themes */
+.form-control, .form-select {
+  background-color: var(--input-bg);
+  color: var(--input-fg);
+  border-color: var(--input-border);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 .2rem rgba(13, 110, 253, 0.25);
+  background-color: var(--input-bg);
+  color: var(--input-fg);
+  caret-color: var(--input-fg);
+}
+.form-control:active { background-color: var(--input-bg); color: var(--input-fg); }
+
+.form-control::placeholder { color: color-mix(in srgb, var(--input-fg) 50%, transparent); opacity: .7; }
+
+.form-control:disabled, .form-control[readonly] {
+  background-color: color-mix(in srgb, var(--input-bg) 90%, transparent);
+  color: color-mix(in srgb, var(--input-fg) 70%, transparent);
+  border-color: var(--input-border);
+  opacity: 1;
+}
+
+.form-select:disabled {
+  background-color: color-mix(in srgb, var(--input-bg) 90%, transparent);
+  color: color-mix(in srgb, var(--input-fg) 70%, transparent);
+  border-color: var(--input-border);
+}
+
+/* Checkbox/switch theming */
+.form-check-input { background-color: var(--input-bg); border-color: var(--input-border); }
+.form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
+.form-check-input:disabled { background-color: color-mix(in srgb, var(--input-bg) 90%, transparent); }
+
+/* Light theme: keep disabled switches visible with subtle primary tint */
+html:not(.dark) .form-check-input:disabled { background-color: #cfe2ff; border-color: #cfe2ff; opacity: 1; }
+html:not(.dark) .form-check-input:checked:disabled { background-color: #9ec5fe; border-color: #9ec5fe; }
+
+/* Muted text in dark */
+.text-muted { color: var(--muted) !important; }
+
+/* Make dark buttons readable in dark theme */
+html.dark .btn-dark { background-color: #f8f9fa; color: #212529; border-color: #f8f9fa; }
+html.dark .btn-dark:hover { background-color: #e9ecef; border-color: #e9ecef; }
+html.dark .btn-outline-dark { color: #f8f9fa; border-color: #f8f9fa; }
+html.dark .btn-outline-dark:hover { background-color: #f8f9fa; color: #212529; border-color: #f8f9fa; }
+
+/* Large slider toggle with sun/moon */
+.theme-toggle { position: relative; width: 64px; height: 32px; }
+.theme-toggle input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 2; }
+.theme-toggle-label { display: flex; align-items: center; justify-content: space-between; width: 100%; height: 100%; padding: 2px 8px 0 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--section-bg); position: relative; user-select: none; }
+.theme-toggle-label .bi { font-size: 1.1rem; line-height: 1; }
+.theme-toggle .handle { position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); transition: transform .2s ease-in-out; }
+.theme-toggle input:checked + .theme-toggle-label .handle { transform: translateX(32px); }
+
+/* Hide native file button; keep only the field */
+input[type="file"].form-control::file-selector-button { display: none; }
+input[type="file"].form-control::-webkit-file-upload-button { visibility: hidden; }
+input[type="file"].form-control { color: var(--input-fg); background-color: var(--input-bg); }
+input[type="file"].form-control:focus { background-color: var(--input-bg); color: var(--input-fg); }
+
+/* Autofill theming to avoid white background */
+input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
+  -webkit-text-fill-color: var(--input-fg);
+  -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset;
+  box-shadow: 0 0 0px 1000px var(--input-bg) inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+/* Buttons disabled state readable in dark */
+.btn:disabled, .btn.disabled { opacity: .6; }
+
+/* Progress bars track and text */
+.progress { background-color: var(--progress-track); }
+.progress .progress-bar { color: var(--progress-text); }
+
+/* Footer */
+.app-footer { border-top: 1px solid var(--border); color: var(--muted); }
+.app-footer a { color: inherit; }
+.app-footer a:hover { color: var(--fg); }
+.app-footer .bi { font-size: 1.1rem; }
+
+/* Actions spacing when wrapped */
+.actions-grid > .btn { margin-bottom: 1rem;}
+
+
+/* Mobile tweaks */
+@media (max-width: 576px) {
+  /* 1. NVRAM buttons stacked full width */
+  .nv-actions { flex-direction: column; align-items: stretch; }
+  .nv-actions > .btn { width: 100%; 
+    margin-bottom: 0.5rem; }
+
+  /* 2. Actions buttons spacing already handled via margin */
+
+  /* 3. Modal fits screen */
+  .modal-card-lite { 
+    width: calc(100vw - 16px); 
+    margin: 0 8px; 
+    max-width: 98vw;
+    max-height: 98vh;
+  }
+
+  /* 4. Serial: hide controls, show note */
+  .serial-controls { display: none; }
+  .serial-note { display: block !important; }
+
+  /* 5. Mobile: show TCP panel by default; user can hide it by adding .tcp-hidden on <html> or <body> */
+  #tcpSettingsPanel { display: block; }
+  html.tcp-hidden #tcpSettingsPanel,
+  body.tcp-hidden #tcpSettingsPanel { display: none !important; }
+}

@@ -1,0 +1,35 @@
+{
+  "icon": {
+    "desktop": {
+      "regularIconTransformation": {
+        "type": "background",
+        "backgroundColor": "#ffffff",
+        "backgroundRadius": 0.7,
+        "imageScale": 0.9
+      },
+      "darkIconType": "none"
+    },
+    "touch": {
+      "transformation": {
+        "type": "background",
+        "backgroundColor": "#ffffff",
+        "backgroundRadius": 0,
+        "imageScale": 0.8
+      },
+      "appTitle": "XZG MT"
+    },
+    "webAppManifest": {
+      "transformation": {
+        "type": "background",
+        "backgroundColor": "#ffffff",
+        "backgroundRadius": 0,
+        "imageScale": 0.8
+      },
+      "backgroundColor": "#ffffff",
+      "name": "XZG Multi-tool",
+      "shortName": "XZG MT",
+      "themeColor": "#ffffff"
+    }
+  },
+  "path": "fav/"
+}
