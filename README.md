@@ -1,84 +1,68 @@
-## XZG Multi-tool Web
+# <div align="center">
 
-A static web app to flash TI CC2538/CC26x2 devices using the browser’s Web Serial API. No native bridge required.
+  <img src="favicon/logo.png" alt="XZG Multi-tool Logo" style="height:80px;margin-bottom:16px;" />
+</div>
 
-### Requirements
+# 🚀 XZG Multi-tool Web
 
-- Node.js 20.18+
-- A Chromium-based browser with Web Serial support (Chrome / Edge)
+**A simple online tool to flash TI CC2538/CC26x2 devices right in your browser!**
 
-### Install
+🌐 Use it at: [mt.xyzroe.cc](https://mt.xyzroe.cc)
 
-```bash
-npm install
-```
+---
 
-### Build
+## Features
 
-```bash
-npm run build
-```
+- 🔌 Flash TI CC2538/CC26x2 via Web Serial (Chrome/Edge)
+- 📂 Load firmware from local files or the cloud
+- 💾 Backup, restore, and erase NVRAM
+- 🦾 Automatic device model and parameter detection
+- 📝 Cloud firmware with descriptions
 
-Outputs to `dist/`.
+---
 
-### Develop / Preview
+## How to use?
 
-```bash
-# Build once and watch + serve on http://localhost:5173
-npm run dev
+1. Open [mt.xyzroe.cc](https://mt.xyzroe.cc) in Chrome or Edge
+2. Connect your device via USB or TCP ([using ws-tcp-bridge](https://github.com/xyzroe/ws-tcp-bridge))
+3. Click "Choose Serial" and select your port
+4. Pick a firmware (local or cloud)
+5. Click "Start" — that's it! 🎉
 
-# Or just serve the built output (opens a browser tab)
-npm run preview
-```
+> ⚠️ Web Serial requires HTTPS or localhost. mt.xyzroe.cc is already set up for you!
 
-### Lint and Type Check
+---
 
-```bash
-npm run lint
-npm run typecheck
-```
+## Requirements
 
-### Usage
+- Modern browser: Chrome or Edge (with Web Serial support)
+- TI CC2538/CC26x2 device
 
-- After building, open `dist/index.html` in your browser, or use the preview/dev servers above.
-- Web Serial requires HTTPS or localhost. Directly opening the file may restrict functionality.
+---
 
-### Features
+## FAQ
 
-- Flash TI CC2538/CC26x2 over Web Serial.
-- Load firmware from local files or network manifests.
-- Backup/erase/restore NVRAM for supported stacks.
+- **Do I need to install anything?**
 
-### Project Structure
+  > For local USB mode - No! Everything works in your browser. For TCP mode or remote USB mode [using ws-tcp-bridge](https://github.com/xyzroe/ws-tcp-bridge)
 
-```
-src/
-   index.html                 # Entry page
-   style.css                 # Styles
-   flasher.ts                 # UI and app logic
-   protocols/                 # BSL + Intel HEX parsers
-   transport/                 # Serial (and optional TCP client code if present)
-   utils/                     # Helpers
-```
+- **Where do I get firmware?**
 
-### Notes
+  > Choose from the cloud (auto-filtered for your model) or upload your own file.
 
-- This project is web-only. Native WS→TCP bridge scripts were removed.
-- You can use any static server to host `dist/` (for example, `npx http-server dist -p 5173 -o`).
+- **Is it safe?**
+  > Yes, all operations are local. Your data never leaves your computer.
 
-### Favicons (automated)
+---
 
-This project uses RealFaviconGenerator CLI to generate and inject favicons during build/watch.
+## Contact & Support
 
-- Master icon: `imgs/logo.svg`
-- Settings: `favicon-settings.json`
+- 💬 [Telegram channel](https://t.me/xzg_fw)
+- 🗨️ [Discord](https://discord.gg/A5ge3cYRKW)
+- 🐙 [Author's GitHub](https://github.com/xyzroe)
 
-Scripts:
+---
 
-- `npm run fav:gen` — generate files into `dist/fav` and `dist/favicon-data.json`
-- `npm run fav:inject` — inject markup into `dist/index.html`
-
-These run automatically in `npm run build` and `npm run watch`.
-
-. ~/.nvm/nvm.sh
-nvm use 20.18
+<div align="center">
+  <sub>Made with <span aria-hidden="true">❤️</span> for the Zigbee community!</sub>
+</div>
