@@ -89,6 +89,123 @@
 })();
 
 // Bridge Info modal UI wiring
+// Escape key handler to close firmware notes and bridge info modals
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    var fwNotesModal = document.getElementById("fwNotesModal");
+    var bridgeInfoModal = document.getElementById("bridgeInfoModal");
+    if (fwNotesModal && !fwNotesModal.classList.contains("d-none")) {
+      closeModalById("fwNotesModal");
+    }
+    if (bridgeInfoModal && !bridgeInfoModal.classList.contains("d-none")) {
+      closeModalById("bridgeInfoModal");
+    }
+  }
+});
+// --- Firmware notes modal logic ---
+const netFwNotesBtn = document.getElementById("netFwNotesBtn");
+const fwNotesModal = document.getElementById("fwNotesModal");
+const fwNotesContent = document.getElementById("fwNotesContent");
+const fwNotesClose = document.getElementById("fwNotesClose");
+const fwNotesCloseX = document.getElementById("fwNotesCloseX");
+
+function getSelectedFwNotes() {
+  if (!window.netFwSelect || !window.netFwItems) return;
+  const opt = window.netFwSelect.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const item = window.netFwItems.find(function (it) {
+    return it.key === opt.value;
+  });
+  return item && item.notes;
+}
+
+if (window.netFwSelect) {
+  window.netFwSelect.addEventListener("change", function () {
+    if (!window.netFwSelect || !netFwNotesBtn) return;
+    var notes = getSelectedFwNotes();
+    netFwNotesBtn.disabled = !notes;
+    // Activate Write and Verify checkboxes when a firmware is selected
+    var optWrite = document.getElementById("optWrite");
+    var optVerify = document.getElementById("optVerify");
+    if (window.netFwSelect.value) {
+      if (optWrite) {
+        optWrite.disabled = false;
+        optWrite.checked = true;
+      }
+      if (optVerify) {
+        optVerify.disabled = false;
+        optVerify.checked = true;
+      }
+    } else {
+      if (optWrite) {
+        optWrite.checked = false;
+        optWrite.disabled = true;
+      }
+      if (optVerify) {
+        optVerify.checked = false;
+        optVerify.disabled = true;
+      }
+    }
+  });
+}
+
+if (netFwNotesBtn) {
+  netFwNotesBtn.addEventListener("click", function () {
+    if (!fwNotesModal || !fwNotesContent) return;
+    var notes = getSelectedFwNotes();
+    if (!notes) return;
+    var marked = window.marked;
+    if (/^https?:\/\/.*\.md$/i.test(notes.trim())) {
+      fwNotesContent.innerHTML =
+        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading…';
+      fetch(notes.trim())
+        .then(function (r) {
+          return r.ok ? r.text() : Promise.reject("Failed to load markdown");
+        })
+        .then(function (md) {
+          if (marked) {
+            fwNotesContent.innerHTML = marked.parse(md);
+          } else {
+            fwNotesContent.textContent = md;
+          }
+        })
+        .catch(function (err) {
+          fwNotesContent.innerHTML = '<div class="text-danger">Error loading markdown: ' + err + "</div>";
+        });
+    } else {
+      if (marked) {
+        fwNotesContent.innerHTML = marked.parse(notes);
+      } else {
+        fwNotesContent.textContent = notes;
+      }
+    }
+    fwNotesModal.classList.remove("d-none");
+    fwNotesModal.setAttribute("aria-hidden", "false");
+  });
+}
+
+function closeModalById(id) {
+  var modal = document.getElementById(id);
+  if (modal) {
+    modal.classList.add("d-none");
+    modal.setAttribute("aria-hidden", "true");
+  }
+}
+if (fwNotesClose)
+  fwNotesClose.addEventListener("click", function () {
+    closeModalById("fwNotesModal");
+  });
+if (fwNotesCloseX)
+  fwNotesCloseX.addEventListener("click", function () {
+    closeModalById("fwNotesModal");
+  });
+
+if (!window.marked) {
+  var script = document.createElement("script");
+  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+  script.async = true;
+  document.head.appendChild(script);
+}
 (function () {
   function $(id) {
     return document.getElementById(id);
@@ -111,11 +228,12 @@
     modal.classList.remove("d-none");
     modal.setAttribute("aria-hidden", "false");
   }
-  function closeBridgeInfo() {
-    var modal = $("bridgeInfoModal");
-    if (!modal) return;
-    modal.classList.add("d-none");
-    modal.setAttribute("aria-hidden", "true");
+  function closeModalById(id) {
+    var modal = document.getElementById(id);
+    if (modal) {
+      modal.classList.add("d-none");
+      modal.setAttribute("aria-hidden", "true");
+    }
   }
   function init() {
     var infoBtn = $("tcpInfoBtn");
@@ -123,11 +241,17 @@
     var closeX = $("bridgeInfoCloseX");
     var modal = $("bridgeInfoModal");
     if (infoBtn) infoBtn.addEventListener("click", openBridgeInfo);
-    if (closeBtn) closeBtn.addEventListener("click", closeBridgeInfo);
-    if (closeX) closeX.addEventListener("click", closeBridgeInfo);
+    if (closeBtn)
+      closeBtn.addEventListener("click", function () {
+        closeModalById("bridgeInfoModal");
+      });
+    if (closeX)
+      closeX.addEventListener("click", function () {
+        closeModalById("bridgeInfoModal");
+      });
     if (modal)
       modal.addEventListener("click", function (e) {
-        if (e.target === modal) closeBridgeInfo();
+        if (e.target === modal) closeModalById("bridgeInfoModal");
       });
   }
   if (document.readyState === "loading") {

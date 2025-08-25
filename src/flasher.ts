@@ -817,6 +817,9 @@ async function refreshNetworkFirmwareList(chipModel?: string) {
     // sort by ver desc overall
     items.sort((a, b) => b.ver - a.ver);
     netFwItems = items;
+    // Make available to index.js
+    (window as any).netFwItems = netFwItems;
+    (window as any).netFwSelect = netFwSelect;
     for (const it of items) {
       const o = document.createElement("option");
       o.value = it.key;
@@ -842,90 +845,6 @@ netFwRefreshBtn?.addEventListener("click", () => {
 });
 
 // --- Firmware notes modal logic ---
-const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
-const fwNotesModal = document.getElementById("fwNotesModal") as HTMLElement | null;
-const fwNotesContent = document.getElementById("fwNotesContent") as HTMLElement | null;
-const fwNotesClose = document.getElementById("fwNotesClose") as HTMLButtonElement | null;
-const fwNotesCloseX = document.getElementById("fwNotesCloseX") as HTMLButtonElement | null;
-
-// Helper: find notes for selected firmware
-function getSelectedFwNotes(): string | undefined {
-  if (!netFwSelect || !netFwItems) return;
-  const opt = netFwSelect.selectedOptions[0];
-  if (!opt || !opt.value) return;
-  const item = netFwItems.find((it: any) => it.key === opt.value);
-  return item?.notes;
-}
-
-// Enable/disable notes button on select change
-netFwSelect?.addEventListener("change", async () => {
-  if (!netFwSelect || !netFwNotesBtn) return;
-  const notes = getSelectedFwNotes();
-  netFwNotesBtn.disabled = !notes;
-
-  // Existing logic: load firmware
-  const opt = netFwSelect.selectedOptions[0];
-  const link = opt?.getAttribute("data-link");
-  if (!link) return;
-  try {
-    const img = await downloadFirmwareFromUrl(link);
-    hexImage = img;
-    updateOptionsStateForFile(true);
-    log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
-  } catch (e: any) {
-    log("HEX download error: " + (e?.message || String(e)));
-  }
-});
-
-// Notes button click: show modal with notes
-netFwNotesBtn?.addEventListener("click", () => {
-  if (!fwNotesModal || !fwNotesContent) return;
-  const notes = getSelectedFwNotes();
-  if (!notes) return;
-  const marked = (window as any).marked;
-  // Если notes — это ссылка на .md файл
-  if (/^https?:\/\/.*\.md$/i.test(notes.trim())) {
-    fwNotesContent.innerHTML =
-      '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading…';
-    fetch(notes.trim())
-      .then((r) => (r.ok ? r.text() : Promise.reject("Failed to load markdown")))
-      .then((md) => {
-        if (marked) {
-          fwNotesContent.innerHTML = marked.parse(md);
-        } else {
-          fwNotesContent.textContent = md;
-        }
-      })
-      .catch((err) => {
-        fwNotesContent.innerHTML = `<div class='text-danger'>Error loading markdown: ${err}</div>`;
-      });
-  } else {
-    if (marked) {
-      fwNotesContent.innerHTML = marked.parse(notes);
-    } else {
-      fwNotesContent.textContent = notes;
-    }
-  }
-  fwNotesModal.classList.remove("d-none");
-  fwNotesModal.setAttribute("aria-hidden", "false");
-});
-
-// Modal close logic
-function closeFwNotesModal() {
-  if (!fwNotesModal) return;
-  fwNotesModal.classList.add("d-none");
-  fwNotesModal.setAttribute("aria-hidden", "true");
-}
-fwNotesClose?.addEventListener("click", closeFwNotesModal);
-fwNotesCloseX?.addEventListener("click", closeFwNotesModal);
-
-// --- Load marked.js if not present ---
-if (!(window as any).marked) {
-  const script = document.createElement("script");
-  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
-  script.async = true;
-  document.head.appendChild(script);
-}
 
 async function flash(doVerifyOnly = false) {
   if (!hexImage) throw new Error("Load HEX first");
@@ -1447,3 +1366,5 @@ mdnsSelect?.addEventListener("change", () => {
 
 // auto-refresh list on load (non-blocking)
 refreshMdnsList().catch(() => {});
+
+// Escape key handler to close firmware notes and bridge info modals
