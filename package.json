@@ -8,7 +8,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npm run clean && esbuild src/flasher.ts --bundle --outfile=dist/flasher.js --platform=browser --target=es2020 && npm run copy:static && npm run fav:gen && npm run fav:inject && echo mt.xyzroe.cc > dist/CNAME",
+  "build": "npm run clean && git rev-parse --short HEAD | xargs -I{} sed -i '' 's/COMMITSHA_PLACEHOLDER/{}/g' src/index.html && esbuild src/flasher.ts --bundle --outfile=dist/flasher.js --platform=browser --target=es2020 && npm run copy:static && npm run fav:gen && npm run fav:inject && echo mt.xyzroe.cc > dist/CNAME",
     "build:lite": "npm run clean && esbuild src/flasher.ts --bundle --outfile=dist/flasher.js --platform=browser --target=es2020 && npm run copy:static",
     "copy:html": "copyfiles -u 1 src/index.html dist",
     "copy:static": "copyfiles -u 1 src/index.html src/style.css src/index.js dist",

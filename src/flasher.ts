@@ -538,6 +538,45 @@ function updateOptionsStateForFile(selected: boolean) {
   }
 }
 
+// --- Firmware notes modal logic ---
+const netFwNotesBtn = document.getElementById("netFwNotesBtn");
+// const fwNotesModal = document.getElementById("fwNotesModal");
+// const fwNotesContent = document.getElementById("fwNotesContent");
+// const fwNotesClose = document.getElementById("fwNotesClose");
+// const fwNotesCloseX = document.getElementById("fwNotesCloseX");
+
+function getSelectedFwNotes() {
+  if (!netFwSelect || !netFwItems) return;
+  const opt = netFwSelect.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const item = netFwItems.find(function (it) {
+    return it.key === opt.value;
+  });
+  return item && item.notes;
+}
+
+// Enable/disable notes button on select change
+netFwSelect?.addEventListener("change", async () => {
+  if (!netFwSelect || !netFwNotesBtn) return;
+  const notes = getSelectedFwNotes();
+  //console.log(notes);
+  // make btn active
+  (netFwNotesBtn as HTMLButtonElement).disabled = !notes;
+  //log("test");
+  // Existing logic: load firmware
+  const opt = netFwSelect.selectedOptions[0];
+  const link = opt?.getAttribute("data-link");
+  if (!link) return;
+  try {
+    const img = await downloadFirmwareFromUrl(link);
+    hexImage = img;
+    updateOptionsStateForFile(true);
+    log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
+  } catch (e: any) {
+    log("HEX download error: " + (e?.message || String(e)));
+  }
+});
+
 hexInput.addEventListener("change", async () => {
   const f = hexInput.files?.[0];
   if (!f) return;

@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (serialControls) serialControls.classList.remove("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
   } else {
-    // Hide Serial controls, show HTTP message/button
+    // Hide Serial controls, show HTTP message/button. hide mobile msg
     if (serialControls) serialControls.classList.add("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.remove("d-none");
     // Show TCP controls, hide HTTPS message
@@ -165,12 +165,12 @@ document.addEventListener("keydown", function (e) {
     }
   }
 });
-// --- Firmware notes modal logic ---
-const netFwNotesBtn = document.getElementById("netFwNotesBtn");
-const fwNotesModal = document.getElementById("fwNotesModal");
-const fwNotesContent = document.getElementById("fwNotesContent");
-const fwNotesClose = document.getElementById("fwNotesClose");
-const fwNotesCloseX = document.getElementById("fwNotesCloseX");
+// // --- Firmware notes modal logic ---
+// const netFwNotesBtn = document.getElementById("netFwNotesBtn");
+// const fwNotesModal = document.getElementById("fwNotesModal");
+// const fwNotesContent = document.getElementById("fwNotesContent");
+// const fwNotesClose = document.getElementById("fwNotesClose");
+// const fwNotesCloseX = document.getElementById("fwNotesCloseX");
 
 function getSelectedFwNotes() {
   if (!window.netFwSelect || !window.netFwItems) return;
@@ -182,35 +182,35 @@ function getSelectedFwNotes() {
   return item && item.notes;
 }
 
-if (window.netFwSelect) {
-  window.netFwSelect.addEventListener("change", function () {
-    if (!window.netFwSelect || !netFwNotesBtn) return;
-    var notes = getSelectedFwNotes();
-    netFwNotesBtn.disabled = !notes;
-    // Activate Write and Verify checkboxes when a firmware is selected
-    var optWrite = document.getElementById("optWrite");
-    var optVerify = document.getElementById("optVerify");
-    if (window.netFwSelect.value) {
-      if (optWrite) {
-        optWrite.disabled = false;
-        optWrite.checked = true;
-      }
-      if (optVerify) {
-        optVerify.disabled = false;
-        optVerify.checked = true;
-      }
-    } else {
-      if (optWrite) {
-        optWrite.checked = false;
-        optWrite.disabled = true;
-      }
-      if (optVerify) {
-        optVerify.checked = false;
-        optVerify.disabled = true;
-      }
-    }
-  });
-}
+// if (window.netFwSelect) {
+//   window.netFwSelect.addEventListener("change", function () {
+//     if (!window.netFwSelect || !netFwNotesBtn) return;
+//     var notes = getSelectedFwNotes();
+//     netFwNotesBtn.disabled = !notes;
+//     // Activate Write and Verify checkboxes when a firmware is selected
+//     var optWrite = document.getElementById("optWrite");
+//     var optVerify = document.getElementById("optVerify");
+//     if (window.netFwSelect.value) {
+//       if (optWrite) {
+//         optWrite.disabled = false;
+//         optWrite.checked = true;
+//       }
+//       if (optVerify) {
+//         optVerify.disabled = false;
+//         optVerify.checked = true;
+//       }
+//     } else {
+//       if (optWrite) {
+//         optWrite.checked = false;
+//         optWrite.disabled = true;
+//       }
+//       if (optVerify) {
+//         optVerify.checked = false;
+//         optVerify.disabled = true;
+//       }
+//     }
+//   });
+// }
 
 if (netFwNotesBtn) {
   netFwNotesBtn.addEventListener("click", function () {
