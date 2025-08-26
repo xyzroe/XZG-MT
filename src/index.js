@@ -1,4 +1,67 @@
-"use strict";
+// Protocol-specific UI switching for Serial/TCP columns
+document.addEventListener("DOMContentLoaded", function () {
+  var isHttps = window.location.protocol === "https:";
+  var isLocalhost = window.location.hostname === "localhost";
+  var serialControlsWrap = document.getElementById("serialControlsWrap");
+  var serialControls = serialControlsWrap && serialControlsWrap.querySelector(".serial-controls");
+  var serialHttpMsg = document.getElementById("serialHttpMsg");
+  var goToHttps = document.getElementById("goToHttps");
+  var tcpControlsWrap = document.getElementById("tcpControlsWrap");
+  var tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
+  var tcpControls =
+    tcpControlsWrap &&
+    tcpControlsWrap.querySelectorAll(
+      ".d-flex, #tcpSettingsPanel, .row.g-2.align-items-center.mb-4, .row.g-2.align-items-center.mb-4, .col-12.mb-4, #ctrlUrlRow, .row.mt-auto"
+    );
+  var goToHttp = document.getElementById("goToHttp");
+
+  if (isLocalhost) {
+    // On localhost, show both Serial and TCP controls, hide all warning messages
+    if (serialControls) serialControls.classList.remove("d-none");
+    if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
+    if (tcpControls) {
+      tcpControls.forEach(function (el) {
+        el.classList.remove("d-none");
+      });
+    }
+    if (tcpHttpsMsg) tcpHttpsMsg.classList.add("d-none");
+  } else if (isHttps) {
+    // Hide TCP controls, show HTTPS message/button
+    if (tcpControls) {
+      tcpControls.forEach(function (el) {
+        el.classList.add("d-none");
+      });
+    }
+    if (tcpHttpsMsg) tcpHttpsMsg.classList.remove("d-none");
+    // Show Serial controls, hide HTTP message
+    if (serialControls) serialControls.classList.remove("d-none");
+    if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
+  } else {
+    // Hide Serial controls, show HTTP message/button
+    if (serialControls) serialControls.classList.add("d-none");
+    if (serialHttpMsg) serialHttpMsg.classList.remove("d-none");
+    // Show TCP controls, hide HTTPS message
+    if (tcpControls) {
+      tcpControls.forEach(function (el) {
+        el.classList.remove("d-none");
+      });
+    }
+    if (tcpHttpsMsg) tcpHttpsMsg.classList.add("d-none");
+  }
+
+  // Button handlers for switching protocol
+  if (goToHttps) {
+    goToHttps.addEventListener("click", function () {
+      window.location.href = "https://mt.xyzroe.cc";
+    });
+  }
+  if (goToHttp) {
+    goToHttp.addEventListener("click", function () {
+      window.location.href = "http://mt.xyzroe.cc";
+    });
+  }
+});
+("use strict");
 
 // Mobile tweaks: show TCP settings, clear default bridge values on small screens
 (function () {
