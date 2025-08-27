@@ -15,7 +15,7 @@ export const CONTROL_PRESETS: Array<{
 }> = [
   {
     name: "ZigStar/UZG HTTP",
-    test: (m) => /^(zigstar_gw|zig_star_gw|uzg-01)$/i.test(m.type || ""),
+    test: (m) => /^(zigstar_gw|zig_star_gw|uzg-01|xzg)$/i.test(m.type || ""),
     config: {
       remote: true,
       bslPath: "http://{HOST}/cmdZigBSL",

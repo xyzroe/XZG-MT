@@ -18,7 +18,7 @@ function getCtrlMode(): CtrlMode {
   const t = (currentConnMeta.type || "").toLowerCase();
   const p = (currentConnMeta.protocol || "").toLowerCase();
   // Map known device types over TCP to device HTTP (on port 80)
-  if (/^(zigstar_gw|zig_star_gw|uzg-01)$/.test(t) && p === "tcp") {
+  if (/^(zigstar_gw|zig_star_gw|uzg-01|xzg)$/.test(t) && p === "tcp") {
     return "zig-http";
   }
   // Local serial exposed via ws-tcp bridge: control lines via /sc
@@ -1353,6 +1353,7 @@ async function refreshMdnsList() {
       "_zigstar_gw._tcp.local.",
       "_uzg-01._tcp.local.",
       "_tubeszb._tcp.local.",
+      "_xzg._tcp.local.",
       // special token for local serial exposure by the bridge
       "local.serial",
     ].join(",");
