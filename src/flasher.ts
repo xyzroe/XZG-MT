@@ -286,7 +286,8 @@ try {
 
   if (isHttp && (isLocalhost || isIpLike) && !storedHost && !storedPort && (hasPort || isLocalhost)) {
     const host = loc.hostname;
-    const port = loc.port ? String(Number(loc.port) || 8765) : "8765";
+    //const port = loc.port ? String(Number(loc.port) || 8765) : "8765";
+    const port = "8765";
     if (bridgeHostInput) bridgeHostInput.value = host;
     if (bridgePortInput) bridgePortInput.value = port;
     // Persist to localStorage
