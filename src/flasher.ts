@@ -271,6 +271,31 @@ bridgePortInput?.addEventListener("change", saveBridgeSettings);
 if (bridgeHostInput) bridgeHostInput.value = localStorage.getItem("bridgeHost") || bridgeHostInput.value;
 if (bridgePortInput) bridgePortInput.value = localStorage.getItem("bridgePort") || bridgePortInput.value;
 
+// Auto-fill bridge host/port from current page URL when opened as http://HOST:PORT
+// if no values are already stored in localStorage.
+// This covers localhost и прямые IP-адреса.
+try {
+  const storedHost = localStorage.getItem("bridgeHost");
+  const storedPort = localStorage.getItem("bridgePort");
+  const loc = window.location;
+  const isHttp = loc.protocol === "http:";
+  const isLocalhost = loc.hostname === "localhost";
+  const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(loc.hostname);
+  const isIpLike = isIpv4 || loc.hostname.includes(":"); // quick IPv6-ish check
+  const hasPort = !!loc.port;
+
+  if (isHttp && (isLocalhost || isIpLike) && !storedHost && !storedPort && (hasPort || isLocalhost)) {
+    const host = loc.hostname;
+    const port = loc.port ? String(Number(loc.port) || 8765) : "8765";
+    if (bridgeHostInput) bridgeHostInput.value = host;
+    if (bridgePortInput) bridgePortInput.value = port;
+    // Persist to localStorage
+    saveBridgeSettings();
+  }
+} catch (e) {
+  // ignore any unexpected errors
+}
+
 // Initialize Pin/Mode and URLs from localStorage
 function loadCtrlSettings() {
   try {
@@ -1315,7 +1340,7 @@ async function refreshMdnsList() {
     var link = document.getElementById("tcpLocalhostLink") as HTMLAnchorElement | null;
     if (link) {
       link.href = "http://" + host + ":" + port;
-      link.textContent = host === "localhost" ? "localhost" : host;
+      link.textContent = host === "localhost" ? "localhost" : host + ":" + port;
     }
   } catch (e) {
     // ignore

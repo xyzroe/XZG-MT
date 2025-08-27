@@ -64,14 +64,14 @@ document.addEventListener("DOMContentLoaded", function () {
 ("use strict");
 
 // Mobile tweaks: show TCP settings, clear default bridge values on small screens
-(function () {
-  var mq = window.matchMedia("(max-width: 576px)");
-  if (!mq.matches) return;
-  var host = document.getElementById("bridgeHostInput");
-  var port = document.getElementById("bridgePortInput");
-  if (host && host.value === "127.0.0.1") host.value = "";
-  if (port && port.value === "8765") port.value = "";
-})();
+// (function () {
+//   var mq = window.matchMedia("(max-width: 576px)");
+//   if (!mq.matches) return;
+//   var host = document.getElementById("bridgeHostInput");
+//   var port = document.getElementById("bridgePortInput");
+//   if (host && host.value === "127.0.0.1") host.value = "";
+//   if (port && port.value === "8765") port.value = "";
+// })();
 
 // Log I/O visibility toggle
 (function () {

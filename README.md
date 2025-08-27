@@ -64,3 +64,5 @@
 <div align="center">
   <sub>Made with <span aria-hidden="true">❤️</span> for the Zigbee community!</sub>
 </div>
+
+. ~/.nvm/nvm.sh
