@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
   var serialControlsWrap = document.getElementById("serialControlsWrap");
   var serialControls = serialControlsWrap && serialControlsWrap.querySelector(".serial-controls");
   var serialHttpMsg = document.getElementById("serialHttpMsg");
-  var goToHttps = document.getElementById("goToHttps");
+  //var goToHttps = document.getElementById("goToHttps");
   var tcpControlsWrap = document.getElementById("tcpControlsWrap");
   var tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
   var tcpControls =
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     tcpControlsWrap.querySelectorAll(
       ".d-flex, #tcpSettingsPanel, .row.g-2.align-items-center.mb-4, .row.g-2.align-items-center.mb-4, .col-12.mb-4, #ctrlUrlRow, .row.mt-auto"
     );
-  var goToHttp = document.getElementById("goToHttp");
+  //var goToHttp = document.getElementById("goToHttp");
 
   if (isLocalhost) {
     // On localhost, show both Serial and TCP controls, hide all warning messages
@@ -49,17 +49,17 @@ document.addEventListener("DOMContentLoaded", function () {
     if (tcpHttpsMsg) tcpHttpsMsg.classList.add("d-none");
   }
 
-  // Button handlers for switching protocol
-  if (goToHttps) {
-    goToHttps.addEventListener("click", function () {
-      window.location.href = "https://mt.xyzroe.cc";
-    });
-  }
-  if (goToHttp) {
-    goToHttp.addEventListener("click", function () {
-      window.location.href = "http://mt.xyzroe.cc";
-    });
-  }
+  // // Button handlers for switching protocol
+  // if (goToHttps) {
+  //   goToHttps.addEventListener("click", function () {
+  //     window.location.href = "https://mt.xyzroe.cc";
+  //   });
+  // }
+  // if (goToHttp) {
+  //   goToHttp.addEventListener("click", function () {
+  //     window.location.href = "http://mt.xyzroe.cc";
+  //   });
+  // }
 });
 ("use strict");
 
@@ -94,6 +94,8 @@ document.addEventListener("DOMContentLoaded", function () {
     init();
   }
 })();
+
+// NOTE: tcpLocalhostLink updater moved to flasher.ts so it runs alongside other bridge handlers
 
 // Wire up theme toggle and persistence using cookies
 (function () {

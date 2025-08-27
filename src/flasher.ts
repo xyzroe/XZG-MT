@@ -138,6 +138,7 @@ const pinModeSelect = document.getElementById("pinModeSelect") as HTMLInputEleme
 const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | null;
 const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
 const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
+const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const verboseIo = true;
 
 let serial: SerialWrap | null = null;
@@ -299,7 +300,9 @@ rstUrlInput?.addEventListener("change", saveCtrlSettings);
 let bridgeRefreshTimer: number | null = null;
 function scheduleBridgeRefresh() {
   if (bridgeRefreshTimer) window.clearTimeout(bridgeRefreshTimer);
-  setBridgeLoading();
+  //setBridgeLoading();
+  // also update the helpful localhost link in the TCP HTTPS message to reflect bridge settings
+
   bridgeRefreshTimer = window.setTimeout(() => {
     // optimistic: show spinner state by setting unknown (keep last icon) then attempt refresh
     refreshMdnsList();
@@ -538,13 +541,6 @@ function updateOptionsStateForFile(selected: boolean) {
   }
 }
 
-// --- Firmware notes modal logic ---
-const netFwNotesBtn = document.getElementById("netFwNotesBtn");
-// const fwNotesModal = document.getElementById("fwNotesModal");
-// const fwNotesContent = document.getElementById("fwNotesContent");
-// const fwNotesClose = document.getElementById("fwNotesClose");
-// const fwNotesCloseX = document.getElementById("fwNotesCloseX");
-
 function getSelectedFwNotes() {
   if (!netFwSelect || !netFwItems) return;
   const opt = netFwSelect.selectedOptions[0];
@@ -559,10 +555,7 @@ function getSelectedFwNotes() {
 netFwSelect?.addEventListener("change", async () => {
   if (!netFwSelect || !netFwNotesBtn) return;
   const notes = getSelectedFwNotes();
-  //console.log(notes);
-  // make btn active
-  (netFwNotesBtn as HTMLButtonElement).disabled = !notes;
-  //log("test");
+  netFwNotesBtn.disabled = !notes;
   // Existing logic: load firmware
   const opt = netFwSelect.selectedOptions[0];
   const link = opt?.getAttribute("data-link");
@@ -1313,6 +1306,21 @@ btnCopyLog?.addEventListener("click", async () => {
 async function refreshMdnsList() {
   if (!mdnsSelect) return;
   setBridgeLoading();
+  try {
+    var host =
+      (bridgeHostInput && bridgeHostInput.value && bridgeHostInput.value.trim()) ||
+      localStorage.getItem("bridgeHost") ||
+      "127.0.0.1";
+    var port = Number((bridgePortInput && bridgePortInput.value) || localStorage.getItem("bridgePort") || 3000) || 3000;
+    var link = document.getElementById("tcpLocalhostLink") as HTMLAnchorElement | null;
+    if (link) {
+      link.href = "http://" + host + ":" + port;
+      link.textContent = host === "localhost" ? "localhost" : host;
+    }
+  } catch (e) {
+    // ignore
+    console.log(e);
+  }
   try {
     const types = [
       "_zig_star_gw._tcp.local.",
