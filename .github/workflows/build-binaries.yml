@@ -68,11 +68,11 @@ jobs:
 
           # Update add-on config.json
           echo "Before updating xzg-multi-tool-addon/config.json:"
-          cat xzg-multi-tool-addon/config.json | jq '.version'
+          cat ../xzg-multi-tool-addon/config.json | jq '.version'
           tmp=$(mktemp)
-          jq --arg v "$ver" '.version=$v' xzg-multi-tool-addon/config.json > "$tmp" && mv "$tmp" xzg-multi-tool-addon/config.json
+          jq --arg v "$ver" '.version=$v' ../xzg-multi-tool-addon/config.json > "$tmp" && mv "$tmp" ../xzg-multi-tool-addon/config.json
           echo "After updating xzg-multi-tool-addon/config.json:"
-          cat xzg-multi-tool-addon/config.json | jq '.version'
+          cat ../xzg-multi-tool-addon/config.json | jq '.version'
 
           echo "Git status after updates:"
           git status --porcelain
