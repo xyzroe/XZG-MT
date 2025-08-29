@@ -1,5 +1,5 @@
 # Multi-stage build for better optimization
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Create app directory
 WORKDIR /app
@@ -11,8 +11,8 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 # Copy fetch script and run it to populate web/ before packaging into image
-COPY scripts ./scripts
-RUN node scripts/fetch-web.js || true
+#COPY scripts ./scripts
+RUN npm run build:web
 
 # Production stage
 FROM node:18-alpine
@@ -32,7 +32,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy web folder from builder stage so it ends up in the final image
-COPY --from=builder /app/web ./web
+COPY --from=builder /app/web-page/dist ./web
 
 # Copy app source
 COPY bridge/package*.json ./
