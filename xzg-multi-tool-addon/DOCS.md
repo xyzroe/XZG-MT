@@ -3,7 +3,7 @@
 Follow these steps to install the Home Assistant add-on:
 
 1. Add the repository URL to your Home Assistant add-on store.
-2. Install the "WS-TCP Bridge" add-on from the store.
+2. Install the "XZG Multi-tool" add-on from the store.
 3. Configure options as needed (see Configuration below).
 4. Start the add-on.
 
