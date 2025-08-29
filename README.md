@@ -24,19 +24,6 @@ Highlights
 - 🔌 Lightweight WS ↔ TCP bridge that can forward WebSocket clients to TCP hosts and expose local serial ports over TCP
 - 🧰 Scripts to build the web assets and to produce standalone bridge binaries
 
-Quick links
-
-- Web app: `web-page/` — browser flasher (uses Web Serial API)
-- Bridge: `bridge/` — WebSocket to TCP bridge and binary build pipeline
-- Home Assistant add-on: `xzg-multi-tool-addon/` — add-on wrapper for Home Assistant
-
-Table of contents
-
-- About
-- Repo structure
-- Tech & badges
-- Where to read more
-
 ## About
 
 XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538/CC26x2 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
