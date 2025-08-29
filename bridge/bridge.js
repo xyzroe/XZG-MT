@@ -258,7 +258,7 @@ function ensureSerialportPrebuildExtractedSync() {
     if (!fs.existsSync(chosen)) return null;
     const data = fs.readFileSync(chosen);
     // Use a per-process folder to avoid cross-run locking conflicts
-    const outDir = path.join(os.tmpdir(), "bridge-prebuilds", `${plat}-${arch}-${process.pid}`);
+    const outDir = path.join(os.tmpdir(), "ws-tcp-bridge-prebuilds", `${plat}-${arch}-${process.pid}`);
     try {
       fs.mkdirSync(outDir, { recursive: true });
     } catch {}
@@ -438,7 +438,7 @@ async function ensureSerialportPrebuildExtracted() {
   if (DEBUG) console.log("[serial][pkg] selected prebuild file:", chosenFile);
   const data = fs.readFileSync(chosenFile);
   // Write to a stable temp dir
-  const baseTmp = path.join(os.tmpdir(), "bridge-prebuilds");
+  const baseTmp = path.join(os.tmpdir(), "ws-tcp-bridge-prebuilds");
   try {
     fs.mkdirSync(baseTmp, { recursive: true });
   } catch {}
@@ -481,10 +481,52 @@ function detectMusl() {
 
 // --- Global store of opened SerialPort instances ---
 const openSerialPorts = new Map(); // path -> SerialPort instance
+const serialPortRefCount = new Map(); // path -> reference count
 // Reverse mapping of local TCP server port to the serial path
 const tcpPortToSerialPath = new Map(); // tcpPort -> path
 
-const serialPortStates = new Map(); // path -> { dtr: boolean, rts: boolean }
+const serialPortStates = new Map(); // path -> { dtr: boolean, rts: boolean, baudRate: number }
+const validRates = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 500000];
+
+// Функция для валидации baudrate
+function isValidBaudRate(baud) {
+  return validRates.includes(baud);
+}
+
+// Функция для закрытия серийного порта при изменении baudrate
+async function reopenSerialPort(path, newBaudRate) {
+  try {
+    // Закрываем существующий порт если он открыт
+    const existingSerial = openSerialPorts.get(path);
+    if (existingSerial) {
+      try {
+        if (existingSerial.isOpen) {
+          await new Promise((resolve) => {
+            existingSerial.close((err) => {
+              if (err) console.warn(`[serial] close error for ${path}:`, String(err));
+              resolve();
+            });
+          });
+        }
+      } catch (e) {
+        console.warn(`[serial] failed to close existing port ${path}:`, String(e));
+      }
+      openSerialPorts.delete(path);
+      serialPortRefCount.delete(path);
+    }
+
+    // Ждем немного чтобы порт освободился
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    console.log(
+      `[serial] closed serial port for ${path}, new baudrate ${newBaudRate} will be used for new connections`
+    );
+    return true;
+  } catch (e) {
+    console.warn(`[serial] reopenSerialPort failed for ${path}:`, String(e));
+    return false;
+  }
+}
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -638,23 +680,39 @@ const server = http.createServer(async (req, res) => {
       }
       const dtr = u.searchParams.get("dtr");
       const rts = u.searchParams.get("rts");
-      if (!path || (dtr === null && rts === null)) {
+      const baudStr = u.searchParams.get("baud");
+      const baud = baudStr ? Number(baudStr) : null;
+
+      if (!path || (dtr === null && rts === null && baud === null)) {
         res.writeHead(400, { "content-type": "application/json", "access-control-allow-origin": "*" });
-        return res.end(JSON.stringify({ error: "Missing path/tcpPort or dtr/rts param" }));
+        return res.end(JSON.stringify({ error: "Missing path/tcpPort or dtr/rts/baud param" }));
       }
-      let serial = openSerialPorts.get(path);
-      if (!serial) {
-        try {
-          const SP = SerialPortLib.SerialPort || SerialPortLib;
-          serial = new SP({ path, baudRate: 115200, autoOpen: true });
-          openSerialPorts.set(path, serial);
-        } catch (e) {
-          res.writeHead(500, { "content-type": "application/json", "access-control-allow-origin": "*" });
-          return res.end(JSON.stringify({ error: "Failed to open serial port", details: String(e) }));
-        }
+
+      // Валидация baudrate если он задан
+      if (baud !== null && !isValidBaudRate(baud)) {
+        res.writeHead(400, { "content-type": "application/json", "access-control-allow-origin": "*" });
+        return res.end(
+          JSON.stringify({
+            error: "Invalid baud rate",
+            validRates: validRates,
+          })
+        );
       }
+
       // Get current saved state or initialize defaults
-      let currentState = serialPortStates.get(path) || { dtr: false, rts: false };
+      let currentState = serialPortStates.get(path) || { dtr: false, rts: false, baudRate: 115200 };
+
+      // Если меняется baudrate, нужно переоткрыть порт
+      if (baud !== null && baud !== currentState.baudRate) {
+        const reopenSuccess = await reopenSerialPort(path, baud);
+        if (!reopenSuccess) {
+          res.writeHead(500, { "content-type": "application/json", "access-control-allow-origin": "*" });
+          return res.end(JSON.stringify({ error: "Failed to reopen port with new baud rate" }));
+        }
+        currentState.baudRate = baud;
+      }
+
+      let serial = openSerialPorts.get(path);
 
       // Build the complete state object (current + new values)
       const setObj = { ...currentState };
@@ -666,20 +724,41 @@ const server = http.createServer(async (req, res) => {
       if (rts !== null) {
         setObj.rts = rts === "1" || rts === "true";
       }
+      if (baud !== null) {
+        setObj.baudRate = baud;
+      }
 
       // Save the new state
       serialPortStates.set(path, setObj);
 
-      if (Object.keys(setObj).length === 0) {
-        res.writeHead(400, { "content-type": "application/json", "access-control-allow-origin": "*" });
-        return res.end(JSON.stringify({ error: "No DTR/RTS parameters to set" }));
+      // Применяем DTR/RTS только если они были изменены
+      if (dtr !== null || rts !== null) {
+        // Нужно открыть порт если он не открыт для применения DTR/RTS
+        if (!serial) {
+          try {
+            const SP = SerialPortLib.SerialPort || SerialPortLib;
+            serial = new SP({ path, baudRate: currentState.baudRate, autoOpen: true });
+            openSerialPorts.set(path, serial);
+          } catch (e) {
+            res.writeHead(500, { "content-type": "application/json", "access-control-allow-origin": "*" });
+            return res.end(JSON.stringify({ error: "Failed to open serial port for DTR/RTS", details: String(e) }));
+          }
+        }
+
+        const dtrRtsObj = { dtr: setObj.dtr, rts: setObj.rts };
+        serial.set(dtrRtsObj, (err) => {
+          if (err) {
+            res.writeHead(500, { "content-type": "application/json", "access-control-allow-origin": "*" });
+            return res.end(JSON.stringify({ error: "Failed to set DTR/RTS", details: String(err) }));
+          }
+          sendSuccessResponse();
+        });
+      } else {
+        // Если изменялся только baudrate, сразу возвращаем успех
+        sendSuccessResponse();
       }
 
-      serial.set(setObj, (err) => {
-        if (err) {
-          res.writeHead(500, { "content-type": "application/json", "access-control-allow-origin": "*" });
-          return res.end(JSON.stringify({ error: "Failed to set DTR/RTS", details: String(err) }));
-        }
+      function sendSuccessResponse() {
         res.writeHead(200, { "content-type": "application/json", "access-control-allow-origin": "*" });
         return res.end(
           JSON.stringify({
@@ -690,10 +769,11 @@ const server = http.createServer(async (req, res) => {
             changed: {
               dtr: dtr !== null ? setObj.dtr : undefined,
               rts: rts !== null ? setObj.rts : undefined,
+              baudRate: baud !== null ? setObj.baudRate : undefined,
             },
           })
         );
-      });
+      }
       return;
     }
 
@@ -984,28 +1064,39 @@ async function closeSerialTcpServer(path) {
   try {
     const info = serialServers.get(path);
     if (!info) return;
+
     try {
-      // close TCP server
-      info.server.close(() => {
-        // closed
+      // Закрываем TCP сервер и ждем завершения
+      await new Promise((resolve) => {
+        info.server.close(() => {
+          resolve();
+        });
       });
     } catch {}
+
     try {
       tcpPortToSerialPath.delete(info.port);
     } catch {}
+
     serialServers.delete(path);
     serialPortDetails.delete(path);
+
     try {
       const sp = openSerialPorts.get(path);
       if (sp) {
-        if (typeof sp.close === "function") {
-          try {
-            sp.close();
-          } catch {}
+        if (typeof sp.close === "function" && sp.isOpen) {
+          await new Promise((resolve) => {
+            sp.close((err) => {
+              if (err) console.warn(`[serial] close error for ${path}:`, String(err));
+              resolve();
+            });
+          });
         }
         openSerialPorts.delete(path);
+        serialPortRefCount.delete(path);
       }
     } catch {}
+
     console.log("[serial] closed TCP server for", path);
   } catch (e) {
     console.warn("[serial] error closing tcp server for", path, String(e));
@@ -1169,22 +1260,43 @@ async function ensureSerialTcpServer(path, baudRate) {
   // Ensure SerialPort is resolved prior to accepting connections
   const SerialPortLib = await getSerialPort();
   if (serialServers.has(path)) return serialServers.get(path);
+
+  // Получаем текущий baudRate из состояния или используем переданный
+  const currentState = serialPortStates.get(path);
+  const effectiveBaudRate = currentState?.baudRate || baudRate || 460800;
+
   const server = net.createServer();
   let boundPort = null;
   server.on("connection", (socket) => {
     console.log("[serial] client connected for", path);
     let serial;
-    try {
-      const SP = (SerialPortLib && (SerialPortLib.SerialPort || SerialPortLib)) || null;
-      if (!SP) throw new Error("serialport unavailable");
-      serial = new SP({ path, baudRate, autoOpen: true });
-      openSerialPorts.set(path, serial); // keep for DTR/RTS control
-    } catch (e) {
-      console.error("[serial] open failed", path, e);
+
+    // Получаем актуальный baudRate из состояния при каждом подключении
+    const currentState = serialPortStates.get(path);
+    const currentBaudRate = currentState?.baudRate || baudRate || 460800;
+
+    // Проверяем, есть ли уже открытый порт для этого пути
+    const existingSerial = openSerialPorts.get(path);
+    if (existingSerial && existingSerial.isOpen) {
+      // Используем существующий порт
+      serial = existingSerial;
+      serialPortRefCount.set(path, (serialPortRefCount.get(path) || 0) + 1);
+      console.log("[serial] reusing existing serial port for", path, "refs:", serialPortRefCount.get(path));
+    } else {
       try {
-        socket.destroy(e);
-      } catch {}
-      return;
+        const SP = (SerialPortLib && (SerialPortLib.SerialPort || SerialPortLib)) || null;
+        if (!SP) throw new Error("serialport unavailable");
+        serial = new SP({ path, baudRate: currentBaudRate, autoOpen: true });
+        openSerialPorts.set(path, serial); // keep for DTR/RTS control
+        serialPortRefCount.set(path, 1);
+        console.log("[serial] opened new serial port for", path, "with baudrate", currentBaudRate);
+      } catch (e) {
+        console.error("[serial] open failed", path, e);
+        try {
+          socket.destroy(e);
+        } catch {}
+        return;
+      }
     }
     const onSerialData = (data) => {
       try {
@@ -1216,16 +1328,27 @@ async function ensureSerialTcpServer(path, baudRate) {
       safeOff(socket, "error", onSocketError);
       safeOff(serial, "error", onSerialError);
       safeOff(serial, "close", onSerialClose);
-      try {
-        if (serial && typeof serial.close === "function" && serial.isOpen) {
-          serial.close();
-        }
-      } catch {}
+
+      // Уменьшаем счетчик ссылок
+      const refCount = serialPortRefCount.get(path) || 0;
+      if (refCount > 1) {
+        serialPortRefCount.set(path, refCount - 1);
+        console.log("[serial] connection closed for", path, `(reason: ${reason}), refs remaining:`, refCount - 1);
+      } else {
+        // Последняя ссылка - закрываем порт
+        try {
+          if (serial && typeof serial.close === "function" && serial.isOpen) {
+            serial.close();
+          }
+        } catch {}
+        openSerialPorts.delete(path);
+        serialPortRefCount.delete(path);
+        console.log("[serial] connection closed for", path, `(reason: ${reason}), port closed`);
+      }
+
       try {
         socket && socket.destroy && socket.destroy();
       } catch {}
-      openSerialPorts.delete(path); // remove from the store
-      console.log("[serial] connection closed for", path, reason ? `(reason: ${reason})` : "");
     };
     const onSocketClose = () => cleanup("socket close");
     const onSocketError = () => cleanup("socket error");
@@ -1238,8 +1361,8 @@ async function ensureSerialTcpServer(path, baudRate) {
   });
   await new Promise((resolve) => server.listen(0, "0.0.0.0", resolve));
   boundPort = server.address().port;
-  console.log("[serial] TCP server for", path, "listening on", boundPort);
-  const info = { server, port: boundPort, baudRate };
+  console.log("[serial] TCP server for", path, "listening on", boundPort, "with baudrate", effectiveBaudRate);
+  const info = { server, port: boundPort, baudRate: effectiveBaudRate };
   serialServers.set(path, info);
   try {
     tcpPortToSerialPath.set(boundPort, path);
