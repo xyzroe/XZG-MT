@@ -41,14 +41,6 @@ Table of contents
 
 XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538/CC26x2 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
-## Repository structure
-
-- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets. See `web-page/README.md` for full docs.
-- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers. See `bridge/README.md`.
-- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
-- LICENSE — License for the whole repository (MIT).
-- repository.json — repository metadata.
-
 ## Quick start
 
 - Local USB: use the hosted web app — open the online flasher at [https://mt.xyzroe.cc](https://mt.xyzroe.cc) and connect your device via the browser's Web Serial API.
@@ -58,6 +50,22 @@ XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flas
   </div>
 
 On the [bridge README](bridge/README.md) page you'll find more installation options (Docker images, prebuilt binaries, or building your own) and detailed configuration notes.
+
+## Where to read more
+
+Read the individual project READMEs for full documentation and advanced options:
+
+- Web UI: [README](web-page/README.md)
+- WebSocket bridge: [README](bridge/README.md)
+- Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
+
+## Repository structure
+
+- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets. See `web-page/README.md` for full docs.
+- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers. See `bridge/README.md`.
+- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
+- LICENSE — License for the whole repository (MIT).
+- repository.json — repository metadata.
 
 ## Tech & badges
 
@@ -80,14 +88,6 @@ Below are key technologies, libraries and tools used across the projects (click 
 </div>
 
 The list above was composed from the `package.json` files in `web-page/` and `bridge/` and highlights the main runtime, build and developer dependencies used in this repository.
-
-## Where to read more
-
-Read the individual project READMEs for full documentation and advanced options:
-
-- Web UI: [README](web-page/README.md)
-- WebSocket bridge: [README](bridge/README.md)
-- Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
 ## License
 
