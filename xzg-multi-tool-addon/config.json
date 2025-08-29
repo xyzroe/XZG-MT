@@ -3,12 +3,8 @@
   "version": "0.0.7",
   "slug": "xzg-multi-tool-addon",
   "description": "Simple WebSocket <-> TCP bridge with optional mDNS and local serial exposure",
-  "image": "ghcr.io/xyzroe/bridge",
-  "arch": [
-    "amd64",
-    "armv7",
-    "aarch64"
-  ],
+  "image": "ghcr.io/xyzroe/xzg-mt",
+  "arch": ["amd64", "armv7", "aarch64"],
   "startup": "services",
   "webui": "http://[HOST]:[PORT:8765]",
   "ingress": true,
@@ -29,10 +25,8 @@
     "advertise_host": "str?",
     "debug_serial": "bool?"
   },
-  "url": "https://github.com/xyzroe/bridge",
-  "map": [
-    "config:rw"
-  ],
+  "url": "https://github.com/xyzroe/XZG-MT",
+  "map": ["config:rw"],
   "host_network": true,
   "uart": true
 }
