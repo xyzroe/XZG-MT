@@ -9,7 +9,7 @@
     "bridge-legacy": "./bridge.legacy.js"
   },
   "scripts": {
-    "prep": "npx babel ../bridge.js --out-file bridge.legacy.js --no-babelrc --presets=@babel/preset-env && mkdir -p serialprebuilds && cp -R node_modules/@serialport/bindings-cpp/prebuilds serialprebuilds 2>/dev/null || true",
+    "prep": "npx babel ../bridge.js --out-file bridge.legacy.js --no-babelrc --presets=@babel/preset-env && mkdir -p web && cp -R ../web/ web 2>/dev/null && mkdir -p serialprebuilds && cp -R node_modules/@serialport/bindings-cpp/prebuilds serialprebuilds 2>/dev/null || true",
     "build:pkg:win7": "npm run prep && pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe "
   },
   "engines": {
