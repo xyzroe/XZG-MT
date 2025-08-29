@@ -159,10 +159,10 @@ jobs:
           echo "COMMIT_SHA=$short_sha" >> "$GITHUB_ENV"
         id: short_sha
         
-      - name: Use Node.js 20.18.3
+      - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
-          node-version: 20.18.3
+          node-version: 18
           cache: npm
       
       # - name: Change workdir
@@ -174,19 +174,26 @@ jobs:
       # - name: Fetch web assets
       #   run: npm run fetch-web
 
-      - name: Ensure web assets are present (debug)
-        run: |
-          echo "Workspace:" $(pwd)
-          echo "List repo root:"
-          ls -la .
-          echo "List web-page/dist (built web):"
-          ls -la web-page/dist || true
-          echo "Run web build to be safe:"
-          npm --prefix web-page run build || true
-          echo "Run bridge copy-web:"
-          npm --prefix bridge run copy-web || true
-          echo "List bridge/web after copy:"
-          ls -R bridge/web || true
+      #download web-page-artifacts
+      - name: Download web-page artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-page-artifacts
+          path: web-page/dist
+
+      # - name: Ensure web assets are present (debug)
+      #   run: |
+      #     echo "Workspace:" $(pwd)
+      #     echo "List repo root:"
+      #     ls -la .
+      #     echo "List web-page/dist (built web):"
+      #     ls -la web-page/dist || true
+      #     echo "Run web build to be safe:"
+      #     npm --prefix web-page run build || true
+      #     echo "Run bridge copy-web:"
+      #     npm --prefix bridge run copy-web || true
+      #     echo "List bridge/web after copy:"
+      #     ls -R bridge/web || true
 
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
