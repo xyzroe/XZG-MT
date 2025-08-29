@@ -1,0 +1,100 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build app",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			]
+		},
+		{
+			"label": "Build app",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$eslint - stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build app",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			]
+		},
+		{
+			"label": "Build app",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:lite"
+			]
+		},
+		{
+			"label": "Build app",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build"
+			],
+			"problemMatcher": [
+				"$eslint-stylish"
+			]
+		},
+		{
+			"label": "Build app (lite)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:lite"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build app (lite)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:lite"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build app (lite)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"build:lite"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

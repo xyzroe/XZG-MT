@@ -1,0 +1,23 @@
+**/.DS_Store
+node_modules/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Env
+.env
+.env.*
+*.local
+
+# Tooling caches
+.eslintcache
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
