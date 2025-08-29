@@ -18,19 +18,22 @@ ENV COMMIT_SHA=${COMMIT_SHA:-}
 WORKDIR /app
 
 # Install only web deps required for build
+# Note: the `--mount=type=cache` syntax requires Docker BuildKit (use
+# DOCKER_BUILDKIT=1). This speeds up npm package fetches and avoids
+# repeatedly downloading the same packages in CI.
 COPY web-page/package*.json ./web-page/
-RUN npm --prefix ./web-page install
+RUN --mount=type=cache,target=/root/.npm \
+    npm --prefix ./web-page ci --no-audit --prefer-offline
 
 # Copy web sources and build (lite -> smaller output)
 COPY web-page ./web-page
 COPY bridge/scripts ./bridge/scripts
 # If the local `web-page` contains a host `node_modules`, it can overwrite the
-# node_modules we installed earlier (for caching). Remove any copied
-# node_modules and re-install inside the builder to ensure native binaries
-# (esbuild etc.) match the builder architecture.
-RUN rm -rf ./web-page/node_modules || true \
-  && npm --prefix ./web-page install --no-audit --prefer-offline \
-  && npm --prefix ./web-page run build
+# node_modules we installed earlier (for caching). We avoid copying host
+# node_modules via .dockerignore, so do not remove the installed dependencies
+# here — the devDependencies (esbuild, realfavicon, etc.) must be present to
+# run the build step.
+RUN npm --prefix ./web-page run build
 
 ####################
 # 2) Alpine deps builder (compile native modules against musl)

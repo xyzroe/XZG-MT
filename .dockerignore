@@ -1,11 +1,16 @@
-node_modules;
-npm - debug.log * yarn.lock;
-pnpm - lock.yaml.git.github.gitignore.vscode.DS_Store;
-legacy;
-dist;
-serialprebuilds;
-README.md;
-web - page / node_modules;
-bridge / node_modules;
-node_modules;
-dist;
+node_modules
+**/node_modules
+web-page/node_modules
+bridge/node_modules
+
+# Build output
+dist
+
+# Workspace and misc
+.DS_Store
+.env
+npm-debug.log
+yarn.lock
+pnpm-lock.yaml
+README.md
+legacy/serialprebuilds
