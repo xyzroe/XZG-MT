@@ -50,6 +50,14 @@ jobs:
           echo "After updating package.json:"
           cat package.json | jq '.version'
 
+          # Update add-on config.json
+          echo "Before updating xzg-multi-tool-addon/config.json:"
+          cat ../xzg-multi-tool-addon/config.json | jq '.version'
+          tmp=$(mktemp)
+          jq --arg v "$ver" '.version=$v' ../xzg-multi-tool-addon/config.json > "$tmp" && mv "$tmp" ../xzg-multi-tool-addon/config.json
+          echo "After updating xzg-multi-tool-addon/config.json:"
+          cat ../xzg-multi-tool-addon/config.json | jq '.version'
+
           # Update legacy package.json
           echo "Before updating legacy/package.json:"
           cat legacy/package.json | jq '.version'
@@ -66,14 +74,6 @@ jobs:
           echo "After updating legacy/package.json:"
           cat legacy/package.json | jq '.version'
 
-          # Update add-on config.json
-          echo "Before updating xzg-multi-tool-addon/config.json:"
-          cat ../xzg-multi-tool-addon/config.json | jq '.version'
-          tmp=$(mktemp)
-          jq --arg v "$ver" '.version=$v' ../xzg-multi-tool-addon/config.json > "$tmp" && mv "$tmp" ../xzg-multi-tool-addon/config.json
-          echo "After updating xzg-multi-tool-addon/config.json:"
-          cat ../xzg-multi-tool-addon/config.json | jq '.version'
-
           echo "Git status after updates:"
           git status --porcelain
       - name: Commit version bumps
@@ -81,7 +81,7 @@ jobs:
         with:
           commit_message: "chore(release): bump version to ${{ steps.setver.outputs.version }}"
           branch: main
-          file_pattern: "package.json xzg-multi-tool-addon/config.json"
+          file_pattern: "bridge/package.json bridge/legacy/package.json xzg-multi-tool-addon/config.json"
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -100,17 +100,17 @@ jobs:
       - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
       
-      - name: Change workdir
-        run: cd bridge
+      # - name: Change workdir
+      #   run: cd bridge
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Fetch web assets
-        run: npm run fetch-web
+      # - name: Fetch web assets
+      #   run: npm run fetch-web
 
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
