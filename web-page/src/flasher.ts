@@ -865,6 +865,7 @@ async function pingWithBaudRetries(
         // keep new baud in UI
         try {
           bitrateInput.value = String(b);
+          updateConnectionUI();
         } catch {}
         log(`Ping succeeded at ${b}bps`);
         return true;

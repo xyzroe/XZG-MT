@@ -1,7 +1,7 @@
 # XZG Multi-tool
 
 <div align="center">
-  <img src="web-page/favicon/logo.png" alt="XZG Multi-tool" style="height:160px; margin-bottom:12px;" />
+  <img src="https://mt.xyzroe.cc/fav/favicon.svg" alt="XZG Multi-tool" style="height:160px; margin-bottom:12px;" />
 </div>
 
 <div align="center"> 
