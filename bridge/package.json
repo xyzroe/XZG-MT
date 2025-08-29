@@ -12,7 +12,7 @@
     "dev": "node bridge.js",
     "start:port": "node bridge.js $PORT",
     "fetch-web": "node scripts/fetch-web.js",
-    "copy-web": "rm -r -f ../bridge/web/* && cp -R ../web-page/dist/* ../bridge/web/",
+    "copy-web": "mkdir -p ../bridge/web && rm -r -f ../bridge/web/* && cp -R ../web-page/dist/* ../bridge/web/",
     "build:pkg:mac": "npm run copy-web && rm -rf dist/mac && mkdir -p dist/mac && pkg . --targets node18-macos-x64 --output dist/mac/XZG-MT-macos-x64 && pkg . --targets node18-macos-arm64 --output dist/mac/XZG-MT-macos-arm64",
     "build:pkg:linux": "npm run copy-web && rm -rf dist/linux && mkdir -p dist/linux && pkg . --targets node18-linux-x64 --output dist/linux/XZG-MT-linux-x64 && pkg . --targets node18-linux-arm64 --output dist/linux/XZG-MT-linux-arm64",
     "build:pkg:win": "npm run copy-web && rm -rf dist/win && mkdir -p dist/win && pkg . --targets node18-win-x64 --output dist/win/XZG-MT-win-x64",
