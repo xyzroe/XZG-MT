@@ -70,7 +70,6 @@ Below are key technologies, libraries and tools used across the projects (click 
   <img src="https://img.shields.io/badge/pkg-for_binaries-lightgrey" alt="pkg" />
   <img src="https://img.shields.io/badge/ws-WebSocket-orange" alt="ws" />
   <img src="https://img.shields.io/badge/serialport-native-red" alt="serialport" />
-  <img src="https://img.shields.io/badge/bonjour-service-mdns-yellow" alt="bonjour-service" />
   <img src="https://img.shields.io/badge/browser--sync-dev_server-blue" alt="browser-sync" />
   <img src="https://img.shields.io/badge/realfavicon-fav_gen-lightblue" alt="realfavicon" />
   <img src="https://img.shields.io/badge/sharp-image_processing-teal" alt="sharp" />
