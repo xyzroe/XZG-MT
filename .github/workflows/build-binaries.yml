@@ -269,14 +269,22 @@ jobs:
             type=raw,value=${{ needs.version-bump.outputs.version }}
             type=raw,value=latest
 
+      - name: Compute short commit SHA
+        id: short_sha
+        run: |
+          echo "sha=$(echo ${GITHUB_SHA} | cut -c1-8)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push main Docker image (multi-arch)
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./bridge/Dockerfile
+          file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            COMMIT_SHA=${{ steps.short_sha.outputs.sha }}
+            COMMIT_SHA_FULL=${{ github.sha }}

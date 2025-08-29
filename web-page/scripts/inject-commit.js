@@ -11,7 +11,53 @@ try {
     process.exit(0); // не фейлить сборку, если файл отсутствует (опция) — можно выйти с кодом 1, если нужно строго
   }
 
-  const sha = execSync("git rev-parse --short HEAD", { cwd: repoRoot, encoding: "utf8" }).trim();
+  // Prefer commit SHA from environment (CI/build systems).
+  let sha = process.env.COMMIT_SHA || process.env.GIT_COMMIT || process.env.GITHUB_SHA || process.env.GIT_SHA || null;
+
+  // If no env var, attempt to discover git commit by trying multiple candidate
+  // working directories. This helps when the script is invoked from a different
+  // CWD (Docker build, npm prefix, CI helpers, etc.). We check for a .git
+  // directory near the web-page folder and walk up a couple of parents, then
+  // fallback to the current process.cwd(). If git is not available or no repo
+  // is present, we fall back to 'unknown' without failing the build.
+  if (!sha) {
+    const candidates = [];
+    // primary candidate: the repo root relative to this script
+    candidates.push(repoRoot);
+    // walk up a couple of levels (in case web-page is nested)
+    candidates.push(path.resolve(repoRoot, ".."));
+    candidates.push(path.resolve(repoRoot, "..", ".."));
+    // also try the current working directory
+    candidates.push(process.cwd());
+
+    for (const c of candidates) {
+      try {
+        const gitDir = path.join(c, ".git");
+        if (existsSync(gitDir)) {
+          // run git in the candidate cwd
+          sha = execSync("git rev-parse --short HEAD", { cwd: c, encoding: "utf8" }).trim();
+          if (sha) break;
+        } else {
+          // if .git not present, we can still try git in case the environment
+          // has the repo elsewhere; wrap in try/catch to avoid throwing.
+          try {
+            sha = execSync("git rev-parse --short HEAD", { cwd: c, encoding: "utf8" }).trim();
+            if (sha) break;
+          } catch (e) {
+            // ignore and continue
+          }
+        }
+      } catch (err) {
+        // ignore and continue to next candidate
+      }
+    }
+  }
+
+  if (!sha) {
+    sha = "unknown";
+    console.warn('No git repository found and no commit env var set — injecting "unknown"');
+  }
+
   const html = readFileSync(distPath, "utf8");
   const updated = html.replace(/COMMITSHA_PLACEHOLDER/g, sha);
   writeFileSync(distPath, updated, "utf8");

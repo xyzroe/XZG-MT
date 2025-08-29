@@ -5,3 +5,7 @@ legacy;
 dist;
 serialprebuilds;
 README.md;
+web - page / node_modules;
+bridge / node_modules;
+node_modules;
+dist;

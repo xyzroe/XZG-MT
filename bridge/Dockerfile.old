@@ -1,5 +1,9 @@
 # Multi-stage build for better optimization
-FROM node:20-alpine AS builder
+FROM node:20-bullseye AS builder
+
+# allow buildx to pass target platform/arch to npm so native binaries (esbuild, sharp) are fetched for target
+ARG TARGETOS
+ARG TARGETARCH
 
 WORKDIR /app
 
@@ -10,7 +14,7 @@ COPY package*.json ./
 COPY web-page/package*.json ./web-page/
 
 # Install web-page deps (dev deps required for esbuild/typescript) and bridge production deps
-RUN npm --prefix ./web-page ci && \
+RUN npm --prefix ./web-page install && \
     npm ci --only=production && npm cache clean --force
 
 # Copy web-page sources and any scripts used during build
@@ -18,18 +22,27 @@ COPY web-page ./web-page
 COPY bridge/scripts ./bridge/scripts
 
 # Build web
-RUN npm --prefix ./web-page run build
+RUN npm --prefix ./web-page run build:lite
 
 # Production stage
-FROM node:18-alpine
+# FROM node:18-alpine
+# Production stage (glibc-based so native modules work)
+FROM node:18-bullseye-slim
 
+# Install jq, gosu (used instead of su-exec), netcat and udev
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    jq \
+    gosu \
+    netcat \
+    udev \
+  && rm -rf /var/lib/apt/lists/*
 # Install jq, su-exec, netcat, and udev for Home Assistant addon support
-RUN apk add --no-cache jq su-exec netcat-openbsd eudev
+#RUN apk add --no-cache jq su-exec netcat-openbsd eudev
 
 # Create non-root user (for non-HA mode) and add to dialout group for serial access
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    addgroup nodejs dialout
+RUN addgroup --gid 1001 --system nodejs && \
+    adduser --system --uid 1001 --ingroup nodejs --no-create-home --shell /usr/sbin/nologin nodejs && \
+    usermod -aG dialout nodejs || true
 
 # Create app directory
 WORKDIR /app
@@ -62,4 +75,4 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
 # Smart entrypoint: 
 # - HA mode: run as root with full device access
 # - Standalone: switch to nodejs user but keep dialout group access
-ENTRYPOINT ["/bin/sh", "-c", "if [ -f /data/options.json ]; then exec ./run.sh; else exec su-exec nodejs node /app/bridge.js \"$@\"; fi", "--"]
+ENTRYPOINT ["/bin/sh", "-c", "if [ -f /data/options.json ]; then exec ./run.sh; else exec gosu nodejs node /app/bridge.js \"$@\"; fi", "--"]
