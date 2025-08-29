@@ -1,0 +1,59 @@
+les/@serialport/bindings-cpp/dist/load-bindings.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js is added to queue.
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/errors.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/src/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/poller.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-read.js is added to queue.
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/errors.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-read.js
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-read.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/src/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-read.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-write.js is added to queue.
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-write.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/src/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/unix-write.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32-sn-parser.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js is added to queue.
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/load-bindings.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32-sn-parser.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/src/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-cpp/dist/win32.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/bindings-interface/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-byte-length/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-cctalk/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-delimiter/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-inter-byte-timeout/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-packet-length/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-readline/dist/index.js is added to queue.
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-delimiter/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-readline/dist/index.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-delimiter/dist/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-readline/dist/index.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-ready/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-regex/dist/index.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/decoder.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/encoder.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/index.js is added to queue.
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/decoder.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/index.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/encoder.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-slip-encoder/dist/index.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-spacepacket/dist/index.js is added to queue.
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-spacepacket/dist/utils.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-spacepacket/dist/index.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/parser-spacepacket/dist/utils.js is added to queue.
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/stream/dist/index.js is added to queue.
+> [debug] Content of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/package.json is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/stream/dist/index.js
+> [debug] Bytecode of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/debug/src/index.js is added to queue. It was required from /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/@serialport/stream/dist/index.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/bin.js is added to queue.
+> [debug] Cannot find module 'node-gyp/package.json' from '/Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build'  in /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/bin.js
+> [debug] Cannot find module 'node-gyp/package.json' from '/Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build'  in /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/bin.js
+> [debug] Stat info of /Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/build-test.js is added to queue.
+> Warning Cannot resolve 'path.join(process.cwd(), test)'
+/Users/runner/work/XZG-MT/XZG-MT/bridge/legacy/node_modules/node-gyp-build/build-test.js
+Dynamic require may fail at run time, because the requested file
+is unknown at compilation time and not included into executable.
+Use a string literal as an argument for 'require', or leave it
+as is and specify the resolved file name in 'scripts' option.
+> [debug] Cannot resolve 'path.join(process.cwd(), 'package.json')'
+=== strings search for web/ inside exe ===
+"build:pkg:win7": "set -e && npm run prep && rm -rf ../dist/win-legacy && mkdir -p ../dist/win-legacy && cp -R ../web ./web 2>/dev/null || true && echo '=== web tree (legacy/web) ===' && ls -R ./web || true && echo 'pkg version:' && npx pkg --version || true && echo '=== running pkg (debug) ===' && npx pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe --debug 2>&1 | tee /tmp/pkg.log || true && echo '=== pkg.log (head 300) ===' && head -n 300 /tmp/pkg.log || true && echo '=== strings search for web/ inside exe ===' && (strings ../dist/win-legacy/XZG-MT-win7-x64.exe | grep -a \"web/\" || true) && echo '=== full ls dist/win-legacy ===' && ls -R ../dist/win-legacy || true"
+"web/**/*"
+=== full ls dist/win-legacy ===
+XZG-MT-win7-x64.exe
