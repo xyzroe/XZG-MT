@@ -11,4 +11,5 @@ issuehunt: # Replace with a single IssueHunt username
 lfx_crowdfunding: # Replace with a single LFX Crowdfunding project-name e.g., cloud-foundry
 polar: # Replace with a single Polar username
 buy_me_a_coffee: xyzroe
-custom: ['https://www.paypal.com/paypalme/xyzroe', 'https://nowpayments.io/donation/xyzroe']
+
+
