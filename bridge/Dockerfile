@@ -1,18 +1,21 @@
-# Multi-stage build for better optimization
-FROM node:20-alpine AS builder
-
-# Create app directory
 WORKDIR /app
 
-# Copy package files
+# Copy root package metadata
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy web-page package metadata so we can install its deps (devDeps needed for build)
+COPY web-page/package*.json ./web-page/
 
-# Copy fetch script and run it to populate web/ before packaging into image
-#COPY scripts ./scripts
-RUN npm run build:web
+# Install web-page deps (dev deps required for esbuild/typescript) and bridge production deps
+RUN npm --prefix ./web-page ci && \
+    npm ci --only=production && npm cache clean --force
+
+# Copy web-page sources and any scripts used during build
+COPY web-page ./web-page
+COPY scripts ./scripts
+
+# Build web (use build:lite if you want faster build without favicons/inject)
+RUN npm --prefix ./web-page run build
 
 # Production stage
 FROM node:18-alpine
