@@ -106,6 +106,14 @@ jobs:
         with:
           ref: main
 
+      - name: Ensure full git history and export short SHA
+        run: |
+          git fetch --prune --unshallow || true
+          short_sha=$(git rev-parse --short HEAD)
+          echo "sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "COMMIT_SHA=$short_sha" >> "$GITHUB_ENV"
+        id: short_sha
+        
       - name: Use Node.js 20.18.3
         uses: actions/setup-node@v4
         with:

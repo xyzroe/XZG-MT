@@ -16,7 +16,7 @@ function _isNativeReflectConstruct() { try { var t = !Boolean.prototype.valueOf.
 function _getPrototypeOf(t) { return _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf.bind() : function (t) { return t.__proto__ || Object.getPrototypeOf(t); }, _getPrototypeOf(t); }
 function _inherits(t, e) { if ("function" != typeof e && null !== e) throw new TypeError("Super expression must either be null or a function"); t.prototype = Object.create(e && e.prototype, { constructor: { value: t, writable: !0, configurable: !0 } }), Object.defineProperty(t, "prototype", { writable: !1 }), e && _setPrototypeOf(t, e); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
-function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, "default": e }; if (null === e || "object" != _typeof(e) && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t19 in e) "default" !== _t19 && {}.hasOwnProperty.call(e, _t19) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t19)) && (i.get || i.set) ? o(f, _t19, i) : f[_t19] = e[_t19]); return f; })(e, t); }
+function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, "default": e }; if (null === e || "object" != _typeof(e) && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t23 in e) "default" !== _t23 && {}.hasOwnProperty.call(e, _t23) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t23)) && (i.get || i.set) ? o(f, _t23, i) : f[_t23] = e[_t23]); return f; })(e, t); }
 function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t["return"] || t["return"](); } finally { if (u) throw o; } } }; }
 function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
@@ -385,7 +385,7 @@ function ensureSerialportPrebuildExtractedSync() {
     if (!fs.existsSync(chosen)) return null;
     var data = fs.readFileSync(chosen);
     // Use a per-process folder to avoid cross-run locking conflicts
-    var outDir = path.join(os.tmpdir(), "bridge-prebuilds", "".concat(plat, "-").concat(arch, "-").concat(process.pid));
+    var outDir = path.join(os.tmpdir(), "ws-tcp-bridge-prebuilds", "".concat(plat, "-").concat(arch, "-").concat(process.pid));
     try {
       fs.mkdirSync(outDir, {
         recursive: true
@@ -620,7 +620,7 @@ function _ensureSerialportPrebuildExtracted() {
         case 10:
           if (DEBUG) console.log("[serial][pkg] selected prebuild file:", chosenFile);
           data = fs.readFileSync(chosenFile); // Write to a stable temp dir
-          baseTmp = path.join(os.tmpdir(), "bridge-prebuilds");
+          baseTmp = path.join(os.tmpdir(), "ws-tcp-bridge-prebuilds");
           try {
             fs.mkdirSync(baseTmp, {
               recursive: true
@@ -682,14 +682,78 @@ function detectMusl() {
 
 // --- Global store of opened SerialPort instances ---
 var openSerialPorts = new Map(); // path -> SerialPort instance
+var serialPortRefCount = new Map(); // path -> reference count
 // Reverse mapping of local TCP server port to the serial path
 var tcpPortToSerialPath = new Map(); // tcpPort -> path
 
-var serialPortStates = new Map(); // path -> { dtr: boolean, rts: boolean }
+var serialPortStates = new Map(); // path -> { dtr: boolean, rts: boolean, baudRate: number }
+var validRates = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 500000];
 
+// Функция для валидации baudrate
+function isValidBaudRate(baud) {
+  return validRates.includes(baud);
+}
+
+// Функция для закрытия серийного порта при изменении baudrate
+function reopenSerialPort(_x, _x2) {
+  return _reopenSerialPort.apply(this, arguments);
+}
+function _reopenSerialPort() {
+  _reopenSerialPort = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(path, newBaudRate) {
+    var existingSerial, _t11, _t12;
+    return _regenerator().w(function (_context5) {
+      while (1) switch (_context5.p = _context5.n) {
+        case 0:
+          _context5.p = 0;
+          // Закрываем существующий порт если он открыт
+          existingSerial = openSerialPorts.get(path);
+          if (!existingSerial) {
+            _context5.n = 5;
+            break;
+          }
+          _context5.p = 1;
+          if (!existingSerial.isOpen) {
+            _context5.n = 2;
+            break;
+          }
+          _context5.n = 2;
+          return new Promise(function (resolve) {
+            existingSerial.close(function (err) {
+              if (err) console.warn("[serial] close error for ".concat(path, ":"), String(err));
+              resolve();
+            });
+          });
+        case 2:
+          _context5.n = 4;
+          break;
+        case 3:
+          _context5.p = 3;
+          _t11 = _context5.v;
+          console.warn("[serial] failed to close existing port ".concat(path, ":"), String(_t11));
+        case 4:
+          openSerialPorts["delete"](path);
+          serialPortRefCount["delete"](path);
+        case 5:
+          _context5.n = 6;
+          return new Promise(function (resolve) {
+            return setTimeout(resolve, 100);
+          });
+        case 6:
+          console.log("[serial] closed serial port for ".concat(path, ", new baudrate ").concat(newBaudRate, " will be used for new connections"));
+          return _context5.a(2, true);
+        case 7:
+          _context5.p = 7;
+          _t12 = _context5.v;
+          console.warn("[serial] reopenSerialPort failed for ".concat(path, ":"), String(_t12));
+          return _context5.a(2, false);
+      }
+    }, _callee5, null, [[1, 3], [0, 7]]);
+  }));
+  return _reopenSerialPort.apply(this, arguments);
+}
 var server = http.createServer(/*#__PURE__*/function () {
   var _ref = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee(req, res) {
-    var originHeader, _corsHeaders, _i2, _Object$keys, k, _origWriteHead, u, dbg, typesParam, timeout, types, normalized, wantsLocalSerial, results, _results, locals, payload, body, originHeaderResp, _SerialPortLib, _path, tcpPortStr, tcpPort, dtr, rts, serial, SP, currentState, setObj, distPath, filePath, _t, _t2, _t3, _t4, _t5;
+    var originHeader, _corsHeaders, _i2, _Object$keys, k, _origWriteHead, u, dbg, typesParam, timeout, types, normalized, wantsLocalSerial, results, _results, locals, payload, body, originHeaderResp, sendSuccessResponse, _SerialPortLib, _path, tcpPortStr, tcpPort, dtr, rts, baudStr, baud, currentState, reopenSuccess, serial, setObj, SP, dtrRtsObj, distPath, filePath, _t, _t2, _t3, _t4, _t5;
     return _regenerator().w(function (_context) {
       while (1) switch (_context.p = _context.n) {
         case 0:
@@ -867,9 +931,26 @@ var server = http.createServer(/*#__PURE__*/function () {
           return _context.a(2);
         case 11:
           if (!(u.pathname === "/sc")) {
-            _context.n = 19;
+            _context.n = 24;
             break;
           }
+          sendSuccessResponse = function sendSuccessResponse() {
+            res.writeHead(200, {
+              "content-type": "application/json",
+              "access-control-allow-origin": "*"
+            });
+            return res.end(JSON.stringify({
+              ok: true,
+              path: _path,
+              tcpPort: tcpPort || tcpPortFromPath(_path),
+              set: setObj,
+              changed: {
+                dtr: dtr !== null ? setObj.dtr : undefined,
+                rts: rts !== null ? setObj.rts : undefined,
+                baudRate: baud !== null ? setObj.baudRate : undefined
+              }
+            }));
+          };
           _context.n = 12;
           return getSerialPort();
         case 12:
@@ -895,7 +976,9 @@ var server = http.createServer(/*#__PURE__*/function () {
           }
           dtr = u.searchParams.get("dtr");
           rts = u.searchParams.get("rts");
-          if (!(!_path || dtr === null && rts === null)) {
+          baudStr = u.searchParams.get("baud");
+          baud = baudStr ? Number(baudStr) : null;
+          if (!(!_path || dtr === null && rts === null && baud === null)) {
             _context.n = 14;
             break;
           }
@@ -904,53 +987,11 @@ var server = http.createServer(/*#__PURE__*/function () {
             "access-control-allow-origin": "*"
           });
           return _context.a(2, res.end(JSON.stringify({
-            error: "Missing path/tcpPort or dtr/rts param"
+            error: "Missing path/tcpPort or dtr/rts/baud param"
           })));
         case 14:
-          serial = openSerialPorts.get(_path);
-          if (serial) {
-            _context.n = 17;
-            break;
-          }
-          _context.p = 15;
-          SP = _SerialPortLib.SerialPort || _SerialPortLib;
-          serial = new SP({
-            path: _path,
-            baudRate: 115200,
-            autoOpen: true
-          });
-          openSerialPorts.set(_path, serial);
-          _context.n = 17;
-          break;
-        case 16:
-          _context.p = 16;
-          _t3 = _context.v;
-          res.writeHead(500, {
-            "content-type": "application/json",
-            "access-control-allow-origin": "*"
-          });
-          return _context.a(2, res.end(JSON.stringify({
-            error: "Failed to open serial port",
-            details: String(_t3)
-          })));
-        case 17:
-          // Get current saved state or initialize defaults
-          currentState = serialPortStates.get(_path) || {
-            dtr: false,
-            rts: false
-          }; // Build the complete state object (current + new values)
-          setObj = _objectSpread({}, currentState); // Update only the parameters that were provided
-          if (dtr !== null) {
-            setObj.dtr = dtr === "1" || dtr === "true";
-          }
-          if (rts !== null) {
-            setObj.rts = rts === "1" || rts === "true";
-          }
-
-          // Save the new state
-          serialPortStates.set(_path, setObj);
-          if (!(Object.keys(setObj).length === 0)) {
-            _context.n = 18;
+          if (!(baud !== null && !isValidBaudRate(baud))) {
+            _context.n = 15;
             break;
           }
           res.writeHead(400, {
@@ -958,10 +999,89 @@ var server = http.createServer(/*#__PURE__*/function () {
             "access-control-allow-origin": "*"
           });
           return _context.a(2, res.end(JSON.stringify({
-            error: "No DTR/RTS parameters to set"
+            error: "Invalid baud rate",
+            validRates: validRates
           })));
+        case 15:
+          // Get current saved state or initialize defaults
+          currentState = serialPortStates.get(_path) || {
+            dtr: false,
+            rts: false,
+            baudRate: 115200
+          }; // Если меняется baudrate, нужно переоткрыть порт
+          if (!(baud !== null && baud !== currentState.baudRate)) {
+            _context.n = 18;
+            break;
+          }
+          _context.n = 16;
+          return reopenSerialPort(_path, baud);
+        case 16:
+          reopenSuccess = _context.v;
+          if (reopenSuccess) {
+            _context.n = 17;
+            break;
+          }
+          res.writeHead(500, {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*"
+          });
+          return _context.a(2, res.end(JSON.stringify({
+            error: "Failed to reopen port with new baud rate"
+          })));
+        case 17:
+          currentState.baudRate = baud;
         case 18:
-          serial.set(setObj, function (err) {
+          serial = openSerialPorts.get(_path); // Build the complete state object (current + new values)
+          setObj = _objectSpread({}, currentState); // Update only the parameters that were provided
+          if (dtr !== null) {
+            setObj.dtr = dtr === "1" || dtr === "true";
+          }
+          if (rts !== null) {
+            setObj.rts = rts === "1" || rts === "true";
+          }
+          if (baud !== null) {
+            setObj.baudRate = baud;
+          }
+
+          // Save the new state
+          serialPortStates.set(_path, setObj);
+
+          // Применяем DTR/RTS только если они были изменены
+          if (!(dtr !== null || rts !== null)) {
+            _context.n = 22;
+            break;
+          }
+          if (serial) {
+            _context.n = 21;
+            break;
+          }
+          _context.p = 19;
+          SP = _SerialPortLib.SerialPort || _SerialPortLib;
+          serial = new SP({
+            path: _path,
+            baudRate: currentState.baudRate,
+            autoOpen: true
+          });
+          openSerialPorts.set(_path, serial);
+          _context.n = 21;
+          break;
+        case 20:
+          _context.p = 20;
+          _t3 = _context.v;
+          res.writeHead(500, {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*"
+          });
+          return _context.a(2, res.end(JSON.stringify({
+            error: "Failed to open serial port for DTR/RTS",
+            details: String(_t3)
+          })));
+        case 21:
+          dtrRtsObj = {
+            dtr: setObj.dtr,
+            rts: setObj.rts
+          };
+          serial.set(dtrRtsObj, function (err) {
             if (err) {
               res.writeHead(500, {
                 "content-type": "application/json",
@@ -972,35 +1092,28 @@ var server = http.createServer(/*#__PURE__*/function () {
                 details: String(err)
               }));
             }
-            res.writeHead(200, {
-              "content-type": "application/json",
-              "access-control-allow-origin": "*"
-            });
-            return res.end(JSON.stringify({
-              ok: true,
-              path: _path,
-              tcpPort: tcpPort || tcpPortFromPath(_path),
-              set: setObj,
-              changed: {
-                dtr: dtr !== null ? setObj.dtr : undefined,
-                rts: rts !== null ? setObj.rts : undefined
-              }
-            }));
+            sendSuccessResponse();
           });
+          _context.n = 23;
+          break;
+        case 22:
+          // Если изменялся только baudrate, сразу возвращаем успех
+          sendSuccessResponse();
+        case 23:
           return _context.a(2);
-        case 19:
+        case 24:
           // New: Serve static files from ./web directory
           distPath = path.join(__dirname, "web");
           filePath = path.join(distPath, u.pathname === "/" ? "index.html" : u.pathname); // Security: Prevent directory traversal
           if (filePath.startsWith(distPath)) {
-            _context.n = 20;
+            _context.n = 25;
             break;
           }
           res.writeHead(403, {
             "Content-Type": "text/plain"
           });
           return _context.a(2, res.end("Forbidden"));
-        case 20:
+        case 25:
           fs.stat(filePath, function (err, stats) {
             if (err || !stats.isFile()) {
               res.writeHead(404, {
@@ -1039,13 +1152,13 @@ var server = http.createServer(/*#__PURE__*/function () {
               res.end("Server error");
             });
           });
-          _context.n = 24;
+          _context.n = 29;
           break;
-        case 21:
-          _context.p = 21;
+        case 26:
+          _context.p = 26;
           _t4 = _context.v;
           console.error("[mdns] handler error:", _t4);
-          _context.p = 22;
+          _context.p = 27;
           res.writeHead(500, {
             "content-type": "application/json",
             "access-control-allow-origin": "*"
@@ -1053,15 +1166,15 @@ var server = http.createServer(/*#__PURE__*/function () {
           return _context.a(2, res.end(JSON.stringify({
             error: String(_t4)
           })));
-        case 23:
-          _context.p = 23;
+        case 28:
+          _context.p = 28;
           _t5 = _context.v;
-        case 24:
+        case 29:
           return _context.a(2);
       }
-    }, _callee, null, [[22, 23], [15, 16], [9, 10], [3, 7], [0, 21]]);
+    }, _callee, null, [[27, 28], [19, 20], [9, 10], [3, 7], [0, 26]]);
   }));
-  return function (_x, _x2) {
+  return function (_x3, _x4) {
     return _ref.apply(this, arguments);
   };
 }());
@@ -1231,15 +1344,15 @@ function isLocalSerialToken(s) {
     return x.toLowerCase();
   }).includes(String(s || "").toLowerCase());
 }
-function scanMdns(_x3, _x4) {
+function scanMdns(_x5, _x6) {
   return _scanMdns.apply(this, arguments);
 } // --- Local Serial exposure ---
 function _scanMdns() {
-  _scanMdns = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5(typeList, timeoutMs) {
-    return _regenerator().w(function (_context5) {
-      while (1) switch (_context5.n) {
+  _scanMdns = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(typeList, timeoutMs) {
+    return _regenerator().w(function (_context6) {
+      while (1) switch (_context6.n) {
         case 0:
-          _context5.n = 1;
+          _context6.n = 1;
           return new Promise(function (resolve) {
             console.log("[mdns] scanning with timeout", timeoutMs); //, typeList,
             var bonjour = new BonjourCtor();
@@ -1329,9 +1442,9 @@ function _scanMdns() {
             setTimeout(done, timeoutMs);
           });
         case 1:
-          return _context5.a(2, _context5.v);
+          return _context6.a(2, _context6.v);
       }
-    }, _callee5);
+    }, _callee6);
   }));
   return _scanMdns.apply(this, arguments);
 }
@@ -1339,56 +1452,80 @@ var serialServers = new Map(); // path -> { server, port }
 
 // Keep original port info returned by serialport.list()
 var serialPortDetails = new Map(); // path -> portInfo
-function closeSerialTcpServer(_x5) {
+function closeSerialTcpServer(_x7) {
   return _closeSerialTcpServer.apply(this, arguments);
 }
 function _closeSerialTcpServer() {
-  _closeSerialTcpServer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(path) {
-    var info, sp, _t11;
-    return _regenerator().w(function (_context6) {
-      while (1) switch (_context6.p = _context6.n) {
+  _closeSerialTcpServer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(path) {
+    var info, sp, _t13, _t14, _t15;
+    return _regenerator().w(function (_context7) {
+      while (1) switch (_context7.p = _context7.n) {
         case 0:
-          _context6.p = 0;
+          _context7.p = 0;
           info = serialServers.get(path);
           if (info) {
-            _context6.n = 1;
+            _context7.n = 1;
             break;
           }
-          return _context6.a(2);
+          return _context7.a(2);
         case 1:
-          try {
-            // close TCP server
+          _context7.p = 1;
+          _context7.n = 2;
+          return new Promise(function (resolve) {
             info.server.close(function () {
-              // closed
+              resolve();
             });
-          } catch (_unused58) {}
+          });
+        case 2:
+          _context7.n = 4;
+          break;
+        case 3:
+          _context7.p = 3;
+          _t13 = _context7.v;
+        case 4:
           try {
             tcpPortToSerialPath["delete"](info.port);
           } catch (_unused59) {}
           serialServers["delete"](path);
           serialPortDetails["delete"](path);
-          try {
-            sp = openSerialPorts.get(path);
-            if (sp) {
-              if (typeof sp.close === "function") {
-                try {
-                  sp.close();
-                } catch (_unused60) {}
-              }
-              openSerialPorts["delete"](path);
-            }
-          } catch (_unused61) {}
-          console.log("[serial] closed TCP server for", path);
-          _context6.n = 3;
+          _context7.p = 5;
+          sp = openSerialPorts.get(path);
+          if (!sp) {
+            _context7.n = 7;
+            break;
+          }
+          if (!(typeof sp.close === "function" && sp.isOpen)) {
+            _context7.n = 6;
+            break;
+          }
+          _context7.n = 6;
+          return new Promise(function (resolve) {
+            sp.close(function (err) {
+              if (err) console.warn("[serial] close error for ".concat(path, ":"), String(err));
+              resolve();
+            });
+          });
+        case 6:
+          openSerialPorts["delete"](path);
+          serialPortRefCount["delete"](path);
+        case 7:
+          _context7.n = 9;
           break;
-        case 2:
-          _context6.p = 2;
-          _t11 = _context6.v;
-          console.warn("[serial] error closing tcp server for", path, String(_t11));
-        case 3:
-          return _context6.a(2);
+        case 8:
+          _context7.p = 8;
+          _t14 = _context7.v;
+        case 9:
+          console.log("[serial] closed TCP server for", path);
+          _context7.n = 11;
+          break;
+        case 10:
+          _context7.p = 10;
+          _t15 = _context7.v;
+          console.warn("[serial] error closing tcp server for", path, String(_t15));
+        case 11:
+          return _context7.a(2);
       }
-    }, _callee6, null, [[0, 2]]);
+    }, _callee7, null, [[5, 8], [1, 3], [0, 10]]);
   }));
   return _closeSerialTcpServer.apply(this, arguments);
 }
@@ -1396,72 +1533,72 @@ function scanAndSyncSerialPorts() {
   return _scanAndSyncSerialPorts.apply(this, arguments);
 }
 function _scanAndSyncSerialPorts() {
-  _scanAndSyncSerialPorts = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
-    var _SerialPortLib2, ports, maybeSerialPort, foundPaths, _iterator4, _step4, _loop2, _i8, _Array$from, existingPath, _t12, _t13, _t14;
-    return _regenerator().w(function (_context8) {
-      while (1) switch (_context8.p = _context8.n) {
+  _scanAndSyncSerialPorts = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
+    var _SerialPortLib2, ports, maybeSerialPort, foundPaths, _iterator4, _step4, _loop2, _i8, _Array$from, existingPath, _t16, _t17, _t18;
+    return _regenerator().w(function (_context9) {
+      while (1) switch (_context9.p = _context9.n) {
         case 0:
-          _context8.p = 0;
-          _context8.n = 1;
+          _context9.p = 0;
+          _context9.n = 1;
           return getSerialPort();
         case 1:
-          _SerialPortLib2 = _context8.v;
+          _SerialPortLib2 = _context9.v;
           if (_SerialPortLib2) {
-            _context8.n = 2;
+            _context9.n = 2;
             break;
           }
-          return _context8.a(2);
+          return _context9.a(2);
         case 2:
           ports = [];
-          _context8.p = 3;
+          _context9.p = 3;
           maybeSerialPort = _SerialPortLib2.SerialPort || _SerialPortLib2;
           if (!(typeof maybeSerialPort.list === "function")) {
-            _context8.n = 5;
+            _context9.n = 5;
             break;
           }
-          _context8.n = 4;
+          _context9.n = 4;
           return maybeSerialPort.list();
         case 4:
-          ports = _context8.v;
-          _context8.n = 8;
+          ports = _context9.v;
+          _context9.n = 8;
           break;
         case 5:
           if (!(typeof _SerialPortLib2.list === "function")) {
-            _context8.n = 7;
+            _context9.n = 7;
             break;
           }
-          _context8.n = 6;
+          _context9.n = 6;
           return _SerialPortLib2.list();
         case 6:
-          ports = _context8.v;
-          _context8.n = 8;
+          ports = _context9.v;
+          _context9.n = 8;
           break;
         case 7:
-          return _context8.a(2);
+          return _context9.a(2);
         case 8:
-          _context8.n = 10;
+          _context9.n = 10;
           break;
         case 9:
-          _context8.p = 9;
-          _t12 = _context8.v;
-          console.warn("[serial] list() failed during scan:", _t12);
-          return _context8.a(2);
+          _context9.p = 9;
+          _t16 = _context9.v;
+          console.warn("[serial] list() failed during scan:", _t16);
+          return _context9.a(2);
         case 10:
           foundPaths = new Set();
           _iterator4 = _createForOfIteratorHelper(ports);
-          _context8.p = 11;
+          _context9.p = 11;
           _loop2 = /*#__PURE__*/_regenerator().m(function _loop2() {
             var p, pathName;
-            return _regenerator().w(function (_context7) {
-              while (1) switch (_context7.n) {
+            return _regenerator().w(function (_context8) {
+              while (1) switch (_context8.n) {
                 case 0:
                   p = _step4.value;
                   pathName = p.path || p.comName || p.device || p.port || p.friendlyName;
                   if (pathName) {
-                    _context7.n = 1;
+                    _context8.n = 1;
                     break;
                   }
-                  return _context7.a(2, 1);
+                  return _context8.a(2, 1);
                 case 1:
                   foundPaths.add(pathName);
                   serialPortDetails.set(pathName, p);
@@ -1476,66 +1613,66 @@ function _scanAndSyncSerialPorts() {
                     }
                   }
                 case 2:
-                  return _context7.a(2);
+                  return _context8.a(2);
               }
             }, _loop2);
           });
           _iterator4.s();
         case 12:
           if ((_step4 = _iterator4.n()).done) {
-            _context8.n = 15;
+            _context9.n = 15;
             break;
           }
-          return _context8.d(_regeneratorValues(_loop2()), 13);
+          return _context9.d(_regeneratorValues(_loop2()), 13);
         case 13:
-          if (!_context8.v) {
-            _context8.n = 14;
+          if (!_context9.v) {
+            _context9.n = 14;
             break;
           }
-          return _context8.a(3, 14);
+          return _context9.a(3, 14);
         case 14:
-          _context8.n = 12;
+          _context9.n = 12;
           break;
         case 15:
-          _context8.n = 17;
+          _context9.n = 17;
           break;
         case 16:
-          _context8.p = 16;
-          _t13 = _context8.v;
-          _iterator4.e(_t13);
+          _context9.p = 16;
+          _t17 = _context9.v;
+          _iterator4.e(_t17);
         case 17:
-          _context8.p = 17;
+          _context9.p = 17;
           _iterator4.f();
-          return _context8.f(17);
+          return _context9.f(17);
         case 18:
           _i8 = 0, _Array$from = Array.from(serialServers.keys());
         case 19:
           if (!(_i8 < _Array$from.length)) {
-            _context8.n = 21;
+            _context9.n = 21;
             break;
           }
           existingPath = _Array$from[_i8];
           if (foundPaths.has(existingPath)) {
-            _context8.n = 20;
+            _context9.n = 20;
             break;
           }
-          _context8.n = 20;
+          _context9.n = 20;
           return closeSerialTcpServer(existingPath);
         case 20:
           _i8++;
-          _context8.n = 19;
+          _context9.n = 19;
           break;
         case 21:
-          _context8.n = 23;
+          _context9.n = 23;
           break;
         case 22:
-          _context8.p = 22;
-          _t14 = _context8.v;
-          if (DEBUG) console.warn("[serial] scanAndSyncSerialPorts error:", String(_t14));
+          _context9.p = 22;
+          _t18 = _context9.v;
+          if (DEBUG) console.warn("[serial] scanAndSyncSerialPorts error:", String(_t18));
         case 23:
-          return _context8.a(2);
+          return _context9.a(2);
       }
-    }, _callee7, null, [[11, 16, 17, 18], [3, 9], [0, 22]]);
+    }, _callee8, null, [[11, 16, 17, 18], [3, 9], [0, 22]]);
   }));
   return _scanAndSyncSerialPorts.apply(this, arguments);
 }
@@ -1544,42 +1681,42 @@ function startSerialMonitor() {
   return _startSerialMonitor.apply(this, arguments);
 }
 function _startSerialMonitor() {
-  _startSerialMonitor = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
-    var _t15;
-    return _regenerator().w(function (_context9) {
-      while (1) switch (_context9.p = _context9.n) {
+  _startSerialMonitor = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+    var _t19;
+    return _regenerator().w(function (_context0) {
+      while (1) switch (_context0.p = _context0.n) {
         case 0:
-          _context9.p = 0;
+          _context0.p = 0;
           if (!(SERIAL_SCAN_INTERVAL === 0)) {
-            _context9.n = 1;
+            _context0.n = 1;
             break;
           }
           if (DEBUG) console.log("[serial] monitor disabled (SERIAL_SCAN_INTERVAL=0)");
-          return _context9.a(2);
+          return _context0.a(2);
         case 1:
-          _context9.n = 2;
+          _context0.n = 2;
           return scanAndSyncSerialPorts();
         case 2:
           if (!_serialMonitorHandle) {
-            _context9.n = 3;
+            _context0.n = 3;
             break;
           }
-          return _context9.a(2);
+          return _context0.a(2);
         case 3:
           _serialMonitorHandle = setInterval(function () {
             scanAndSyncSerialPorts()["catch"](function () {});
           }, SERIAL_SCAN_INTERVAL);
           if (DEBUG) console.log("[serial] monitor started, interval", SERIAL_SCAN_INTERVAL);
-          _context9.n = 5;
+          _context0.n = 5;
           break;
         case 4:
-          _context9.p = 4;
-          _t15 = _context9.v;
-          console.warn("[serial] failed to start monitor:", _t15);
+          _context0.p = 4;
+          _t19 = _context0.v;
+          console.warn("[serial] failed to start monitor:", _t19);
         case 5:
-          return _context9.a(2);
+          return _context0.a(2);
       }
-    }, _callee8, null, [[0, 4]]);
+    }, _callee9, null, [[0, 4]]);
   }));
   return _startSerialMonitor.apply(this, arguments);
 }
@@ -1598,71 +1735,71 @@ function closeAllSerialServers() {
   return _closeAllSerialServers.apply(this, arguments);
 }
 function _closeAllSerialServers() {
-  _closeAllSerialServers = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
-    var keys, _i9, _keys, p, _t16, _t17;
-    return _regenerator().w(function (_context0) {
-      while (1) switch (_context0.p = _context0.n) {
-        case 0:
-          _context0.p = 0;
-          keys = Array.from(serialServers.keys());
-          _i9 = 0, _keys = keys;
-        case 1:
-          if (!(_i9 < _keys.length)) {
-            _context0.n = 6;
-            break;
-          }
-          p = _keys[_i9];
-          _context0.p = 2;
-          _context0.n = 3;
-          return closeSerialTcpServer(p);
-        case 3:
-          _context0.n = 5;
-          break;
-        case 4:
-          _context0.p = 4;
-          _t16 = _context0.v;
-          if (DEBUG) console.warn("[serial] failed closing server for", p, String(_t16));
-        case 5:
-          _i9++;
-          _context0.n = 1;
-          break;
-        case 6:
-          _context0.n = 8;
-          break;
-        case 7:
-          _context0.p = 7;
-          _t17 = _context0.v;
-          if (DEBUG) console.warn("[serial] closeAllSerialServers failed:", String(_t17));
-        case 8:
-          return _context0.a(2);
-      }
-    }, _callee9, null, [[2, 4], [0, 7]]);
-  }));
-  return _closeAllSerialServers.apply(this, arguments);
-}
-var _gracefulShuttingDown = false;
-function gracefulShutdown(_x6) {
-  return _gracefulShutdown.apply(this, arguments);
-}
-function _gracefulShutdown() {
-  _gracefulShutdown = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0(code) {
-    var _t18;
+  _closeAllSerialServers = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
+    var keys, _i9, _keys, p, _t20, _t21;
     return _regenerator().w(function (_context1) {
       while (1) switch (_context1.p = _context1.n) {
         case 0:
           _context1.p = 0;
-          if (!_gracefulShuttingDown) {
-            _context1.n = 1;
+          keys = Array.from(serialServers.keys());
+          _i9 = 0, _keys = keys;
+        case 1:
+          if (!(_i9 < _keys.length)) {
+            _context1.n = 6;
             break;
           }
+          p = _keys[_i9];
+          _context1.p = 2;
+          _context1.n = 3;
+          return closeSerialTcpServer(p);
+        case 3:
+          _context1.n = 5;
+          break;
+        case 4:
+          _context1.p = 4;
+          _t20 = _context1.v;
+          if (DEBUG) console.warn("[serial] failed closing server for", p, String(_t20));
+        case 5:
+          _i9++;
+          _context1.n = 1;
+          break;
+        case 6:
+          _context1.n = 8;
+          break;
+        case 7:
+          _context1.p = 7;
+          _t21 = _context1.v;
+          if (DEBUG) console.warn("[serial] closeAllSerialServers failed:", String(_t21));
+        case 8:
           return _context1.a(2);
+      }
+    }, _callee0, null, [[2, 4], [0, 7]]);
+  }));
+  return _closeAllSerialServers.apply(this, arguments);
+}
+var _gracefulShuttingDown = false;
+function gracefulShutdown(_x8) {
+  return _gracefulShutdown.apply(this, arguments);
+}
+function _gracefulShutdown() {
+  _gracefulShutdown = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1(code) {
+    var _t22;
+    return _regenerator().w(function (_context10) {
+      while (1) switch (_context10.p = _context10.n) {
+        case 0:
+          _context10.p = 0;
+          if (!_gracefulShuttingDown) {
+            _context10.n = 1;
+            break;
+          }
+          return _context10.a(2);
         case 1:
           _gracefulShuttingDown = true;
           console.log("[shutdown] graceful shutdown starting...");
           // Stop monitor to avoid races
           stopSerialMonitor();
           // Close serial-related servers/ports
-          _context1.n = 2;
+          _context10.n = 2;
           return closeAllSerialServers();
         case 2:
           // Close websocket and http servers
@@ -1679,22 +1816,22 @@ function _gracefulShutdown() {
             }
           } catch (e) {}
           console.log("[shutdown] done");
-          _context1.n = 4;
+          _context10.n = 4;
           break;
         case 3:
-          _context1.p = 3;
-          _t18 = _context1.v;
-          console.warn("[shutdown] error:", String(_t18));
+          _context10.p = 3;
+          _t22 = _context10.v;
+          console.warn("[shutdown] error:", String(_t22));
         case 4:
-          _context1.p = 4;
+          _context10.p = 4;
           try {
             if (typeof code === "number") process.exit(code);
-          } catch (_unused62) {}
-          return _context1.f(4);
+          } catch (_unused61) {}
+          return _context10.f(4);
         case 5:
-          return _context1.a(2);
+          return _context10.a(2);
       }
-    }, _callee0, null, [[0, 3, 4, 5]]);
+    }, _callee1, null, [[0, 3, 4, 5]]);
   }));
   return _gracefulShutdown.apply(this, arguments);
 }
@@ -1702,10 +1839,10 @@ function listLocalSerialAsServices() {
   return _listLocalSerialAsServices.apply(this, arguments);
 }
 function _listLocalSerialAsServices() {
-  _listLocalSerialAsServices = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee1() {
+  _listLocalSerialAsServices = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10() {
     var services, hostIp, _iterator5, _step5, _step5$value, pathName, info, p;
-    return _regenerator().w(function (_context10) {
-      while (1) switch (_context10.n) {
+    return _regenerator().w(function (_context11) {
+      while (1) switch (_context11.n) {
         case 0:
           // Only return services for servers we already created via the monitor.
           services = [];
@@ -1739,61 +1876,80 @@ function _listLocalSerialAsServices() {
           } catch (e) {
             console.warn("[serial] listLocalSerialAsServices failed:", e);
           }
-          return _context10.a(2, services);
+          return _context11.a(2, services);
       }
-    }, _callee1);
+    }, _callee10);
   }));
   return _listLocalSerialAsServices.apply(this, arguments);
 }
-function ensureSerialTcpServer(_x7, _x8) {
+function ensureSerialTcpServer(_x9, _x0) {
   return _ensureSerialTcpServer.apply(this, arguments);
 }
 function _ensureSerialTcpServer() {
-  _ensureSerialTcpServer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee10(path, baudRate) {
-    var SerialPortLib, server, boundPort, info;
-    return _regenerator().w(function (_context11) {
-      while (1) switch (_context11.n) {
+  _ensureSerialTcpServer = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee11(path, baudRate) {
+    var SerialPortLib, currentState, effectiveBaudRate, server, boundPort, info;
+    return _regenerator().w(function (_context12) {
+      while (1) switch (_context12.n) {
         case 0:
-          _context11.n = 1;
+          _context12.n = 1;
           return getSerialPort();
         case 1:
-          SerialPortLib = _context11.v;
+          SerialPortLib = _context12.v;
           if (!serialServers.has(path)) {
-            _context11.n = 2;
+            _context12.n = 2;
             break;
           }
-          return _context11.a(2, serialServers.get(path));
+          return _context12.a(2, serialServers.get(path));
         case 2:
+          // Получаем текущий baudRate из состояния или используем переданный
+          currentState = serialPortStates.get(path);
+          effectiveBaudRate = (currentState === null || currentState === void 0 ? void 0 : currentState.baudRate) || baudRate || 460800;
           server = net.createServer();
           boundPort = null;
           server.on("connection", function (socket) {
             console.log("[serial] client connected for", path);
             var serial;
-            try {
-              var SP = SerialPortLib && (SerialPortLib.SerialPort || SerialPortLib) || null;
-              if (!SP) throw new Error("serialport unavailable");
-              serial = new SP({
-                path: path,
-                baudRate: baudRate,
-                autoOpen: true
-              });
-              openSerialPorts.set(path, serial); // keep for DTR/RTS control
-            } catch (e) {
-              console.error("[serial] open failed", path, e);
+
+            // Получаем актуальный baudRate из состояния при каждом подключении
+            var currentState = serialPortStates.get(path);
+            var currentBaudRate = (currentState === null || currentState === void 0 ? void 0 : currentState.baudRate) || baudRate || 460800;
+
+            // Проверяем, есть ли уже открытый порт для этого пути
+            var existingSerial = openSerialPorts.get(path);
+            if (existingSerial && existingSerial.isOpen) {
+              // Используем существующий порт
+              serial = existingSerial;
+              serialPortRefCount.set(path, (serialPortRefCount.get(path) || 0) + 1);
+              console.log("[serial] reusing existing serial port for", path, "refs:", serialPortRefCount.get(path));
+            } else {
               try {
-                socket.destroy(e);
-              } catch (_unused63) {}
-              return;
+                var SP = SerialPortLib && (SerialPortLib.SerialPort || SerialPortLib) || null;
+                if (!SP) throw new Error("serialport unavailable");
+                serial = new SP({
+                  path: path,
+                  baudRate: currentBaudRate,
+                  autoOpen: true
+                });
+                openSerialPorts.set(path, serial); // keep for DTR/RTS control
+                serialPortRefCount.set(path, 1);
+                console.log("[serial] opened new serial port for", path, "with baudrate", currentBaudRate);
+              } catch (e) {
+                console.error("[serial] open failed", path, e);
+                try {
+                  socket.destroy(e);
+                } catch (_unused62) {}
+                return;
+              }
             }
             var onSerialData = function onSerialData(data) {
               try {
                 socket.write(data);
-              } catch (_unused64) {}
+              } catch (_unused63) {}
             };
             var onSockData = function onSockData(data) {
               try {
                 serial.write(data);
-              } catch (_unused65) {}
+              } catch (_unused64) {}
             };
             serial.on("data", onSerialData);
             socket.on("data", onSockData);
@@ -1801,7 +1957,7 @@ function _ensureSerialTcpServer() {
               try {
                 if (!emitter) return;
                 if (typeof emitter.off === "function") emitter.off(event, handler);else if (typeof emitter.removeListener === "function") emitter.removeListener(event, handler);
-              } catch (_unused66) {}
+              } catch (_unused65) {}
             };
             var cleaned = false;
             var cleanup = function cleanup(reason) {
@@ -1814,16 +1970,26 @@ function _ensureSerialTcpServer() {
               safeOff(socket, "error", onSocketError);
               safeOff(serial, "error", onSerialError);
               safeOff(serial, "close", onSerialClose);
-              try {
-                if (serial && typeof serial.close === "function" && serial.isOpen) {
-                  serial.close();
-                }
-              } catch (_unused67) {}
+
+              // Уменьшаем счетчик ссылок
+              var refCount = serialPortRefCount.get(path) || 0;
+              if (refCount > 1) {
+                serialPortRefCount.set(path, refCount - 1);
+                console.log("[serial] connection closed for", path, "(reason: ".concat(reason, "), refs remaining:"), refCount - 1);
+              } else {
+                // Последняя ссылка - закрываем порт
+                try {
+                  if (serial && typeof serial.close === "function" && serial.isOpen) {
+                    serial.close();
+                  }
+                } catch (_unused66) {}
+                openSerialPorts["delete"](path);
+                serialPortRefCount["delete"](path);
+                console.log("[serial] connection closed for", path, "(reason: ".concat(reason, "), port closed"));
+              }
               try {
                 socket && socket.destroy && socket.destroy();
-              } catch (_unused68) {}
-              openSerialPorts["delete"](path); // remove from the store
-              console.log("[serial] connection closed for", path, reason ? "(reason: ".concat(reason, ")") : "");
+              } catch (_unused67) {}
             };
             var onSocketClose = function onSocketClose() {
               return cleanup("socket close");
@@ -1842,25 +2008,25 @@ function _ensureSerialTcpServer() {
             serial.on("error", onSerialError);
             serial.on && serial.on("close", onSerialClose);
           });
-          _context11.n = 3;
+          _context12.n = 3;
           return new Promise(function (resolve) {
             return server.listen(0, "0.0.0.0", resolve);
           });
         case 3:
           boundPort = server.address().port;
-          console.log("[serial] TCP server for", path, "listening on", boundPort);
+          console.log("[serial] TCP server for", path, "listening on", boundPort, "with baudrate", effectiveBaudRate);
           info = {
             server: server,
             port: boundPort,
-            baudRate: baudRate
+            baudRate: effectiveBaudRate
           };
           serialServers.set(path, info);
           try {
             tcpPortToSerialPath.set(boundPort, path);
-          } catch (_unused69) {}
-          return _context11.a(2, info);
+          } catch (_unused68) {}
+          return _context12.a(2, info);
       }
-    }, _callee10);
+    }, _callee11);
   }));
   return _ensureSerialTcpServer.apply(this, arguments);
 }
