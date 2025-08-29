@@ -1,3 +1,6 @@
+# Multi-stage build for better optimization
+FROM node:20-alpine AS builder
+
 WORKDIR /app
 
 # Copy root package metadata
@@ -15,7 +18,7 @@ COPY web-page ./web-page
 COPY scripts ./scripts
 
 # Build web (use build:lite if you want faster build without favicons/inject)
-RUN npm --prefix ./web-page run build
+RUN npm --prefix ./web-page run build:lite
 
 # Production stage
 FROM node:18-alpine
