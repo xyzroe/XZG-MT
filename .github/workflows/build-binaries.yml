@@ -238,9 +238,9 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "{all-binaries}"
+          name: all-binaries
           path: dist-release
-          merge-multiple: true
+          #merge-multiple: true
 
       - name: Show downloaded files
         run: ls -Rla dist-release || true
