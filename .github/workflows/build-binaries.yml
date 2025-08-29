@@ -1,4 +1,4 @@
-name: Update version, build and push web page, build binaries, create release, and create and push Docker images
+name: Build and release workflow
 
 on:
   push:
