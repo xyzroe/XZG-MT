@@ -1,0 +1,61 @@
+{
+  "name": "ws-tcp-bridge",
+  "version": "0.1.7",
+  "description": "Simple WebSocket <-> TCP bridge with optional mDNS discovery and local serial exposure (dev helper).",
+  "type": "commonjs",
+  "main": "ws-tcp-bridge.js",
+  "bin": {
+    "ws-tcp-bridge": "./ws-tcp-bridge.js"
+  },
+  "scripts": {
+    "start": "node ws-tcp-bridge.js",
+    "dev": "node ws-tcp-bridge.js",
+    "start:port": "node ws-tcp-bridge.js $PORT",
+    "fetch-web": "node scripts/fetch-web.js",
+    "build:pkg:mac": "npm run fetch-web && rm -rf dist/mac && pkg . --targets node18-macos-x64,node18-macos-arm64 --out-path dist/mac",
+    "build:pkg:linux": "npm run fetch-web && rm -rf dist/linux && pkg . --targets node18-linux-x64,node18-linux-arm64 --out-path dist/linux",
+    "build:pkg:win": "npm run fetch-web && rm -rf dist/win && pkg . --targets node18-win-x64 --out-path dist/win",
+    "build:legacy:win7": "rm -rf dist/win-legacy && cd legacy && npm install && npm run build:pkg:win7 && cd .. && ls -l ./dist/win-legacy",
+    "build:pkg:all": "npm run fetch-web && npm run build:pkg:mac && npm run build:pkg:linux && npm run build:pkg:win && npm run build:legacy:win7 && ls -l ./dist/mac && ls -l ./dist/linux && ls -l ./dist/win && ls -l ./dist/win-legacy"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "ws": "^8.14.2",
+    "bonjour-service": "^1.3.0",
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/**/prebuilds/**/*",
+      "node_modules/**/build/Release/*.node",
+      "node_modules/**/build/Release/**/*.node",
+      "node_modules/@serialport/**/build/Release/*.node",
+      "node_modules/@serialport/**/prebuilds/**/*",
+      "web/**/*"
+    ],
+    "scripts": [
+      "ws-tcp-bridge.js",
+      "node_modules/serialport/**/*.js",
+      "node_modules/serialport/**/*.mjs",
+      "node_modules/@serialport/**/*.js",
+      "node_modules/@serialport/**/*.mjs",
+      "node_modules/node-gyp-build/**/*.js",
+      "node_modules/bindings/**/*.js"
+    ],
+    "outputPath": "dist"
+  },
+  "keywords": [
+    "websocket",
+    "tcp",
+    "bridge",
+    "mdns",
+    "serial",
+    "dev"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,254 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    name: Derive version from tag and bump files
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      version: ${{ steps.setver.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Parse version from tag
+        id: setver
+        shell: bash
+        run: |
+          set -e
+          ref="${GITHUB_REF#refs/tags/}"
+          version="${ref#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Using version: $version"
+      - name: Checkout main branch
+        shell: bash
+        run: |
+          git checkout main
+      - name: Update versions in files
+        shell: bash
+        run: |
+          set -e
+          ver='${{ steps.setver.outputs.version }}'
+          echo "Updating version to: $ver"
+          
+          # Update root package.json
+          echo "Before updating package.json:"
+          cat package.json | jq '.version'
+          tmp=$(mktemp)
+          jq --arg v "$ver" '.version=$v' package.json > "$tmp" && mv "$tmp" package.json
+          echo "After updating package.json:"
+          cat package.json | jq '.version'
+          
+          # Update add-on config.json
+          echo "Before updating ws-tcp-bridge-ha/config.json:"
+          cat ws-tcp-bridge-ha/config.json | jq '.version'
+          tmp=$(mktemp)
+          jq --arg v "$ver" '.version=$v' ws-tcp-bridge-ha/config.json > "$tmp" && mv "$tmp" ws-tcp-bridge-ha/config.json
+          echo "After updating ws-tcp-bridge-ha/config.json:"
+          cat ws-tcp-bridge-ha/config.json | jq '.version'
+          
+          echo "Git status after updates:"
+          git status --porcelain
+      - name: Commit version bumps
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(release): bump version to ${{ steps.setver.outputs.version }}"
+          branch: main
+          file_pattern: "package.json ws-tcp-bridge-ha/config.json"
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: version-bump
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch web assets
+        run: npm run fetch-web
+
+      - name: Build (macOS)
+        if: matrix.os == 'macos-latest'
+        run: npm run build:pkg:mac
+
+      - name: Rename artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          set -e
+          # Try common base names and then fall back to suffix detection
+          for name in ws-tcp-bridge xzg-ws-tcp-bridge; do
+            if [ -f "dist/mac/${name}-arm64" ]; then mv "dist/mac/${name}-arm64" "dist/mac/ws-tcp-bridge-macos-arm64"; fi
+            if [ -f "dist/mac/${name}-x64" ]; then mv "dist/mac/${name}-x64" "dist/mac/ws-tcp-bridge-macos-x64"; fi
+          done
+          for f in dist/mac/*; do
+            b="$(basename "$f")"
+            if [[ "$b" == *arm64 && ! "$b" == *macos* ]]; then mv "$f" "dist/mac/ws-tcp-bridge-macos-arm64"; fi
+            if [[ "$b" == *x64 && ! "$b" == *macos* ]]; then mv "$f" "dist/mac/ws-tcp-bridge-macos-x64"; fi
+          done
+          ls -l dist/mac || true
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build:pkg:linux
+
+      - name: Rename artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          set -e
+          for name in ws-tcp-bridge xzg-ws-tcp-bridge; do
+            if [ -f "dist/linux/${name}-arm64" ]; then mv "dist/linux/${name}-arm64" "dist/linux/ws-tcp-bridge-linux-arm64"; fi
+            if [ -f "dist/linux/${name}-x64" ]; then mv "dist/linux/${name}-x64" "dist/linux/ws-tcp-bridge-linux-x64"; fi
+          done
+          for f in dist/linux/*; do
+            b="$(basename "$f")"
+            if [[ "$b" == *arm64 && ! "$b" == *linux* ]]; then mv "$f" "dist/linux/ws-tcp-bridge-linux-arm64"; fi
+            if [[ "$b" == *x64 && ! "$b" == *linux* ]]; then mv "$f" "dist/linux/ws-tcp-bridge-linux-x64"; fi
+          done
+          ls -l dist/linux || true
+
+      - name: Build (Windows + Legacy Win7)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          npm run build:pkg:win
+          npm run build:legacy:win7
+
+      - name: Rename artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          set -e
+          if [ -f "dist/win/ws-tcp-bridge.exe" ]; then mv "dist/win/ws-tcp-bridge.exe" "dist/win/ws-tcp-bridge-windows-x64.exe"; fi
+          if [ -f "dist/win-legacy/ws-tcp-bridge-legacy.exe" ]; then mv "dist/win-legacy/ws-tcp-bridge-legacy.exe" "dist/win-legacy/ws-tcp-bridge-windows-legacy.exe"; fi
+          ls -l dist/win || true
+          ls -l dist/win-legacy || true
+
+      - name: Upload artifacts (macOS)
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: dist/mac/*
+          if-no-files-found: error
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/linux/*
+          if-no-files-found: error
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/win/*.exe
+            dist/win-legacy/*.exe
+          if-no-files-found: error
+
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '{mac,linux,windows}'
+          path: dist-release
+          merge-multiple: true
+
+      - name: Show downloaded files
+        run: ls -Rla dist-release || true
+
+      - name: Create GitHub Release and upload assets files
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-release/**
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Build & Push Docker images
+    runs-on: ubuntu-latest
+    needs: version-bump
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ needs.version-bump.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push main Docker image (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+

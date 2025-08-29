@@ -1,0 +1,59 @@
+
+
+# Node dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data / pids
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (Node.js)
+report.*.json
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Build outputs
+/dist/
+/build/
+/tmp/
+/temp/
+.cache/
+/web/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS / Editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Swap files
+*.swp
+*.swo
+
+# Binary artifacts (usually generated)
+*.dll
+*.so
+*.dylib
+*.exe
