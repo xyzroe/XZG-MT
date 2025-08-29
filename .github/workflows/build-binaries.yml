@@ -90,7 +90,7 @@ jobs:
         with:
           commit_message: "chore(release): bump version to ${{ steps.setver.outputs.version }}"
           branch: main
-          file_pattern: "bridge/package.json bridge/legacy/package.json xzg-multi-tool-addon/config.json"
+          file_pattern: "bridge/package.json bridge/legacy/package.json web-page/package.json xzg-multi-tool-addon/config.json"
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
