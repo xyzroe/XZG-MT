@@ -35,11 +35,11 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/web ./web
 
 # Copy app source
-COPY package*.json ./
-COPY bridge.js ./
+COPY bridge/package*.json ./
+COPY bridge/bridge.js ./
 
 # Copy HA addon wrapper script
-COPY xzg-multi-tool-addon/run.sh ./run.sh
+COPY xzg-multi-tool-addon/run.sh ./
 RUN chmod +x ./run.sh
 
 # Set environment

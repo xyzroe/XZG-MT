@@ -40,8 +40,17 @@ jobs:
           set -e
           ver='${{ steps.setver.outputs.version }}'
           echo "Updating version to: $ver"
-          cd bridge
 
+          cd web-page
+          # Update root package.json
+          echo "Before updating package.json:"
+          cat package.json | jq '.version'
+          tmp=$(mktemp)
+          jq --arg v "$ver" '.version=$v' package.json > "$tmp" && mv "$tmp" package.json
+          echo "After updating package.json:"
+          cat package.json | jq '.version'
+
+          cd ../bridge
           # Update root package.json
           echo "Before updating package.json:"
           cat package.json | jq '.version'
@@ -97,10 +106,10 @@ jobs:
         with:
           ref: main
 
-      - name: Use Node.js 18
+      - name: Use Node.js 20.18.3
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.18.3
           cache: npm
       
       # - name: Change workdir
@@ -175,7 +184,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mac
-          path: dist/mac/*
+          path: bridge/dist/mac/*
           if-no-files-found: error
 
       - name: Upload artifacts (Linux)
@@ -183,7 +192,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: dist/linux/*
+          path: bridge/dist/linux/*
           if-no-files-found: error
 
       - name: Upload artifacts (Windows)
@@ -192,8 +201,8 @@ jobs:
         with:
           name: windows
           path: |
-            dist/win/*.exe
-            dist/win-legacy/*.exe
+            bridge/dist/win/*.exe
+            bridge/dist/win-legacy/*.exe
           if-no-files-found: error
 
   release:
