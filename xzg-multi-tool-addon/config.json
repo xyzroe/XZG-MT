@@ -1,6 +1,6 @@
 {
   "name": "XZG Multi-tool addon",
-  "version": "0.0.5-legacy",
+  "version": "0.0.5",
   "slug": "xzg-multi-tool-addon",
   "description": "Simple WebSocket <-> TCP bridge with optional mDNS and local serial exposure",
   "image": "ghcr.io/xyzroe/bridge",
