@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", function () {
   //var goToHttps = document.getElementById("goToHttps");
   var tcpControlsWrap = document.getElementById("tcpControlsWrap");
   var tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
+  var tcpSettingsBtn = document.getElementById("tcpSettingsBtn");
+  var bridgeStatusIcon = document.getElementById("bridgeStatusIcon");
   var tcpControls =
     tcpControlsWrap &&
     tcpControlsWrap.querySelectorAll(
@@ -15,28 +17,35 @@ document.addEventListener("DOMContentLoaded", function () {
     );
   //var goToHttp = document.getElementById("goToHttp");
 
+  console.log("Protocol check: isHttps=" + isHttps + ", isLocalhost=" + isLocalhost);
   if (isLocalhost) {
+    console.log("Localhost detected - showing all controls");
     // On localhost, show both Serial and TCP controls, hide all warning messages
-    if (serialControls) serialControls.classList.remove("d-none");
+    //if (serialControls) serialControls.classList.remove("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
-    if (tcpControls) {
-      tcpControls.forEach(function (el) {
-        el.classList.remove("d-none");
-      });
-    }
+    // if (tcpControls) {
+    //   tcpControls.forEach(function (el) {
+    //     el.classList.remove("d-none");
+    //   });
+    // }
     if (tcpHttpsMsg) tcpHttpsMsg.classList.add("d-none");
   } else if (isHttps) {
+    //} else if (1 < 2) {
+    console.log("HTTPS but not localhost - assuming HTTPS");
     // Hide TCP controls, show HTTPS message/button
     if (tcpControls) {
       tcpControls.forEach(function (el) {
         el.classList.add("d-none");
       });
     }
+    if (tcpSettingsBtn) tcpSettingsBtn.classList.add("d-none");
+    if (bridgeStatusIcon) bridgeStatusIcon.classList.add("d-none");
     if (tcpHttpsMsg) tcpHttpsMsg.classList.remove("d-none");
     // Show Serial controls, hide HTTP message
     if (serialControls) serialControls.classList.remove("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
   } else {
+    console.log("Non-HTTPS and non-localhost - assuming HTTP");
     // Hide Serial controls, show HTTP message/button. hide mobile msg
     if (serialControls) serialControls.classList.add("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.remove("d-none");

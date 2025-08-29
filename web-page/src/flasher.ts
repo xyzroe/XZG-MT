@@ -1503,22 +1503,27 @@ btnCopyLog?.addEventListener("click", async () => {
 // --- mDNS discovery via local bridge ---
 async function refreshMdnsList() {
   if (!mdnsSelect) return;
-  setBridgeLoading();
-  try {
-    var host =
-      (bridgeHostInput && bridgeHostInput.value && bridgeHostInput.value.trim()) ||
-      localStorage.getItem("bridgeHost") ||
-      "127.0.0.1";
-    var port = Number((bridgePortInput && bridgePortInput.value) || localStorage.getItem("bridgePort") || 3000) || 3000;
-    var link = document.getElementById("tcpLocalhostLink") as HTMLAnchorElement | null;
-    if (link) {
-      link.href = "http://" + host + ":" + port;
-      link.textContent = host === "localhost" ? "localhost" : host + ":" + port;
-    }
-  } catch (e) {
-    // ignore
-    console.log(e);
+  //check if page loader over http
+  if (window.location.protocol === "https:") {
+    console.warn("Secure page - no request to bridge");
+    return;
   }
+  setBridgeLoading();
+  // try {
+  //   var host =
+  //     (bridgeHostInput && bridgeHostInput.value && bridgeHostInput.value.trim()) ||
+  //     localStorage.getItem("bridgeHost") ||
+  //     "127.0.0.1";
+  //   var port = Number((bridgePortInput && bridgePortInput.value) || localStorage.getItem("bridgePort") || 3000) || 3000;
+  //   var link = document.getElementById("tcpLocalhostLink") as HTMLAnchorElement | null;
+  //   if (link) {
+  //     link.href = "http://" + host + ":" + port;
+  //     link.textContent = host === "localhost" ? "localhost" : host + ":" + port;
+  //   }
+  // } catch (e) {
+  //   // ignore
+  //   console.log(e);
+  // }
   try {
     const types = [
       "_zig_star_gw._tcp.local.",
@@ -1531,6 +1536,7 @@ async function refreshMdnsList() {
     ].join(",");
     const base = getBridgeBase();
     const url = `${base}/mdns?types=${encodeURIComponent(types)}&timeout=3000`;
+
     const resp = await fetch(url);
     if (!resp.ok) throw new Error(`mdns http ${resp.status}`);
     const j = await resp.json();
