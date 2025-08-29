@@ -72,37 +72,37 @@ How to run:
 
 - Windows:
 
-  - Run: `bridge-windows-*.exe` or double click
+  - Run: `XZG-MT-windows-*.exe` or double click
 
 - Linux:
 
   1. Make executable:
      ```
-     chmod +x ./bridge-linux-arm64
+     chmod +x ./XZG-MT-linux-arm64
      ```
      or
      ```
-     chmod +x ./bridge-linux-x64
+     chmod +x ./XZG-MT-linux-x64
      ```
-  2. Run: `./bridge-linux-*` or double click
+  2. Run: `./XZG-MT-linux-*` or double click
 
 - macOS:
 
   1. Make executable and remove quarantine:
 
   ```
-  chmod +x ./bridge-macos-arm64
-  xattr -d com.apple.quarantine ./bridge-macos-arm64
+  chmod +x ./XZG-MT-macos-arm64
+  xattr -d com.apple.quarantine ./XZG-MT-macos-arm64
   ```
 
   or
 
   ```
-  chmod +x ./bridge-macos-x64
-  xattr -d com.apple.quarantine ./bridge-macos-x64
+  chmod +x ./XZG-MT-macos-x64
+  xattr -d com.apple.quarantine ./XZG-MT-macos-x64
   ```
 
-  2. Run: `./bridge-macos-*` or double click
+  2. Run: `./XZG-MT-macos-*` or double click
 
   On start it prints the effective URL and needed modules statuses, e.g.
 
@@ -111,7 +111,7 @@ How to run:
   [startup] modules: ws=ok, bonjour=ok, serial=ok
   ```
 
-To run on custom port: `./bridge-* 9999`
+To run on custom port: `./XZG-MT-* 9999`
 
 ## Quick start — Node.js
 

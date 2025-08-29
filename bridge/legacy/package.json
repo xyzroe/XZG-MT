@@ -10,7 +10,7 @@
   },
   "scripts": {
     "prep": "npx babel ../bridge.js --out-file bridge.legacy.js --no-babelrc --presets=@babel/preset-env && mkdir -p serialprebuilds && cp -R node_modules/@serialport/bindings-cpp/prebuilds serialprebuilds 2>/dev/null || true",
-    "build:pkg:win7": "npm run prep && pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe"
+    "build:pkg:win7": "npm run prep && rm -rf ../dist/win-legacy && mkdir -p ../dist/win-legacy && cp -R ../web ./web 2>/dev/null || true && pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe && rm -rf ./web || true"
   },
   "engines": {
     "node": "12.x"
@@ -33,7 +33,7 @@
       "node_modules/**/build/Release/**/*.node",
       "node_modules/@serialport/**/build/Release/*.node",
       "node_modules/@serialport/**/prebuilds/**/*",
-      "../web/**/*"
+      "web/**/*"
     ],
     "scripts": [
       "bridge.legacy.js",
