@@ -1,6 +1,6 @@
 {
   "name": "bridge",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Simple WebSocket <-> TCP bridge with optional mDNS discovery and local serial exposure (dev helper).",
   "type": "commonjs",
   "main": "bridge.js",
