@@ -5,11 +5,11 @@
 </div>
 
 <div align="center"> 
-<a href="https://github.com/xyzroe/bridge/releases"><img src="https://img.shields.io/github/release/xyzroe/bridge.svg" alt="GitHub version"></img></a>
-<a href="https://github.com/xyzroe/bridge/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/bridge/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
-<a href="https://github.com/xyzroe/bridge/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/bridge/total.svg" alt="GitHub download"></img></a>
-<a href="https://github.com/xyzroe/bridge/issues"><img src="https://img.shields.io/github/issues/xyzroe/bridge" alt="GitHub Issues or Pull Requests"></img></a>
-<a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/bridge.svg" alt="License"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/releases"><img src="https://img.shields.io/github/release/xyzroe/XZG-MT.svg" alt="GitHub version"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/XZG-MT/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/XZG-MT/total.svg" alt="GitHub download"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/issues"><img src="https://img.shields.io/github/issues/xyzroe/XZG-MT" alt="GitHub Issues or Pull Requests"></img></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
 </div>
 
 A combined repository that bundles a browser-based TI CC2538 / CC26x2 flasher web app with a tiny WebSocket ↔ TCP bridge for remote or remote-serial flashing.

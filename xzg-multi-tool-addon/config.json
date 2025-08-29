@@ -1,5 +1,5 @@
 {
-  "name": "XZG Multi-tool addon",
+  "name": "XZG Multi-tool",
   "version": "0.0.7",
   "slug": "xzg-multi-tool-addon",
   "description": "Simple WebSocket <-> TCP bridge with optional mDNS and local serial exposure",

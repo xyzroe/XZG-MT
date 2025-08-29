@@ -1,11 +1,11 @@
 # bridge
 
 <div align="center"> 
-<a href="https://github.com/xyzroe/bridge/releases"><img src="https://img.shields.io/github/release/xyzroe/bridge.svg" alt="GitHub version"></img></a>
-<a href="https://github.com/xyzroe/bridge/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/bridge/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
-<a href="https://github.com/xyzroe/bridge/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/bridge/total.svg" alt="GitHub download"></img></a>
-<a href="https://github.com/xyzroe/bridge/issues"><img src="https://img.shields.io/github/issues/xyzroe/bridge" alt="GitHub Issues or Pull Requests"></img></a>
-<a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/bridge.svg" alt="License"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/releases"><img src="https://img.shields.io/github/release/xyzroe/XZG-MT.svg" alt="GitHub version"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/XZG-MT/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/XZG-MT/total.svg" alt="GitHub download"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/issues"><img src="https://img.shields.io/github/issues/xyzroe/XZG-MT" alt="GitHub Issues or Pull Requests"></img></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
 </div>
 
 Tiny WebSocket ↔ TCP bridge for local development. It can also discover devices via mDNS and expose local serial ports over TCP for quick tests.
@@ -26,16 +26,16 @@ Warning: development helper only. Don’t expose it to the public Internet.
 
 ## Quick start — Docker
 
-- [Docker images page](https://github.com/xyzroe/bridge/pkgs/container/bridge)
+- [Docker images page](https://github.com/xyzroe/XZG-MT/pkgs/container/bridge)
 
 Prebuilt multi-arch images are published to GHCR on each release/tag.
 
-- Image: `ghcr.io/xyzroe/bridge:<tag>` (e.g. `v0.1.1`)
+- Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
 
 Run (basic):
 
 ```bash
-docker run --rm -p 8765:8765 -e ADVERTISE_HOST=192.168.1.42 ghcr.io/xyzroe/bridge:latest
+docker run --rm -p 8765:8765 -e ADVERTISE_HOST=192.168.1.42 ghcr.io/xyzroe/XZG-MT:latest
 ```
 
 Customize port or advertised host:
@@ -45,20 +45,20 @@ docker run --rm \
   -e PORT=9000 \
   -e ADVERTISE_HOST=192.168.1.42 \
   -p 9000:9000 \
-  ghcr.io/xyzroe/bridge:latest
+  ghcr.io/xyzroe/XZG-MT:latest
 ```
 
 mDNS and local serial notes:
 
 - mDNS discovery inside containers require host networking on Linux. If needed:
   ```bash
-  docker run --rm --network host ghcr.io/xyzroe/bridge:latest
+  docker run --rm --network host ghcr.io/xyzroe/XZG-MT:latest
   ```
 - To expose a host serial device to the container add `--device` (Linux):
   ```bash
   docker run --rm --network host \
     --device /dev/ttyUSB0:/dev/ttyUSB0 \
-    ghcr.io/xyzroe/bridge:latest
+    ghcr.io/xyzroe/XZG-MT:latest
   ```
   Then query `/mdns?types=local` and connect via the advertised TCP port.
 
@@ -66,7 +66,7 @@ mDNS and local serial notes:
 
 No Node.js required. Download a ready-to-run binary from Releases, make it executable (Linux/macOS), and run. The port argument is optional; default is 8765.
 
-- [Releases page](https://github.com/xyzroe/bridge/releases)
+- [Releases page](https://github.com/xyzroe/XZG-MT/releases)
 
 How to run:
 
@@ -199,7 +199,7 @@ docker run --rm -p 8765:8765 \
   -e SERIAL_SCAN_INTERVAL=5000 \
   -e ADVERTISE_HOST=192.168.1.42 \
   -e DEBUG_SERIAL=true \
-  ghcr.io/xyzroe/bridge:latest
+  ghcr.io/xyzroe/XZG-MT:latest
 ```
 
 Or using the CLI/packaged binary:

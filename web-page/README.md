@@ -23,7 +23,7 @@
 ## How to use?
 
 1. Open [mt.xyzroe.cc](https://mt.xyzroe.cc) in Chrome or Edge
-2. Connect your device via USB or TCP ([using bridge](https://github.com/xyzroe/bridge))
+2. Connect your device via USB or TCP ([using bridge](https://github.com/xyzroe/XZG-MT))
 3. Click "Choose Serial" and select your port
 4. Pick a firmware (local or cloud)
 5. Click "Start" — that's it! 🎉
@@ -43,7 +43,7 @@
 
 - **Do I need to install anything?**
 
-  > For local USB mode - No! Everything works in your browser. For TCP mode or remote USB mode [using bridge](https://github.com/xyzroe/bridge)
+  > For local USB mode - No! Everything works in your browser. For TCP mode or remote USB mode [using bridge](https://github.com/xyzroe/XZG-MT)
 
 - **Where do I get firmware?**
 
