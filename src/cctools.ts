@@ -1,15 +1,280 @@
-import { BslClient, LinkAdapter } from "./protocols/bsl";
+import { sleep } from "./utils/index";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
   onData: (cb: (d: Uint8Array) => void) => void;
 };
 
-// ---------------- BSL ----------------
-export async function bslSync(link: Link): Promise<BslClient> {
-  const bsl = new BslClient(new LinkAdapter(link.write, link.onData));
-  await bsl.sync();
-  return bsl;
+// ---------------- CCTOOLS (formerly BSL) ----------------
+export interface CCToolsLink {
+  write(data: Uint8Array): Promise<void>;
+  onData(cb: (data: Uint8Array) => void): void;
+}
+
+export class CCToolsClient {
+  private link: CCToolsLink;
+  private rxBuf: number[] = [];
+
+  constructor(link: CCToolsLink) {
+    this.link = link;
+    link.onData((d) => this.rxBuf.push(...d));
+  }
+
+  // cc2538-bsl wire protocol: sync with 0x55 0x55 then expect ACK
+  async sync(): Promise<void> {
+    this.rxBuf = [];
+    await this.link.write(new Uint8Array([0x55, 0x55]));
+    const ok = await this.waitForAck(1000);
+    if (!ok) throw new Error("CCTOOLS: no ACK on sync");
+    await sleep(20);
+  }
+
+  // --- low level helpers ---
+  private async waitForAck(timeoutMs = 1200): Promise<boolean> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      // Accept either single-byte ACK/NACK (0xCC / 0x33) or 0x00-prefixed pairs (0x00 0xCC / 0x00 0x33)
+      for (let i = 0; i < this.rxBuf.length; i++) {
+        const b = this.rxBuf[i];
+        if (b === 0xcc) {
+          this.rxBuf.splice(0, i + 1);
+          return true;
+        }
+        if (b === 0x33) {
+          this.rxBuf.splice(0, i + 1);
+          return false;
+        }
+        if (i + 1 < this.rxBuf.length && b === 0x00) {
+          const n = this.rxBuf[i + 1];
+          if (n === 0xcc || n === 0x33) {
+            this.rxBuf.splice(0, i + 2);
+            return n === 0xcc;
+          }
+        }
+      }
+      await sleep(5);
+    }
+    throw new Error("CCTOOLS: timeout waiting for ACK/NACK");
+  }
+
+  private async receivePacket(timeoutMs = 1500): Promise<Uint8Array> {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      if (this.rxBuf.length >= 2) {
+        const size = this.rxBuf[0];
+        if (this.rxBuf.length >= size) {
+          const chks = this.rxBuf[1];
+          const data = this.rxBuf.slice(2, size);
+          const sum = data.reduce((s, b) => (s + b) & 0xff, 0);
+          // drop the packet from rx
+          this.rxBuf.splice(0, size);
+          if (sum !== chks) throw new Error("CCTOOLS: packet checksum error");
+          // send ACK only when checksum is OK
+          await this.link.write(new Uint8Array([0x00, 0xcc]));
+          return new Uint8Array(data);
+        }
+      }
+      await sleep(5);
+    }
+    throw new Error("CCTOOLS: timeout receiving packet");
+  }
+
+  private encodeAddr(addr: number): Uint8Array {
+    // Big-endian: [byte0..byte3] where byte0 = addr >> 24
+    const byte3 = (addr >> 0) & 0xff;
+    const byte2 = (addr >> 8) & 0xff;
+    const byte1 = (addr >> 16) & 0xff;
+    const byte0 = (addr >> 24) & 0xff;
+    return new Uint8Array([byte0, byte1, byte2, byte3]);
+  }
+
+  private async sendCommandRaw(
+    content: Uint8Array,
+    expectPacket = false,
+    ackTimeout = 1000
+  ): Promise<Uint8Array | null> {
+    // content starts with CMD byte
+    const len = content.length + 2; // include size+checksum bytes per protocol
+    const chks = content.reduce((s, b) => (s + b) & 0xff, 0);
+    this.rxBuf = [];
+    const frame = new Uint8Array(2 + content.length);
+    frame[0] = len & 0xff;
+    frame[1] = chks & 0xff;
+    frame.set(content, 2);
+    await this.link.write(frame);
+    const ackOk = await this.waitForAck(ackTimeout);
+    if (!ackOk) throw new Error("CCTOOLS: NACK");
+    if (expectPacket) {
+      return await this.receivePacket();
+    }
+    return null;
+  }
+
+  private async checkLastCmd(): Promise<boolean> {
+    // Get Status (0x23) returns a packet; first byte is status
+    const pkt = await this.sendCommandRaw(new Uint8Array([0x23]), true);
+    if (!pkt || pkt.length === 0) return false;
+    const status = pkt[0];
+    // 0x40 = Success
+    return status === 0x40;
+  }
+
+  async chipId(): Promise<Uint8Array> {
+    const pkt = await this.sendCommandRaw(new Uint8Array([0x28]), true);
+    if (!pkt) throw new Error("CCTOOLS: no chip id packet");
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: chip id status failed");
+    return pkt;
+  }
+
+  async erase(address: number, length: number): Promise<void> {
+    // CC2538 style: 0x26 with addr(4) + size(4).
+    // CC26xx/CC13xx: 0x26 is sector erase (addr only) and range erase is invalid (0x42).
+    // Keep this as CC2538 erase; higher-level code should prefer bankErase/sectorErase for CC26xx/CC13xx.
+    const content = new Uint8Array(1 + 4 + 4);
+    content[0] = 0x26;
+    content.set(this.encodeAddr(address), 1);
+    content.set(this.encodeAddr(length >>> 0), 1 + 4);
+    await this.sendCommandRaw(content, false, 5000);
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: erase failed");
+  }
+
+  async sectorErase(address: number): Promise<void> {
+    // CC26xx/CC13xx sector erase: cmd 0x26 with addr only
+    const content = new Uint8Array(1 + 4);
+    content[0] = 0x26;
+    content.set(this.encodeAddr(address), 1);
+    await this.sendCommandRaw(content, false, 10000);
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: sector erase failed");
+  }
+
+  async bankErase(): Promise<void> {
+    // CC26xx/CC13xx bank erase: cmd 0x2C with no payload
+    const content = new Uint8Array([0x2c]);
+    await this.sendCommandRaw(content, false, 15000);
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: bank erase failed");
+  }
+
+  async write(data: Uint8Array): Promise<void> {
+    // Not used directly; see downloadTo()
+    await this.sendCommandRaw(new Uint8Array([0x24, ...data]));
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: send data failed");
+  }
+
+  async downloadTo(address: number, chunk: Uint8Array): Promise<void> {
+    // For each chunk: cmdDownload(addr, size) then cmdSendData(data)
+    // size must be multiple of 4 and data payload up to ~248 bytes per packet
+    let data = chunk;
+    // round up to 4 with 0xFF padding if needed
+    if (data.length % 4 !== 0) {
+      const pad = 4 - (data.length % 4);
+      const tmp = new Uint8Array(data.length + pad);
+      tmp.set(data, 0);
+      for (let i = 0; i < pad; i++) tmp[data.length + i] = 0xff;
+      data = tmp;
+    }
+    // DOWNLOAD (0x21)
+    const dl = new Uint8Array(1 + 4 + 4);
+    dl[0] = 0x21;
+    dl.set(this.encodeAddr(address), 1);
+    dl.set(this.encodeAddr(data.length), 1 + 4);
+    await this.sendCommandRaw(dl);
+    const ok1 = await this.checkLastCmd();
+    if (!ok1) throw new Error("CCTOOLS: download header failed");
+    // SEND DATA (0x24)
+    const sdHeader = new Uint8Array(1 + data.length);
+    sdHeader[0] = 0x24;
+    sdHeader.set(data, 1);
+    await this.sendCommandRaw(sdHeader, false, 5000);
+    const ok2 = await this.checkLastCmd();
+    if (!ok2) throw new Error("CCTOOLS: send data failed");
+  }
+
+  async verifyCrc(address: number, length: number): Promise<boolean> {
+    // CRC32 (0x27) addr(4) + size(4). Returns 4B CRC (LSB first)
+    const content = new Uint8Array(1 + 4 + 4);
+    content[0] = 0x27;
+    content.set(this.encodeAddr(address), 1);
+    content.set(this.encodeAddr(length >>> 0), 1 + 4);
+    const pkt = await this.sendCommandRaw(content, true);
+    if (!pkt || pkt.length < 4) return false;
+    const ok = await this.checkLastCmd();
+    if (!ok) return false;
+    return true; // caller can be updated later to compare CRCs explicitly
+  }
+
+  async crc32(address: number, length: number): Promise<number> {
+    // CC2538/legacy CRC32 read: 0x27 addr+size
+    const content = new Uint8Array(1 + 4 + 4);
+    content[0] = 0x27;
+    content.set(this.encodeAddr(address), 1);
+    content.set(this.encodeAddr(length >>> 0), 1 + 4);
+    const pkt = await this.sendCommandRaw(content, true);
+    if (!pkt || pkt.length < 4) throw new Error("CCTOOLS: CRC packet too short");
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: CRC status failed");
+    // LSB first
+    const crc = (pkt[0] | (pkt[1] << 8) | (pkt[2] << 16) | (pkt[3] << 24)) >>> 0;
+    return crc;
+  }
+
+  async crc32Cc26xx(address: number, length: number): Promise<number> {
+    // CC26xx/CC13xx CRC32: 0x27 addr+size+reads(0)
+    const content = new Uint8Array(1 + 4 + 4 + 4);
+    content[0] = 0x27;
+    content.set(this.encodeAddr(address), 1);
+    content.set(this.encodeAddr(length >>> 0), 1 + 4);
+    content.set(this.encodeAddr(0), 1 + 8); // number of reads = 0
+    const pkt = await this.sendCommandRaw(content, true);
+    if (!pkt || pkt.length < 4) throw new Error("CCTOOLS: CRC packet too short");
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: CRC status failed");
+    const crc = (pkt[0] | (pkt[1] << 8) | (pkt[2] << 16) | (pkt[3] << 24)) >>> 0;
+    return crc;
+  }
+
+  async memRead(addr: number, widthCode: number, count: number): Promise<Uint8Array> {
+    // Read Memory (0x2A) addr(4) + width + count
+    // On CC2538/CC26xx, widthCode=1 corresponds to 4-byte width; count is number of reads.
+    const content = new Uint8Array(1 + 4 + 1 + 1);
+    content[0] = 0x2a;
+    content.set(this.encodeAddr(addr), 1);
+    content[5] = widthCode & 0xff;
+    content[6] = count & 0xff;
+    const pkt = await this.sendCommandRaw(content, true);
+    if (!pkt) throw new Error("CCTOOLS: no memRead packet");
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: memRead status failed");
+    return pkt;
+  }
+
+  async memRead32(addr: number): Promise<Uint8Array> {
+    // widthCode=1 (32-bit), count=1 → expect 4 bytes
+    return this.memRead(addr, 1, 1);
+  }
+}
+
+export class LinkAdapter implements CCToolsLink {
+  constructor(
+    private writeFn: (d: Uint8Array) => Promise<void>,
+    private onDataHook: (cb: (d: Uint8Array) => void) => void
+  ) {}
+  write(data: Uint8Array): Promise<void> {
+    return this.writeFn(data);
+  }
+  onData(cb: (data: Uint8Array) => void): void {
+    this.onDataHook(cb);
+  }
+}
+
+export async function cctoolsSync(link: Link): Promise<CCToolsClient> {
+  const client = new CCToolsClient(new LinkAdapter(link.write, link.onData));
+  await client.sync();
+  return client;
 }
 
 // ---------------- Chip description ----------------
@@ -31,6 +296,7 @@ export function xorFcs(bytes: number[]): number {
   return bytes.reduce((a, b) => a ^ (b & 0xff), 0);
 }
 
+// ...existing code...
 export async function sendMtAndWait(
   link: Link,
   cmd0: number,
@@ -43,29 +309,63 @@ export async function sendMtAndWait(
   const frame = new Uint8Array([0xfe, len, cmd0 & 0xff, cmd1 & 0xff, ...payload, fcs & 0xff]);
   await link.write(frame);
   const chunks: number[] = [];
+
   return await new Promise((resolve) => {
-    const deadline = Date.now() + timeoutMs;
-    const onData = (d: Uint8Array) => {
-      chunks.push(...d);
-      for (let i = 0; i < chunks.length; i++) {
-        if (chunks[i] !== 0xfe) continue;
-        if (i + 4 >= chunks.length) break;
-        const l = chunks[i + 1];
-        const end = i + 5 + l - 1;
-        if (end >= chunks.length) break;
-        const cmd0r = chunks[i + 2];
-        const cmd1r = chunks[i + 3];
-        const payloadR = chunks.slice(i + 4, i + 4 + l);
-        const fcsr = chunks[i + 4 + l];
-        const calc = xorFcs([l, cmd0r, cmd1r, ...payloadR]);
-        if ((calc & 0xff) === (fcsr & 0xff)) {
-          resolve({ cmd0: cmd0r, cmd1: cmd1r, payload: new Uint8Array(payloadR) });
-          return;
-        }
-      }
-      if (Date.now() > deadline) resolve(null);
+    let done = false;
+    const clearDone = (res: { cmd0: number; cmd1: number; payload: Uint8Array } | null) => {
+      if (done) return;
+      done = true;
+      try {
+        if (timer != null) window.clearTimeout(timer);
+      } catch {}
+      resolve(res);
     };
-    link.onData(onData);
+
+    const timer = timeoutMs > 0 ? window.setTimeout(() => clearDone(null), timeoutMs) : null;
+
+    const onData = (chunk: Uint8Array) => {
+      if (done) return;
+      for (let i = 0; i < chunk.length; i++) chunks.push(chunk[i]);
+
+      // Try to parse one or more frames from buffer
+      parseLoop: while (true) {
+        // find start byte 0xFE
+        const startIdx = chunks.indexOf(0xfe);
+        if (startIdx === -1) {
+          // nothing useful
+          chunks.length = 0;
+          break;
+        }
+        // need at least start + len + cmd0 + cmd1 + fcs (minimal payload 0) => 5 bytes
+        if (chunks.length - startIdx < 5) break;
+        const plLen = chunks[startIdx + 1] & 0xff;
+        const fullLen = 5 + plLen; // total bytes from start including fcs
+        if (chunks.length - startIdx < fullLen) break; // wait for more
+
+        // extract frame
+        const frameBytes = chunks.splice(startIdx, fullLen);
+        const rlen = frameBytes[1];
+        const rcmd0 = frameBytes[2];
+        const rcmd1 = frameBytes[3];
+        const rpayload = frameBytes.slice(4, 4 + rlen);
+        const rfcs = frameBytes[4 + rlen] & 0xff;
+        const calc = xorFcs([rlen & 0xff, rcmd0 & 0xff, rcmd1 & 0xff, ...rpayload]) & 0xff;
+        if (calc !== rfcs) {
+          // bad frame, continue searching for next 0xFE
+          continue parseLoop;
+        }
+        // valid frame — resolve if matching command family (0x61 responses)
+        // We'll return any frame; callers check cmd0/cmd1
+        clearDone({ cmd0: rcmd0, cmd1: rcmd1, payload: new Uint8Array(rpayload) });
+        return;
+      }
+    };
+
+    try {
+      link.onData(onData);
+    } catch {
+      // if onData registration fails, just rely on timeout
+    }
   });
 }
 
@@ -87,7 +387,7 @@ export async function getFwVersion(link: Link): Promise<{
   fwRev: number;
   payload: Uint8Array;
 } | null> {
-  const resp = await sendMtAndWait(link, 0x21, 0x02, [], 2000);
+  const resp = await sendMtAndWait(link, 0x21, 0x02, [], 3000);
   if (!resp || resp.cmd0 !== 0x61 || resp.cmd1 !== 0x02) return null;
   const p = resp.payload;
   if (p.length >= 9) {
@@ -102,9 +402,10 @@ export async function getFwVersion(link: Link): Promise<{
   return null;
 }
 
-export async function pingApp(link: Link, timeoutMs = 500): Promise<boolean> {
+export async function pingApp(link: Link, timeoutMs = 1000): Promise<boolean> {
   const resp = await sendMtAndWait(link, 0x21, 0x01, [], timeoutMs);
-  return !!(resp && resp.cmd0 === 0x61 && resp.cmd1 === 0x01);
+  //return !!(resp && resp.cmd0 === 0x61 && resp.cmd1 === 0x01);
+  return !!resp;
 }
 
 // ----------- Legacy OSAL NV -----------

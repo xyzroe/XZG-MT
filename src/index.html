@@ -93,13 +93,14 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="row g-2 align-items-center mb-4">
-                                <div class="col d-flex justify-content-center justify-content-center ">
-                                    <div class="col-auto form-check form-switch">
+                            <div class="col-12 mb-4">
+                                <div id="autoBslWrap" class="d-flex align-items-center justify-content-center gap-2">
+                                    <div
+                                        class="form-check form-switch d-flex align-items-center justify-content-center">
                                         <input id="autoBslToggle" class="form-check-input" type="checkbox" role="switch"
-                                            checked />
-                                        <label class="form-check-label" for="autoBslToggle">Auto BSL</label>
+                                            aria-label="Auto BSL" checked />
                                     </div>
+                                    <span class="text-muted">Auto BSL</span>
                                     <!-- Help tooltip for Auto BSL -->
                                     <button id="autoBslHelp" type="button" class="btn btn-sm btn-link p-0 ms-2"
                                         data-bs-toggle="tooltip" data-bs-placement="top"
@@ -179,10 +180,10 @@
                         </div>
                         <!-- Control strategy: Pin vs Mode -->
                         <div class="col-12 mb-4">
-                            <div id="pinModeWrap" class="d-flex align-items-center justify-content-center gap-3"
+                            <div id="pinModeWrap" class="d-flex align-items-center justify-content-center gap-2"
                                 title="Choose Pin control or Mode control">
                                 <span class="text-muted">Pin</span>
-                                <div class="form-check form-switch m-0">
+                                <div class="form-check form-switch d-flex align-items-center justify-content-center">
                                     <input id="pinModeSelect" class="form-check-input" type="checkbox" role="switch" />
                                 </div>
                                 <span class="text-muted">Mode</span>
@@ -203,6 +204,9 @@
                             </div>
                             <div class="col-12 col-md-12">
                                 <input id="rstUrlInput" class="form-control" placeholder="RST URL" />
+                            </div>
+                            <div class="col-12 col-md-12">
+                                <input id="baudUrlInput" class="form-control" placeholder="Baud URL" />
                             </div>
                             <div class="col-12 small text-muted">
                                 <div>Placeholders: {HOST}, {PORT}, {BRIDGE}, {SET}.</div>
@@ -401,7 +405,7 @@
                         <label class="form-check-label" for="autoScroll">Auto scroll</label>
                     </div>
                     <div class="form-check form-switch m-0">
-                        <input id="showIo" class="form-check-input" type="checkbox" role="switch" checked />
+                        <input id="showIo" class="form-check-input" type="checkbox" role="switch" />
                         <label class="form-check-label" for="showIo">Show TX/RX</label>
                     </div>
                     <div class="ms-auto d-flex gap-2">

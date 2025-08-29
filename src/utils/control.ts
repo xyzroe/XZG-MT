@@ -1,11 +1,12 @@
 // Control configuration and helpers extracted from flasher.ts
 
-export type ControlConfig = { remote: boolean; bslPath: string; rstPath: string };
+export type ControlConfig = { remote: boolean; bslPath: string; rstPath: string; baudPath: string };
 
 export const DEFAULT_CONTROL: ControlConfig = {
   remote: true,
   bslPath: "http://{HOST}/cmdZigBSL",
   rstPath: "http://{HOST}/cmdZigRST",
+  baudPath: "",
 };
 
 export const CONTROL_PRESETS: Array<{
@@ -20,6 +21,7 @@ export const CONTROL_PRESETS: Array<{
       remote: true,
       bslPath: "http://{HOST}/cmdZigBSL",
       rstPath: "http://{HOST}/cmdZigRST",
+      baudPath: "",
     },
   },
   {
@@ -29,6 +31,7 @@ export const CONTROL_PRESETS: Array<{
       remote: false,
       bslPath: "http://{HOST}/switch/zBSL/{SET}",
       rstPath: "http://{HOST}/switch/zRST_gpio/{SET}",
+      baudPath: "",
     },
   },
   {
@@ -38,6 +41,7 @@ export const CONTROL_PRESETS: Array<{
       remote: false,
       bslPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
       rstPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
+      baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
     },
   },
 ];

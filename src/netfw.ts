@@ -1,4 +1,4 @@
-import { parseIntelHex } from "./protocols/intelhex";
+import { parseIntelHex } from "./utils/intelhex";
 
 export type ZwManifest = Record<string, any> & {
   router?: Record<string, any>;

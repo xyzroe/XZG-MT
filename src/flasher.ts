@@ -7,6 +7,7 @@ function applyControlConfig(cfg: ControlConfig, source: string) {
   if (pinModeSelect) pinModeSelect.checked = !!cfg.remote;
   if (bslUrlInput) bslUrlInput.value = cfg.bslPath || DEFAULT_CONTROL.bslPath;
   if (rstUrlInput) rstUrlInput.value = cfg.rstPath || DEFAULT_CONTROL.rstPath;
+  if (baudUrlInput) baudUrlInput.value = cfg.baudPath || DEFAULT_CONTROL.baudPath;
   saveCtrlSettings();
   // Update UI visibility/state
   //updateConnectionUI();
@@ -55,13 +56,13 @@ function buildCtrlUrl(template: string, setVal?: number): string {
 
 async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
   const url = buildCtrlUrl(template, setVal);
-  log(`HTTP: GET ${url}`);
+  //log(`HTTP: GET ${url}`);
   const r = await httpGetWithFallback(url);
   if (r.opaque) {
-    log(`HTTP control response: opaque (no-cors)`);
+    //log(`HTTP control response: opaque (no-cors)`);
     return;
   }
-  log(`HTTP control response: ${r.text ?? ""}`);
+  //log(`HTTP control response: ${r.text ?? ""}`);
 }
 
 // Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
@@ -70,7 +71,7 @@ let activeConnection: "serial" | "tcp" | null = null;
 import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
 import {
-  bslSync,
+  cctoolsSync as cctoolsSync,
   getChipDescription,
   sendMtAndWait as sendMtAndWaitMT,
   pingApp as pingAppMT,
@@ -138,6 +139,7 @@ const pinModeSelect = document.getElementById("pinModeSelect") as HTMLInputEleme
 const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | null;
 const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
 const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
+const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const verboseIo = true;
 
@@ -188,7 +190,7 @@ function updateConnectionUI() {
   setSectionDisabled(tcpSection, anyActive);
 
   // Keep TCP settings panel hidden when a connection is active
-  if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
+  //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
 
   // Unified Disconnect button visible only when connected, red style when shown
   const showDisc = anyActive;
@@ -260,9 +262,11 @@ function saveBridgeSettings() {
   if (bridgePortInput) localStorage.setItem("bridgePort", String(Number(bridgePortInput.value || 8765) || 8765));
 }
 
-let tcpSettingsPanelVisible = false;
+//let tcpSettingsPanelVisible = false;
 tcpSettingsBtn?.addEventListener("click", () => {
-  tcpSettingsPanelVisible = !tcpSettingsPanelVisible;
+  //tcpSettingsPanelVisible = !tcpSettingsPanelVisible;
+  //get current visibility
+  let tcpSettingsPanelVisible = tcpSettingsPanel?.classList.contains("d-none");
   if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible);
 });
 bridgeHostInput?.addEventListener("change", saveBridgeSettings);
@@ -618,7 +622,7 @@ function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb
   throw new Error("No transport connected");
 }
 
-// bslSync provided by cctools
+// cctoolsSync provided by cctools (imported as bslSync for compatibility)
 
 // // Build and send a bridge URL, allowing absolute URL or relative path to bridge base; supports {PORT}
 // async function sendBridgeCmd(pathOrUrl: string): Promise<string> {
@@ -750,7 +754,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
   try {
     if (showBusy) deviceDetectBusy(true);
     const link = getActiveLink();
-    const bsl = await bslSync(link);
+    const bsl = await cctoolsSync(link);
     const id = await bsl.chipId();
     const chipHex = Array.from(id)
       .map((b) => b.toString(16).padStart(2, "0"))
@@ -809,6 +813,88 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
   }
 }
 
+// ...existing code...
+async function pingWithBaudRetries(
+  link: any,
+  baudCandidates: number[] = [9600, 19200, 38400, 57600, 115200, 230400, 460800]
+): Promise<boolean> {
+  // Try a normal ping first
+  try {
+    const ok0 = await pingAppMT(link);
+    if (ok0) return true;
+  } catch {}
+
+  // Only attempt baud cycling for real serial connection
+  //if (activeConnection !== "serial" || !serial) return false;
+
+  const originalBaud = parseInt(bitrateInput.value, 10) || 115200;
+  // ensure unique sorted list and make sure original baud is present
+  const bauds = Array.from(new Set(baudCandidates.concat([originalBaud]))).sort((a, b) => a - b);
+
+  // If there's only one candidate (the original), nothing to try
+  if (bauds.length <= 1) return false;
+
+  const startIdx = bauds.indexOf(originalBaud);
+  // start from the next baud after original and loop circularly until we come back
+  let idx = (startIdx + 1) % bauds.length;
+
+  for (; idx !== startIdx; idx = (idx + 1) % bauds.length) {
+    const b = bauds[idx];
+    try {
+      // if active serial connection
+      if (activeConnection === "serial") {
+        await (serial as any)?.reopenWithBaudrate?.(b);
+        log(`Serial: switched baud to ${b} for ping retry`);
+      } else if (activeConnection === "tcp") {
+        await changeBaudOverTcp(b);
+
+        log(`TCP: requested baud change to ${b} for ping retry`);
+      }
+    } catch (e: any) {
+      log(`Serial: failed to switch baud to ${b}: ${e?.message || String(e)}`);
+      continue;
+    }
+
+    // give device/bridge a moment; perform a reset to let device re-sync at new baud
+    await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
+    await sleep(500);
+
+    try {
+      const ok = await pingAppMT(link);
+      if (ok) {
+        // keep new baud in UI
+        try {
+          bitrateInput.value = String(b);
+        } catch {}
+        log(`Ping succeeded at ${b}bps`);
+        return true;
+      } else {
+        log(`Ping at ${b}bps: timed out or no response`);
+      }
+    } catch (e: any) {
+      log(`Ping error at ${b}bps: ${e?.message || String(e)}`);
+    }
+  }
+
+  // restore original baud if cycling failed
+  try {
+    if (activeConnection === "serial") {
+      await (serial as any)?.reopenWithBaudrate?.(originalBaud);
+      log(`Serial: restored baud to ${originalBaud}`);
+    } else if (activeConnection === "tcp") {
+      await changeBaudOverTcp(originalBaud);
+      log(`TCP: restored baud to ${originalBaud}`);
+    }
+
+    try {
+      bitrateInput.value = String(originalBaud);
+    } catch {}
+  } catch {}
+
+  return false;
+}
+// ...existing code...
+
 // Full connect sequence: enter BSL → read chip info → reset → read firmware version
 async function runConnectSequence(): Promise<void> {
   // Spinner should run from port open until model+FW info are read
@@ -826,14 +912,22 @@ async function runConnectSequence(): Promise<void> {
     await sleep(1000);
     try {
       const link = getActiveLink();
-      await pingAppMT(link);
+      const ok = await pingWithBaudRetries(link);
+      if (!ok) {
+        log("App ping: timed out or no response");
+      }
     } catch {
       log("App ping skipped");
     }
     try {
       const link = getActiveLink();
       const info = await getFwVersionMT(link);
-      if (info && firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+      if (!info) {
+        log("FW version request: timed out or no response");
+      } else if (firmwareVersionEl) {
+        firmwareVersionEl.value = String(info.fwRev);
+        log(`FW version: ${info.fwRev}`);
+      }
     } catch {
       log("FW version check skipped");
     }
@@ -908,9 +1002,16 @@ async function flash(doVerifyOnly = false) {
   if (!hexImage) throw new Error("Load HEX first");
   // If using Web Serial, bump baud to 500000 for faster flashing
   try {
-    await (serial as any)?.reopenWithBaudrate?.(500000);
-    log("Serial: switched baud to 500000");
-  } catch {}
+    if (activeConnection === "serial") {
+      await (serial as any)?.reopenWithBaudrate?.(500000);
+      log("Serial: switched baud to 500000");
+    } else if (activeConnection === "tcp") {
+      await changeBaudOverTcp(460800);
+      log("TCP: switched baud to 460800");
+    }
+  } catch {
+    log("Serial: failed to switch baud");
+  }
   // BSL packet length is 1 byte; with header+cmd, safe payload per packet is <= 248 bytes
   const userChunk = 248;
   const chunkSize = Math.max(16, Math.min(248, userChunk));
@@ -925,7 +1026,7 @@ async function flash(doVerifyOnly = false) {
   } catch (e: any) {
     log("Enter BSL failed: " + (e?.message || String(e)));
   }
-  const bsl = await bslSync(link);
+  const bsl = await cctoolsSync(link);
   let chipIdStr = "";
   let chipIsCC26xx = false;
   try {
@@ -1011,6 +1112,20 @@ async function flash(doVerifyOnly = false) {
       }
     } catch {}
     log(ok ? "Verify OK" : "Verify inconclusive");
+  }
+
+  // If using Web Serial, bump baud back to original that was set in ui
+  const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
+  try {
+    if (activeConnection === "serial") {
+      await (serial as any)?.reopenWithBaudrate?.(originalBaudRate);
+      log(`Serial: switched baud to ${originalBaudRate}`);
+    } else if (activeConnection === "tcp") {
+      await changeBaudOverTcp(originalBaudRate);
+      log(`TCP: switched baud to ${originalBaudRate}`);
+    }
+  } catch {
+    log("Serial: failed to switch baud");
   }
 }
 
@@ -1110,7 +1225,7 @@ btnNvErase?.addEventListener("click", async () => {
 const setLines = async (rstLow: boolean, bslLow: boolean, assumeSwap: boolean) => {
   const { dtr, rts } = computeDtrRts(rstLow, bslLow, assumeSwap);
   if (activeConnection === "serial") {
-    log(`CTRL(serial): DTR=${dtr ? "1" : "0"} RTS=${rts ? "1" : "0"}`);
+    //log(`CTRL(serial): DTR=${dtr ? "1" : "0"} RTS=${rts ? "1" : "0"}`);
     await (serial as any)?.setSignals?.({ dataTerminalReady: dtr, requestToSend: rts });
     return;
   }
@@ -1119,7 +1234,7 @@ const setLines = async (rstLow: boolean, bslLow: boolean, assumeSwap: boolean) =
   const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
   const bslLevel = bslLow ? 0 : 1;
   const rstLevel = rstLow ? 0 : 1;
-  log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
+  //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
   const bslHasSet = /\{SET\}/.test(bslTpl);
   const rstHasSet = /\{SET\}/.test(rstTpl);
   await sendCtrlUrl(bslTpl, bslHasSet ? bslLevel : undefined);
@@ -1135,6 +1250,48 @@ async function bslUseLines(assumeSwap: boolean) {
   await sleep(250);
   await setLines(false, true, assumeSwap);
   await sleep(500);
+}
+
+async function changeBaudOverTcp(baud: number): Promise<void> {
+  if (activeConnection !== "tcp" || !tcp) throw new Error("No TCP connection");
+  const tpl = (baudUrlInput?.value || DEFAULT_CONTROL.baudPath).trim();
+  // const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
+  const hasSet = /\{SET\}/.test(tpl);
+  // const hasRstSet = /\{SET\}/.test(rstTpl);
+  log(`CTRL(tcp): changing baud -> ${baud} using template ${tpl}`);
+  // send control URL (may be opaque/no-cors)
+  await sendCtrlUrl(tpl, hasSet ? baud : undefined).catch((e: any) => {
+    log("Baud change failed: " + (e?.message || String(e)));
+    sleep(1000);
+  });
+  await sleep(1000);
+
+  // Reconnect the TCP client to the same device host:port
+  const host = hostInput.value.trim();
+  const port = parseInt(portInput.value || "", 10);
+  if (!host || !port) throw new Error("Host/port not set for reconnect");
+
+  try {
+    try {
+      tcp.close();
+    } catch {}
+    const wsBase = getBridgeWsBase();
+    tcp = new TcpClient(wsBase);
+    await tcp.connect(host, port).catch;
+    tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
+    tcp.onTx?.((d: Uint8Array) => log(`TX: ${bufToHex(d)}`, "tx"));
+    activeConnection = "tcp";
+    updateConnectionUI();
+    log(`TCP reconnected to ${host}:${port} after baud change`);
+    // await performReset().catch((ee: any) => {
+    //   log("Reset failed: " + (ee?.message || String(ee)));
+    //   sleep(1000);
+    // });
+    await sleep(1000);
+  } catch (e: any) {
+    log(`TCP reconnect error after baud change: ${e?.message || String(e)}`);
+    throw e;
+  }
 }
 
 enterBslBtn?.addEventListener("click", async () => {
@@ -1154,6 +1311,7 @@ btnPing?.addEventListener("click", async () => {
     const link = getActiveLink();
     const ok = await pingAppMT(link);
     if (!ok) throw new Error("Ping failed");
+    else log("Ping-Pong");
   });
 });
 
@@ -1162,7 +1320,10 @@ btnVersion?.addEventListener("click", async () => {
     const link = getActiveLink();
     const info = await getFwVersionMT(link);
     const ok = !!info;
-    if (info && firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+    if (info && firmwareVersionEl) {
+      firmwareVersionEl.value = String(info.fwRev);
+      log(`FW version: ${info.fwRev}`);
+    }
     if (!ok) throw new Error("Version not available");
   });
 });
@@ -1286,7 +1447,8 @@ btnFlash.addEventListener("click", async () => {
       log("Pinging device...");
       try {
         const link = getActiveLink();
-        await pingAppMT(link);
+        const ok = await pingWithBaudRetries(link);
+        if (!ok) log("Ping: timed out or no response");
       } catch (e: any) {
         log("Ping error: " + (e?.message || String(e)));
       }
@@ -1294,7 +1456,10 @@ btnFlash.addEventListener("click", async () => {
       try {
         // use local wrapper to log and update UI
         const info = await getFwVersionMT(getActiveLink());
-        if (info && firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+        if (info && firmwareVersionEl) {
+          firmwareVersionEl.value = String(info.fwRev);
+          log(`FW version: ${info.fwRev}`);
+        }
       } catch (e: any) {
         log("Version read error: " + (e?.message || String(e)));
       }
@@ -1318,6 +1483,13 @@ btnClearLog?.addEventListener("click", () => {
 });
 btnCopyLog?.addEventListener("click", async () => {
   const lines = Array.from(logEl.querySelectorAll<HTMLElement>(".log-line"))
+    .filter((el) => {
+      // when showIo is unchecked, omit RX/TX lines (they have classes log-rx / log-tx)
+      if (typeof showIoEl !== "undefined" && showIoEl !== null && !showIoEl.checked) {
+        if (el.classList.contains("log-rx") || el.classList.contains("log-tx")) return false;
+      }
+      return true;
+    })
     .map((el) => el.innerText)
     .join("\n");
   try {
