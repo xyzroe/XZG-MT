@@ -101,14 +101,6 @@ MIT — see `LICENSE` for details.
 
 If you found an issue or want to request a feature, please open an issue in this repository.
 
----
-
-<div align="center">
-  <sub>Made with <span aria-hidden="true">❤️</span> for the Zigbee community!</sub>
-</div>
-  
----
-
 ## Support
 
 If you find this project useful and want to support further development, you can sponsor or donate to the author:
@@ -121,3 +113,11 @@ If you find this project useful and want to support further development, you can
 </div>
 
 Thank you — every little contribution helps keep the project alive and maintained. 🙏
+
+---
+
+<div align="center">
+  <sub>Made with <span aria-hidden="true">❤️</span> for the Zigbee community!</sub>
+</div>
+  
+---
