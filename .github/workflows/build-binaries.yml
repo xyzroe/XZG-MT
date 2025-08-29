@@ -98,7 +98,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-latest]
 
     steps:
       - name: Checkout
@@ -132,7 +132,7 @@ jobs:
 
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
-        run: npm run build:pkg:mac
+        run: npm run build
 
       # - name: Rename artifacts (macOS)
       #   if: matrix.os == 'macos-latest'
@@ -151,9 +151,9 @@ jobs:
       #     done
       #     ls -l dist/mac || true
 
-      - name: Build (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        run: npm run build:pkg:linux
+      # - name: Build (Linux)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   run: npm run build:pkg:linux
 
       # - name: Rename artifacts (Linux)
       #   if: matrix.os == 'ubuntu-latest'
@@ -171,12 +171,12 @@ jobs:
       #     done
       #     ls -l dist/linux || true
 
-      - name: Build (Windows + Legacy Win7)
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
-          npm run build:pkg:win
-          npm run build:legacy:win7
+      # - name: Build (Windows + Legacy Win7)
+      #   if: matrix.os == 'windows-latest'
+      #   shell: bash
+      #   run: |
+      #     npm run build:pkg:win
+      #     npm run build:legacy:win7
 
       # - name: Rename artifacts (Windows)
       #   if: matrix.os == 'windows-latest'
@@ -188,30 +188,41 @@ jobs:
       #     ls -l dist/win || true
       #     ls -l dist/win-legacy || true
 
-      - name: Upload artifacts (macOS)
-        if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac
-          path: bridge/dist/mac/*
-          if-no-files-found: error
+      # - name: Upload artifacts (macOS)
+      #   if: matrix.os == 'macos-latest'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: mac
+      #     path: bridge/dist/mac/*
+      #     if-no-files-found: error
 
-      - name: Upload artifacts (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux
-          path: bridge/dist/linux/*
-          if-no-files-found: error
+      # - name: Upload artifacts (Linux)
+      #   if: matrix.os == 'ubuntu-latest'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: linux
+      #     path: bridge/dist/linux/*
+      #     if-no-files-found: error
 
-      - name: Upload artifacts (Windows)
-        if: matrix.os == 'windows-latest'
+      # - name: Upload artifacts (Windows)
+      #   if: matrix.os == 'windows-latest'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: windows
+      #     path: |
+      #       bridge/dist/win/*.exe
+      #       bridge/dist/win-legacy/*.exe
+      #     if-no-files-found: error
+
+      - name: Upload all built binaries
         uses: actions/upload-artifact@v4
         with:
-          name: windows
+          name: all-binaries
           path: |
-            bridge/dist/win/*.exe
-            bridge/dist/win-legacy/*.exe
+            bridge/dist/mac/**
+            bridge/dist/linux/**
+            bridge/dist/win/**
+            bridge/dist/win-legacy/**
           if-no-files-found: error
 
   release:
@@ -227,7 +238,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: "{mac,linux,windows}"
+          pattern: "{all-binaries}"
           path: dist-release
           merge-multiple: true
 
