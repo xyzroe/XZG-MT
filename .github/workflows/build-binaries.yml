@@ -107,6 +107,7 @@ jobs:
           ref: main
 
       - name: Ensure full git history and export short SHA
+        shell: bash
         run: |
           git fetch --prune --unshallow || true
           short_sha=$(git rev-parse --short HEAD)
