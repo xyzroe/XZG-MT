@@ -24,7 +24,7 @@ const SERIAL_SCAN_INTERVAL = Number(process.env.SERIAL_SCAN_INTERVAL || process.
 const ADVERTISE_HOST = process.env.ADVERTISE_HOST || process.argv[4] || null;
 
 // Debugging flag port via env (PORT) or argv[5]; default false
-const DEBUG = /^(1|true|yes|on)$/i.test(String(process.env.DEBUG_SERIAL || ""));
+const DEBUG = /^(1|true|yes|on)$/i.test(String(process.env.DEBUG_MODE || ""));
 
 function registerTempCleanup(dir) {
   try {
@@ -122,14 +122,14 @@ async function getSerialPort() {
                 }
               }
             } catch (e3) {
-              process.env.DEBUG_SERIAL && console.warn("[serial][pkg] override node-gyp-build failed:", String(e3));
+              process.env.DEBUG_MODE && console.warn("[serial][pkg] override node-gyp-build failed:", String(e3));
             }
           }
           // Note: do NOT prime require.cache for '@serialport/bindings-cpp'.
           // Serialport expects the JS wrapper (which exports autoDetect()),
           // and priming it with the native exports breaks that contract.
         } catch (e) {
-          process.env.DEBUG_SERIAL && console.warn("[serial][pkg] prebuild extraction failed:", String(e));
+          process.env.DEBUG_MODE && console.warn("[serial][pkg] prebuild extraction failed:", String(e));
         }
       }
       try {
@@ -147,7 +147,7 @@ async function getSerialPort() {
             const mod = await import("serialport");
             return mod?.default || mod;
           } catch (e2) {
-            process.env.DEBUG_SERIAL && console.warn("[serial] dynamic import failed:", String(e2));
+            process.env.DEBUG_MODE && console.warn("[serial] dynamic import failed:", String(e2));
             return null;
           }
         }

@@ -162,7 +162,7 @@ Notes:
 
 ### GET /sc
 
-Set DTR/RTS on a local serial port.
+Set DTR/RTS on a local serial port or change baud rate.
 
 Query (one of `path` or `port` is required):
 
@@ -170,9 +170,10 @@ Query (one of `path` or `port` is required):
 - `port`: TCP port of the serial TCP server returned by `/mdns`
 - `dtr`: `1|0|true|false` (optional)
 - `rts`: `1|0|true|false` (optional)
+- `baud`: integer (optional) — set the serial baud rate. If provided, the port speed will be changed immediately and applied after TCP reconnect. Common values: `9600`, `19200`, `38400`, `57600`, `115200`, `230400`, `460800`.
 
 Response:
-`{ "ok": true, "path": "/dev/tty...", "tcpPort": 50123, "set": { "dtr": true, "rts": false } }`
+`{ "ok": true, "path": "/dev/tty...", "tcpPort": 50123, "set": { "dtr": true, "rts": false, "baud": 115200 } }`
 
 ## Serial over TCP (overview)
 
@@ -187,7 +188,7 @@ The Home Assistant add-on (and Docker/CLI) supports the following configuration 
 - `port` (int, default: 8765) — TCP port the WebSocket server listens on. Can also be set via the `PORT` env var or CLI arg.
 - `serial_scan_interval` (int, default: 5000) — interval in milliseconds used when scanning/exposing local serial ports (set to `0` to disable serial monitoring).
 - `advertise_host` (string, optional) — override the host/IP published in logs and `/mdns` serial entries (env var `ADVERTISE_HOST`).
-- `debug_serial` (bool, default: false) — enable extra serial debug logs (env var `DEBUG_SERIAL`, set to `true`)
+- `debug_mode` (bool, default: false) — enable extra debug logs (env var `DEBUG_MODE`, set to `true`)
 
 Examples:
 
@@ -198,14 +199,14 @@ docker run --rm -p 8765:8765 \
   -e PORT=8765 \
   -e SERIAL_SCAN_INTERVAL=5000 \
   -e ADVERTISE_HOST=192.168.1.42 \
-  -e DEBUG_SERIAL=true \
+  -e DEBUG_MODE=true \
   ghcr.io/xyzroe/XZG-MT:latest
 ```
 
 Or using the CLI/packaged binary:
 
 ```bash
-PORT=9000 SERIAL_SCAN_INTERVAL=5000 ADVERTISE_HOST=192.168.1.42 DEBUG_SERIAL=true \
+PORT=9000 SERIAL_SCAN_INTERVAL=5000 ADVERTISE_HOST=192.168.1.42 DEBUG_MODE=true \
   node bridge.js 9000 5000
 ```
 

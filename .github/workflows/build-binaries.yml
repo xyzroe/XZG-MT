@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   version-bump:
-    name: Derive version from tag and bump files
+    name: Update version numbers
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     outputs:
@@ -94,6 +94,7 @@ jobs:
 
 
   build-web-deploy:
+    name: Build & Deploy Web
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -136,7 +137,7 @@ jobs:
           force_orphan: true
 
   build-bin:
-    name: Build (${{ matrix.os }})
+    name: Build bins (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     needs: [version-bump, build-web-deploy]
     strategy:

@@ -1,67 +1,91 @@
-## Installation
+## Options
 
-Follow these steps to install the Home Assistant add-on:
+- PORT (int) — WebSocket/HTTP server port. Default: 8765.
+- ADVERTISE_HOST (string) — advertised host/IP. Optional; if empty the host is auto-detected.
+- SERIAL_SCAN_INTERVAL (int, ms) — interval to scan and expose local serial ports. Default: 5000 (0 = disabled).
+- DEBUG_MODE (bool) — enable debug logs. Default: false.
 
-1. Add the repository URL to your Home Assistant add-on store.
-2. Install the "XZG Multi-tool" add-on from the store.
-3. Configure options as needed (see Configuration below).
-4. Start the add-on.
+## Web interface
 
-## Configuration
+- Served on the same HTTP port as the WebSocket server: http://<bridgeHost>:<PORT>/
+- The UI uses the WebSocket bridge to connect to targets.
+- No authentication by default; intended for local networks only.
 
-The add-on will be available on the configured port (default: 8765).
+## WebSocket bridge
 
-Options:
-
-- `port` (int, default: 8765) — WebSocket server port
-- `advertise_host` (string, optional) — Host IP to advertise (auto-detected if empty)
-
-Example configuration:
-
-```yaml
-port: 8765
-advertise_host: ""
-```
-
-## Usage
-
-### WebSocket bridge
-
-Connect a WebSocket client to the add-on to forward traffic to a TCP host/port:
+URL format:
 
 ```
-ws://<homeassistant_ip>:<port>/?host=<target_host>&port=<target_port>
+ws://<bridgeHost>:<WS_PORT>/?host=<TCP_HOST>&port=<TCP_PORT>
 ```
 
-Example:
+Behavior:
 
-```
-ws://192.168.1.100:8765/?host=192.168.1.50&port=8888
-```
+- Forward all WS frames to the TCP socket.
+- Send TCP data back as WS binary frames.
+- Server listens on 0.0.0.0 by default.
 
-### mDNS discovery
+## HTTP endpoints
 
-Scan for available devices and optionally include local serial ports:
+All endpoints respond with JSON and include CORS headers.
 
-```
-GET http://<homeassistant_ip>:<port>/mdns?types=_zigstar_gw._tcp,local
-```
+### GET /mdns
+
+Purpose: discover mDNS services and optionally expose local serial ports as ephemeral TCP servers.
 
 Query parameters:
 
-- `types` — comma-separated service types to discover (e.g., `_http._tcp`, `_zigstar_gw._tcp.local`, `local` for serial ports)
-- `timeout` — scan timeout in milliseconds (500–10000, default: 2000)
+- types (string) — comma-separated service types (e.g. `_http._tcp`, `_zigstar_gw._tcp.local.`). To include local serial ports, use one of: `local`, `local.serial`, `local-serial`, `local:serial`.
+- timeout (int) — scan timeout in ms (500–10000). Default: 2000.
 
-### Serial control
+Response schema:
 
-Set DTR/RTS on a local serial port exposed by the add-on:
-
+```json
+{
+  "devices": [
+    {
+      "name": "string",
+      "host": "string",
+      "port": 1234,
+      "type": "string",
+      "protocol": "tcp|udp|serial",
+      "fqdn": "string",
+      "txt": { "k": "v" }
+    }
+  ]
+}
 ```
-GET http://<homeassistant_ip>:<port>/sc?path=/dev/ttyUSB0&dtr=1&rts=0
+
+Notes:
+
+- When local serial is requested each port is bound to 0.0.0.0 on an ephemeral TCP port.
+- The advertised `host` field is ADVERTISE_HOST if set, otherwise the host primary IPv4.
+- Default serial baud: 115200.
+
+### GET /sc
+
+Purpose: set DTR/RTS or change baud on a local serial port (identified by `path` or an exposed TCP `port`).
+
+Query parameters (one of `path` or `port` required):
+
+- path (string) — serial device path (e.g. `/dev/ttyUSB0`, `COM3`).
+- port (int) — TCP port of the serial server (from `/mdns`).
+- dtr (1|0|true|false) — optional.
+- rts (1|0|true|false) — optional.
+- baud (int) — optional; applied immediately and used for subsequent reconnects.
+
+Response schema:
+
+```json
+{ "ok": true, "path": "/dev/tty...", "tcpPort": 50123, "set": { "dtr": true, "rts": false, "baud": 115200 } }
 ```
 
-Query parameters:
+## Serial over TCP
 
-- `path` — serial device path (e.g., `/dev/ttyUSB0`) OR `port` — TCP port of serial server
-- `dtr` — set DTR signal (1/0 or true/false)
-- `rts` — set RTS signal (1/0 or true/false)
+- Request `/mdns?types=local` to create per-device TCP servers for local serial ports.
+- Connect via WebSocket to the advertised TCP port using the WebSocket bridge URL above.
+
+## Notes
+
+- mDNS in Linux containers require host networking (`--network host`).
+- To expose host serial devices to a container, pass `--device /dev/ttyUSB0:/dev/ttyUSB0`.
