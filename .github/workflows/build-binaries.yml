@@ -93,11 +93,20 @@ jobs:
           file_pattern: "bridge/package.json bridge/legacy/package.json web-page/package.json xzg-multi-tool-addon/config.json"
 
 
-  build-deploy:
+  build-web-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Ensure full git history and export short SHA
+        shell: bash
+        run: |
+          git fetch --prune --unshallow || true
+          short_sha=$(git rev-parse --short HEAD)
+          echo "sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "COMMIT_SHA=$short_sha" >> "$GITHUB_ENV"
+        id: short_sha
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -129,7 +138,7 @@ jobs:
   build-bin:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    needs: version-bump
+    needs: [version-bump, build-web-deploy]
     strategy:
       fail-fast: false
       matrix:
