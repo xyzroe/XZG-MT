@@ -16,7 +16,7 @@
     "build:pkg:mac": "npm run copy-web && rm -rf dist/mac && mkdir -p dist/mac && pkg . --targets node18-macos-x64 --output dist/mac/XZG-MT-macos-x64 && pkg . --targets node18-macos-arm64 --output dist/mac/XZG-MT-macos-arm64",
     "build:pkg:linux": "npm run copy-web && rm -rf dist/linux && mkdir -p dist/linux && pkg . --targets node18-linux-x64 --output dist/linux/XZG-MT-linux-x64 && pkg . --targets node18-linux-arm64 --output dist/linux/XZG-MT-linux-arm64",
     "build:pkg:win": "npm run copy-web && node scripts/prepare-dist-win.js && pkg . --targets node18-win-x64 --output dist/win/XZG-MT-win-x64",
-    "build:legacy:win7": "rm -rf dist/win-legacy && cd legacy && npm install && npm run build:pkg:win7 && cd .. && ls -l ./dist/win-legacy",
+    "build:legacy:win7": "npm run copy-web && rm -rf dist/win-legacy && cd legacy && npm install && npm run build:pkg:win7 && cd .. && ls -l ./dist/win-legacy",
     "build:pkg:all": "npm run build:pkg:mac && npm run build:pkg:linux && npm run build:pkg:win && npm run build:legacy:win7 && ls -l ./dist/mac && ls -l ./dist/linux && ls -l ./dist/win && ls -l ./dist/win-legacy"
   },
   "engines": {
