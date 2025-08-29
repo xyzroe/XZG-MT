@@ -10,7 +10,7 @@
   },
   "scripts": {
     "prep": "npx babel ../bridge.js --out-file bridge.legacy.js --no-babelrc --presets=@babel/preset-env && mkdir -p serialprebuilds && cp -R node_modules/@serialport/bindings-cpp/prebuilds serialprebuilds 2>/dev/null || true",
-    "build:pkg:win7": "set -e && npm run prep && rm -rf ../dist/win-legacy && mkdir -p ../dist/win-legacy && cp -R ../web ./web 2>/dev/null || true && echo '=== web tree (legacy/web) ===' && ls -R ./web || true && echo 'pkg version:' && npx pkg --version || true && echo '=== running pkg (debug) ===' && npx pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe --debug 2>&1 | tee /tmp/pkg.log || true && echo '=== pkg.log (head 300) ===' && head -n 300 /tmp/pkg.log || true && echo '=== strings search for web/ inside exe ===' && (strings ../dist/win-legacy/XZG-MT-win7-x64.exe | grep -a \"web/\" || true) && echo '=== full ls dist/win-legacy ===' && ls -R ../dist/win-legacy || true"
+    "build:pkg:win7": "set -e && npm run prep && rm -rf ../dist/win-legacy && mkdir -p ../dist/win-legacy && cp -R ../web ./web 2>/dev/null || true && echo '=== web tree (legacy/web) ===' && ls -la ./web || true && echo '=== web files count ===' && (find ./web -type f | wc -l || true) && echo '=== web sample files (first 200 lines) ===' && (find ./web -type f | sed -n '1,200p' || true) && echo 'pkg version:' && npx pkg --version || true && echo '=== running pkg (debug) ===' && npx pkg . --targets node12-win-x64 --output ../dist/win-legacy/XZG-MT-win7-x64.exe --debug 2>&1 | tee /tmp/pkg.log || true && echo '=== pkg.log (head 300) ===' && head -n 300 /tmp/pkg.log || true && echo '=== strings search for web/ inside exe ===' && (strings ../dist/win-legacy/XZG-MT-win7-x64.exe | grep -a \"web/\" || true) && echo '=== full ls dist/win-legacy ===' && ls -R ../dist/win-legacy || true"
   },
   "engines": {
     "node": "12.x"
@@ -33,7 +33,9 @@
       "node_modules/**/build/Release/**/*.node",
       "node_modules/@serialport/**/build/Release/*.node",
       "node_modules/@serialport/**/prebuilds/**/*",
-      "web/**/*"
+      "web/**/*",
+      "./web/**",
+      "./web/**/*"
     ],
     "scripts": [
       "bridge.legacy.js",
