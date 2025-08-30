@@ -904,6 +904,7 @@ wss.on("connection", (ws, req) => {
 });
 
 server.listen(WS_PORT, "0.0.0.0", () => {
+  console.log(`[XZG-MT] access UI at http://${getAdvertiseHost()}:${WS_PORT}`);
   console.log(`[bridge] listening ws://${getAdvertiseHost()}:${WS_PORT}`); // show the effective IP
   if (!BonjourCtor) {
     console.log("[mdns] bonjour-service unavailable.");
