@@ -137,13 +137,9 @@ jobs:
           force_orphan: true
 
   build-bin:
-    name: Build bins (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build bins (macos-latest)
+    runs-on: macos-latest
     needs: [version-bump, build-web-deploy]
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest]
 
     steps:
       - name: Checkout
@@ -165,120 +161,18 @@ jobs:
         with:
           node-version: 18
           cache: npm
-      
-      # - name: Change workdir
-      #   run: cd bridge
 
       - name: Install dependencies
         run: npm ci
 
-      # - name: Fetch web assets
-      #   run: npm run fetch-web
-
-      #download web-page-artifacts
       - name: Download web-page artifacts
         uses: actions/download-artifact@v4
         with:
           name: web-page-artifacts
           path: web-page/dist
 
-      # - name: Ensure web assets are present (debug)
-      #   run: |
-      #     echo "Workspace:" $(pwd)
-      #     echo "List repo root:"
-      #     ls -la .
-      #     echo "List web-page/dist (built web):"
-      #     ls -la web-page/dist || true
-      #     echo "Run web build to be safe:"
-      #     npm --prefix web-page run build || true
-      #     echo "Run bridge copy-web:"
-      #     npm --prefix bridge run copy-web || true
-      #     echo "List bridge/web after copy:"
-      #     ls -R bridge/web || true
-
-      - name: Build (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Build
         run: npm run build:bridge
-
-      # - name: Rename artifacts (macOS)
-      #   if: matrix.os == 'macos-latest'
-      #   shell: bash
-      #   run: |
-      #     set -e
-      #     # Try common base names and then fall back to suffix detection
-      #     for name in bridge xzg-bridge; do
-      #       if [ -f "dist/mac/${name}-arm64" ]; then mv "dist/mac/${name}-arm64" "dist/mac/bridge-macos-arm64"; fi
-      #       if [ -f "dist/mac/${name}-x64" ]; then mv "dist/mac/${name}-x64" "dist/mac/bridge-macos-x64"; fi
-      #     done
-      #     for f in dist/mac/*; do
-      #       b="$(basename "$f")"
-      #       if [[ "$b" == *arm64 && ! "$b" == *macos* ]]; then mv "$f" "dist/mac/bridge-macos-arm64"; fi
-      #       if [[ "$b" == *x64 && ! "$b" == *macos* ]]; then mv "$f" "dist/mac/bridge-macos-x64"; fi
-      #     done
-      #     ls -l dist/mac || true
-
-      # - name: Build (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   run: npm run build:pkg:linux
-
-      # - name: Rename artifacts (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   shell: bash
-      #   run: |
-      #     set -e
-      #     for name in bridge xzg-bridge; do
-      #       if [ -f "dist/linux/${name}-arm64" ]; then mv "dist/linux/${name}-arm64" "dist/linux/bridge-linux-arm64"; fi
-      #       if [ -f "dist/linux/${name}-x64" ]; then mv "dist/linux/${name}-x64" "dist/linux/bridge-linux-x64"; fi
-      #     done
-      #     for f in dist/linux/*; do
-      #       b="$(basename "$f")"
-      #       if [[ "$b" == *arm64 && ! "$b" == *linux* ]]; then mv "$f" "dist/linux/bridge-linux-arm64"; fi
-      #       if [[ "$b" == *x64 && ! "$b" == *linux* ]]; then mv "$f" "dist/linux/bridge-linux-x64"; fi
-      #     done
-      #     ls -l dist/linux || true
-
-      # - name: Build (Windows + Legacy Win7)
-      #   if: matrix.os == 'windows-latest'
-      #   shell: bash
-      #   run: |
-      #     npm run build:pkg:win
-      #     npm run build:legacy:win7
-
-      # - name: Rename artifacts (Windows)
-      #   if: matrix.os == 'windows-latest'
-      #   shell: bash
-      #   run: |
-      #     set -e
-      #     if [ -f "dist/win/bridge.exe" ]; then mv "dist/win/bridge.exe" "dist/win/bridge-windows-x64.exe"; fi
-      #     if [ -f "dist/win-legacy/bridge-legacy.exe" ]; then mv "dist/win-legacy/bridge-legacy.exe" "dist/win-legacy/bridge-windows-legacy.exe"; fi
-      #     ls -l dist/win || true
-      #     ls -l dist/win-legacy || true
-
-      # - name: Upload artifacts (macOS)
-      #   if: matrix.os == 'macos-latest'
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: mac
-      #     path: bridge/dist/mac/*
-      #     if-no-files-found: error
-
-      # - name: Upload artifacts (Linux)
-      #   if: matrix.os == 'ubuntu-latest'
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: linux
-      #     path: bridge/dist/linux/*
-      #     if-no-files-found: error
-
-      # - name: Upload artifacts (Windows)
-      #   if: matrix.os == 'windows-latest'
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: windows
-      #     path: |
-      #       bridge/dist/win/*.exe
-      #       bridge/dist/win-legacy/*.exe
-      #     if-no-files-found: error
 
       - name: Upload all built binaries
         uses: actions/upload-artifact@v4
@@ -306,7 +200,6 @@ jobs:
         with:
           name: all-binaries
           path: dist-release
-          #merge-multiple: true
 
       - name: Show downloaded files
         run: ls -Rla dist-release || true
