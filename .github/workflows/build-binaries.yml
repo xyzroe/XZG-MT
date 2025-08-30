@@ -85,12 +85,41 @@ jobs:
 
           echo "Git status after updates:"
           git status --porcelain
+
+      - name: Fetch draft release notes from Release Drafter and prepend to CHANGELOG
+        id: fetch_draft
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          owner_repo="${GITHUB_REPOSITORY}"
+          # get first draft release body (release-drafter keeps an editable draft release)
+          draft_body=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$owner_repo/releases" | jq -r 'map(select(.draft==true))[0].body // empty')
+          if [ -z "$draft_body" ]; then
+            echo "No draft release found; skipping changelog update"
+            echo "draft_found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "draft_found=true" >> "$GITHUB_OUTPUT"
+
+          ver='${{ steps.setver.outputs.version }}'
+          header="## $ver"
+          tmpfile=$(mktemp)
+          printf "%s\n\n%s\n\n" "$header" "$draft_body" > "$tmpfile"
+          if [ -f xzg-multi-tool-addon/CHANGELOG.md ]; then
+            cat xzg-multi-tool-addon/CHANGELOG.md >> "$tmpfile"
+          fi
+          mv "$tmpfile" xzg-multi-tool-addon/CHANGELOG.md
+          git add xzg-multi-tool-addon/CHANGELOG.md
+          echo "Prepended xzg-multi-tool-addon/CHANGELOG.md with draft release notes."
+
       - name: Commit version bumps
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "chore(release): bump version to ${{ steps.setver.outputs.version }}"
           branch: main
-          file_pattern: "bridge/package.json bridge/legacy/package.json web-page/package.json xzg-multi-tool-addon/config.json"
+          file_pattern: "bridge/package.json bridge/legacy/package.json web-page/package.json xzg-multi-tool-addon/config.json xzg-multi-tool-addon/CHANGELOG.md"
 
 
   build-web-deploy:
@@ -204,11 +233,26 @@ jobs:
       - name: Show downloaded files
         run: ls -Rla dist-release || true
 
-      - name: Create GitHub Release and upload assets files
+      - name: Get draft release body (Release Drafter)
+        id: get_draft
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          owner_repo="${GITHUB_REPOSITORY}"
+          draft_body=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$owner_repo/releases" | jq -r 'map(select(.draft==true))[0].body // ""')
+          # write multiline output
+          echo "body<<EOF" >> "$GITHUB_OUTPUT"
+          printf "%s\n" "$draft_body" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and upload assets files (use draft body)
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ needs.version-bump.outputs.version }}
+          name: v${{ needs.version-bump.outputs.version }}
+          body: ${{ steps.get_draft.outputs.body }}
           files: dist-release/**
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

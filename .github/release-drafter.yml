@@ -1,0 +1,15 @@
+name-template: 'v$NEXT_PATCH_VERSION - $NEXT_RELEASE_DATE'
+tag-template: 'v$NEXT_PATCH_VERSION'
+categories:
+  - title: '🚀 Features'
+    labels:
+      - 'feature'
+      - 'feat'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+      - 'fix'
+change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
+template: |
+  $CHANGES
+  <!-- Release Drafter -->

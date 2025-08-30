@@ -1,0 +1,19 @@
+name: Update Release Drafter draft
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  update-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update release draft
+        uses: release-drafter/release-drafter@v5
+        with:
+          config-name: .github/release-drafter.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
