@@ -32,6 +32,7 @@ XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flas
 
 - Local USB: use the hosted web app — open the online flasher at [https://mt.xyzroe.cc](https://mt.xyzroe.cc) and connect your device via the browser's Web Serial API.
 - Remote TCP or remote USB/serial: add this repository to your Home Assistant add-on store and install the `bridge` add-on to expose remote/host serial devices to the web UI.
+
   <div align="center"> 
   <a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2Fbridge"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
   </div>
@@ -97,7 +98,8 @@ If you find this project useful and want to support further development, you can
   <a href="https://www.paypal.com/paypalme/xyzroe" title="PayPal Me"><img alt="PayPal" src="https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal" style="margin:6px;"/></a>
   <a href="https://nowpayments.io/donation/xyzroe" title="Crypto donation via NOWPayments"><img alt="NOWPayments" src="https://img.shields.io/badge/Crypto-NOWPayments-purple.svg?logo=bitcoin" style="margin:6px;"/></a>
 </div>
-
+  
+  
 Thank you — every little contribution helps keep the project alive and maintained. 🙏
 
 ---
