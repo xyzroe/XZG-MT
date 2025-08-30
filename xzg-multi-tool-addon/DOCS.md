@@ -48,7 +48,7 @@ Response schema:
       "host": "string",
       "port": 1234,
       "type": "string",
-      "protocol": "tcp|udp|serial",
+      "protocol": "tcp|serial",
       "fqdn": "string",
       "txt": { "k": "v" }
     }
