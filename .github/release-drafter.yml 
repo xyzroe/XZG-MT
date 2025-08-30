@@ -12,4 +12,3 @@ categories:
 change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
 template: |
   $CHANGES
-  <!-- Release Drafter -->
