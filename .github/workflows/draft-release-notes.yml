@@ -1,7 +1,6 @@
 name: Update Release Drafter draft
 
 on:
-  push:
   pull_request:
 
 permissions:
