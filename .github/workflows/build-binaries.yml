@@ -104,7 +104,7 @@ jobs:
           echo "draft_found=true" >> "$GITHUB_OUTPUT"
 
           ver='${{ steps.setver.outputs.version }}'
-          header="## $ver"
+          header="## v$ver"
           tmpfile=$(mktemp)
           printf "%s\n\n%s\n\n" "$header" "$draft_body" > "$tmpfile"
           if [ -f xzg-multi-tool-addon/CHANGELOG.md ]; then
