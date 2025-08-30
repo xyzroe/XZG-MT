@@ -4,6 +4,8 @@
   <img src="https://mt.xyzroe.cc/fav/favicon.svg" alt="XZG Multi-tool" style="height:160px; margin-bottom:12px;" />
 </div>
 
+---
+
 <div align="center"> 
 <a href="https://github.com/xyzroe/XZG-MT/releases"><img src="https://img.shields.io/github/release/xyzroe/XZG-MT.svg" alt="GitHub version"></img></a>
 <a href="https://github.com/xyzroe/XZG-MT/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/XZG-MT/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
