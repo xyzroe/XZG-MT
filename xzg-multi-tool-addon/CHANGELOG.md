@@ -1,3 +1,13 @@
+## 0.1.9
+
+## 🚀 Features
+
+- fix: update permissions to include pull-requests read access (#1) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- fix: conditionally log debug messages (#2) by @xyzroe
+
 ## v0.0.1
 
 - 6e6dc56 - Add 'bridge/' from commit '40ee87446965dcb7415b21a34185ab02bc19d57d'
