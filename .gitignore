@@ -59,3 +59,5 @@ Thumbs.db
 *.so
 *.dylib
 *.exe
+
+clean.sh
