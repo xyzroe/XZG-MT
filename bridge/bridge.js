@@ -339,7 +339,7 @@ async function ensureSerialportPrebuildExtracted() {
     }
   }
   if (!subdir) {
-    console.log("[serial][pkg] unsupported platform/arch for prebuilds:", { plat, arch });
+    if (DEBUG) console.log("[serial][pkg] unsupported platform/arch for prebuilds:", { plat, arch });
     return null;
   }
   // First, try to use an existing external prebuild placed next to the exe or in cwd
@@ -355,7 +355,7 @@ async function ensureSerialportPrebuildExtracted() {
       const entries = fs.readdirSync(d).filter((f) => f.toLowerCase().endsWith(".node"));
       if (entries && entries.length) {
         const file = path.join(d, entries[0]);
-        console.log("[serial][pkg] using external prebuild:", file);
+        if (DEBUG) console.log("[serial][pkg] using external prebuild:", file);
         return { dir: d, file };
       }
     } catch {}
@@ -391,7 +391,7 @@ async function ensureSerialportPrebuildExtracted() {
     } catch {}
   }
   if (!bindingsPkgDir) {
-    console.log("[serial][pkg] bindings package dir not found in snapshot");
+    if (DEBUG) console.log("[serial][pkg] bindings package dir not found in snapshot");
     return null;
   }
   const prebuildDir = path.join(bindingsPkgDir, "prebuilds", subdir);
@@ -432,7 +432,7 @@ async function ensureSerialportPrebuildExtracted() {
     if (fs.existsSync(alt)) chosenFile = alt;
   }
   if (!fs.existsSync(chosenFile)) {
-    console.warn("[serial][pkg] no prebuild found in:", prebuildDir, "and no fallback in serialprebuilds");
+    if (DEBUG) console.warn("[serial][pkg] no prebuild found in:", prebuildDir, "and no fallback in serialprebuilds");
     return null;
   }
   if (DEBUG) console.log("[serial][pkg] selected prebuild file:", chosenFile);
@@ -595,7 +595,7 @@ const server = http.createServer(async (req, res) => {
           "sec-fetch-dest": req.headers["sec-fetch-dest"],
           "access-control-request-private-network": req.headers["access-control-request-private-network"],
         };
-        console.log("[mdns] incoming request:", JSON.stringify(dbg));
+        if (DEBUG) console.log("[mdns] incoming request:", JSON.stringify(dbg));
       } catch {}
 
       if (!BonjourCtor) {
@@ -653,7 +653,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
       } catch (e) {}
       try {
-        console.log("[mdns] sending response length", body.length);
+        //console.log("[mdns] sending response length", body.length);
         return res.end(body);
       } catch (e) {
         try {
@@ -1048,7 +1048,7 @@ async function scanMdns(typeList, timeoutMs) {
         bonjour.destroy();
       } catch {}
       const arr = Array.from(found.values());
-      console.log("[mdns] done; returning", arr.length, "services");
+      //console.log("[mdns] done; returning", arr.length, "services");
       resolve(arr);
     };
     setTimeout(done, timeoutMs);
