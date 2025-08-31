@@ -133,6 +133,7 @@ jobs:
   build-web-deploy:
     name: Build & Deploy Web
     runs-on: ubuntu-latest
+    needs: [version-bump]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -168,6 +169,12 @@ jobs:
             web-page/dist/**
           if-no-files-found: error
 
+      - name: Create CNAME for GitHub Pages
+        shell: bash
+        run: |
+          mkdir -p web-page/dist
+          echo 'mt.xyzroe.cc' > web-page/dist/CNAME
+          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
