@@ -15,6 +15,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     outputs:
       version: ${{ steps.setver.outputs.version }}
+      new_sha: ${{ steps.newsha.outputs.new_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -121,6 +122,13 @@ jobs:
           branch: main
           file_pattern: "bridge/package.json bridge/legacy/package.json web-page/package.json xzg-multi-tool-addon/config.json xzg-multi-tool-addon/CHANGELOG.md"
 
+      - name: Get bumped commit SHA
+        id: newsha
+        run: |
+          # ensure we have the latest remote ref (commit just pushed by previous step)
+          git fetch origin main
+          sha=$(git rev-parse origin/main)
+          echo "new_sha=$sha" >> "$GITHUB_OUTPUT"
 
   build-web-deploy:
     name: Build & Deploy Web
@@ -128,6 +136,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
 
       - name: Ensure full git history and export short SHA
         shell: bash
@@ -174,7 +185,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
 
       - name: Ensure full git history and export short SHA
         shell: bash
@@ -222,7 +234,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -267,7 +280,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
