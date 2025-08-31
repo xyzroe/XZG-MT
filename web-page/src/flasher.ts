@@ -11,7 +11,7 @@ function applyControlConfig(cfg: ControlConfig, source: string) {
   saveCtrlSettings();
   // Update UI visibility/state
   //updateConnectionUI();
-  log(`Control preset applied (${source}): ${cfg.remote ? "Remote" : "Local"} BSL=${cfg.bslPath} RST=${cfg.rstPath}`);
+  //log(`Control preset applied (${source}): ${cfg.remote ? "Remote" : "Local"} BSL=${cfg.bslPath} RST=${cfg.rstPath}`);
 }
 function getCtrlMode(): CtrlMode {
   // If using Web Serial, always serial-direct
@@ -102,7 +102,9 @@ const portInput = document.getElementById("portInput") as HTMLInputElement;
 const mdnsSelect = document.getElementById("mdnsSelect") as HTMLSelectElement | null;
 const mdnsRefreshBtn = document.getElementById("mdnsRefresh") as HTMLButtonElement | null;
 const tcpSettingsBtn = document.getElementById("tcpSettingsBtn") as HTMLButtonElement | null;
+const tcpLinksBtn = document.getElementById("tcpLinksBtn") as HTMLButtonElement | null;
 const tcpSettingsPanel = document.getElementById("tcpSettingsPanel") as HTMLDivElement | null;
+const tcpLinksPanel = document.getElementById("tcpLinksPanel") as HTMLDivElement | null;
 const bridgeHostInput = document.getElementById("bridgeHostInput") as HTMLInputElement | null;
 const bridgePortInput = document.getElementById("bridgePortInput") as HTMLInputElement | null;
 const tcpInfoBtn = document.getElementById("tcpInfoBtn") as HTMLButtonElement | null;
@@ -141,6 +143,7 @@ const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement |
 const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
 const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
+const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 const verboseIo = true;
 
 let serial: SerialWrap | null = null;
@@ -186,8 +189,10 @@ function updateConnectionUI() {
   // Sections: Serial and TCP (entire columns)
   const serialSection = document.getElementById("serialSection") as HTMLElement | null;
   const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
+  const generalSection = document.getElementById("generalSection") as HTMLElement | null;
   setSectionDisabled(serialSection, anyActive);
   setSectionDisabled(tcpSection, anyActive);
+  setSectionDisabled(generalSection, anyActive);
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
@@ -269,6 +274,13 @@ tcpSettingsBtn?.addEventListener("click", () => {
   let tcpSettingsPanelVisible = tcpSettingsPanel?.classList.contains("d-none");
   if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible);
 });
+
+tcpLinksBtn?.addEventListener("click", () => {
+  // Show/hide the TCP links panel
+  let tcpLinksPanelVisible = tcpLinksPanel?.classList.contains("d-none");
+  if (tcpLinksPanel) tcpLinksPanel.classList.toggle("d-none", !tcpLinksPanelVisible);
+});
+
 bridgeHostInput?.addEventListener("change", saveBridgeSettings);
 bridgePortInput?.addEventListener("change", saveBridgeSettings);
 // init from localStorage
@@ -819,9 +831,20 @@ async function pingWithBaudRetries(
   baudCandidates: number[] = [9600, 19200, 38400, 57600, 115200, 230400, 460800]
 ): Promise<boolean> {
   // Try a normal ping first
+  const findBaud = !!findBaudToggle?.checked;
   try {
     const ok0 = await pingAppMT(link);
-    if (ok0) return true;
+    if (
+      (findBaud && activeConnection === "serial") ||
+      (findBaud && activeConnection === "tcp" && (baudUrlInput?.value ?? "").trim() !== "")
+    ) {
+      log(baudUrlInput?.value || "NULL");
+      // If findBaud is enabled, we need to check for baud rate changes
+      if (ok0) return true;
+    } else {
+      // If findBaud is not enabled, we don't need to check for baud rate changes
+      return ok0;
+    }
   } catch {}
 
   // Only attempt baud cycling for real serial connection
@@ -1604,6 +1627,9 @@ mdnsRefreshBtn?.addEventListener("click", () => {
 });
 mdnsSelect?.addEventListener("change", () => {
   if (!mdnsSelect) return;
+  if (mdnsSelect.selectedOptions[0].value === "manual") {
+    tcpLinksPanel?.classList.remove("d-none");
+  }
   const opt = mdnsSelect.selectedOptions[0];
   const h = opt?.getAttribute("data-host") || "";
   const p = Number(opt?.getAttribute("data-port") || 0);
