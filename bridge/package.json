@@ -32,19 +32,19 @@
   },
   "pkg": {
     "assets": [
-      "node_modules/**/prebuilds/**/*",
-      "node_modules/**/build/Release/*.node",
-      "node_modules/**/build/Release/**/*.node",
-      "node_modules/@serialport/**/build/Release/*.node",
-      "node_modules/@serialport/**/prebuilds/**/*",
+      "../node_modules/**/prebuilds/**/*",
+      "../node_modules/**/build/Release/*.node",
+      "../node_modules/**/build/Release/**/*.node",
+      "../node_modules/@serialport/**/build/Release/*.node",
+      "../node_modules/@serialport/**/prebuilds/**/*",
       "web/**/*"
     ],
     "scripts": [
       "bridge.js",
-      "node_modules/serialport/**/*.js",
-      "node_modules/serialport/**/*.mjs",
-      "node_modules/@serialport/**/*.js",
-      "node_modules/@serialport/**/*.mjs",
+      "../node_modules/serialport/**/*.js",
+      "../node_modules/serialport/**/*.mjs",
+      "../node_modules/@serialport/**/*.js",
+      "../node_modules/@serialport/**/*.mjs",
       "node_modules/node-gyp-build/**/*.js",
       "node_modules/bindings/**/*.js"
     ],

@@ -162,6 +162,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 })();
 
+// Reusable clipboard helper used by badge elements in the UI
+function copyToClipboard(el, txt) {
+  (async function () {
+    try {
+      await navigator.clipboard.writeText(txt);
+      var prev = el.innerText;
+      el.innerText = "Copied!";
+      el.classList.remove("bg-primary");
+      el.classList.add("bg-success");
+      setTimeout(function () {
+        el.innerText = prev;
+        el.classList.remove("bg-success");
+        el.classList.add("bg-primary");
+      }, 1000);
+    } catch (e) {
+      alert("Copy failed");
+    }
+  })();
+}
+// Expose for inline handlers in the HTML (index.html uses inline onclick)
+window.copyToClipboard = copyToClipboard;
+
 // Bridge Info modal UI wiring
 // Escape key handler to close firmware notes and bridge info modals
 document.addEventListener("keydown", function (e) {
