@@ -36,7 +36,7 @@ XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flas
 - Remote TCP or remote USB/serial: add this repository to your Home Assistant add-on store and install the `bridge` add-on to expose remote/host serial devices to the web UI.
 
   <div align="center"> 
-  <a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2Fbridge"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
+  <a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
   </div>
 
 On the [bridge README](bridge/README.md) page you'll find more installation options (Docker images, prebuilt binaries, or building your own) and detailed configuration notes.
