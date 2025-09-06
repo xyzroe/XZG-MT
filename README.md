@@ -33,18 +33,21 @@ XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flas
 
 ### Local USB
 
-🌐 Open: [mt.xyzroe.cc](https://mt.xyzroe.cc)  
-_from Chrome or Edge_
+<div align="center"> 
+🌐 Open: <a href="https://mt.xyzroe.cc" target="_blank">mt.xyzroe.cc</a><br>
+<i>from Chrome or Edge</i>
+</div>
 
 ### Remote (TCP or remote USB/serial)
 
-Because browsers don't support TCP connections you need to use WebSocket ↔ TCP bridge that can forward WebSocket clients to TCP hosts and as option expose local serial ports over TCP.  
+Because browsers don't support TCP connections you need to use WebSocket ↔ TCP bridge that can forward WebSocket clients to TCP hosts and as option expose local serial ports over TCP.
+
 You have some options:
 
 #### Home Assistant Add-On
 
 <div align="center"> 
-<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
+<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT" target="_blank"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
 </div>
  
 Just click on the button above or add this repository to your Home Assistant add-on store manually and then install the add-on to expose remote TCP / host serial devices to the web UI.
