@@ -35,6 +35,7 @@ mkdir -p $BUILD_DIR
 TARGETS=(
     "linux/amd64"
     "linux/arm64"
+    "linux/386"
     "darwin/amd64"
     "darwin/arm64"
     "windows/amd64"

@@ -32,4 +32,14 @@ if [ "$DEBUG_MODE" = "true" ]; then
 fi
 
 echo "Starting bridge on port ${PORT} (ADVERTISE_HOST=${ADVERTISE_HOST:-<auto>}, SERIAL_SCAN_INTERVAL=${SERIAL_SCAN_INTERVAL})"
-exec node /app/bridge.js "$PORT" "$SERIAL_SCAN_INTERVAL"
+# Decide what to execute: prefer compiled Go binary if present, otherwise fall back to Node + bridge.js
+if [ -x "/app/xzg-mt-bridge" ]; then
+    echo "Found Go binary /app/xzg-mt-bridge, launching it"
+    exec /app/xzg-mt-bridge "$PORT" "$SERIAL_SCAN_INTERVAL"
+elif command -v node >/dev/null 2>&1 && [ -f "/app/bridge.js" ]; then
+    echo "Found Node and /app/bridge.js, launching Node"
+    exec node /app/bridge.js "$PORT" "$SERIAL_SCAN_INTERVAL"
+else
+    echo "ERROR: No runtime available. Expected /app/xzg-mt-bridge (executable) or node + /app/bridge.js" >&2
+    exit 1
+fi
