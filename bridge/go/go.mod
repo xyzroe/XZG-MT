@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/gorilla/websocket v1.5.1
-	github.com/hashicorp/mdns v1.0.5
+	github.com/grandcat/zeroconf v1.0.0
 	github.com/labstack/echo/v4 v4.11.4
 	go.bug.st/serial v1.6.2
 )
@@ -13,7 +13,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/creack/goselect v0.1.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

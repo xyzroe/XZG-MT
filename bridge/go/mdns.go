@@ -68,150 +68,151 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	fmt.Printf("[mdns] scanning with timeout %d\n", timeoutMs)
 
 	var results []ServiceInfo
-	entries := make(map[string]ServiceInfo)
+	foundDevices := make(map[string]ServiceInfo)
+	var mu sync.Mutex
+	includeLocal := false
 
-	resolver, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		fmt.Printf("[mdns] failed to initialize resolver: %v\n", err)
-		return results
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
-	defer cancel()
-
-	entriesChan := make(chan *zeroconf.ServiceEntry, 64)
-	var wg sync.WaitGroup
-
-	// For each requested service type start a goroutine that repeatedly browses
-	// for short intervals until the overall timeout. We forward per-iteration
-	// results into entriesChan and close entriesChan once all goroutines finish.
+	// Проверяем нужно ли включать локальные устройства
 	for _, serviceType := range typeList {
-		serviceName := fmt.Sprintf("_%s._%s", serviceType.Type, serviceType.Protocol)
-		fmt.Printf("[mdns] looking for %s\n", serviceName)
-
-		wg.Add(1)
-		go func(svcName string) {
-			defer wg.Done()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-
-				subCtx, subCancel := context.WithTimeout(ctx, 700*time.Millisecond)
-				perChan := make(chan *zeroconf.ServiceEntry, 16)
-
-				// forwarder
-				forwardDone := make(chan struct{})
-				go func(pc chan *zeroconf.ServiceEntry) {
-					for e := range pc {
-						entriesChan <- e
-					}
-					close(forwardDone)
-				}(perChan)
-
-				if err := resolver.Browse(subCtx, svcName, "local.", perChan); err != nil {
-					fmt.Printf("[mdns] browse error for %s: %v\n", svcName, err)
-					// ensure perChan is closed if Browse errors immediately
-					select {
-					case <-forwardDone:
-					default:
-						close(perChan)
-					}
-				}
-
-				// wait for forwarder to drain perChan
-				<-forwardDone
-				subCancel()
-
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(100 * time.Millisecond):
-				}
-			}
-		}(serviceName)
-	}
-
-	// close aggregated channel after all workers finish
-	go func() {
-		wg.Wait()
-		close(entriesChan)
-	}()
-
-readLoop:
-	for {
-		select {
-		case entry, ok := <-entriesChan:
-			if !ok {
-				break readLoop
-			}
-
-			host := ""
-			if len(entry.AddrIPv4) > 0 {
-				host = entry.AddrIPv4[0].String()
-			} else if len(entry.AddrIPv6) > 0 {
-				host = entry.AddrIPv6[0].String()
-			} else if entry.HostName != "" {
-				host = entry.HostName
-			} else {
-				host = getAdvertiseHost()
-			}
-
-			key := fmt.Sprintf("%s|%s|%d", entry.Instance, host, entry.Port)
-			if _, exists := entries[key]; exists {
-				continue
-			}
-
-			txtMap := make(map[string]string)
-			for _, txt := range entry.Text {
-				parts := strings.SplitN(txt, "=", 2)
-				if len(parts) == 2 {
-					txtMap[parts[0]] = parts[1]
-				}
-			}
-
-			serviceType := "unknown"
-			protocol := "tcp"
-			if strings.Contains(entry.Service, "_xzg._tcp") {
-				serviceType = "xzg"
-				protocol = "tcp"
-			} else if strings.Contains(entry.Service, "_zig_star_gw._tcp") {
-				serviceType = "zig_star_gw"
-				protocol = "tcp"
-			} else if strings.Contains(entry.Service, "_zigstar_gw._tcp") {
-				serviceType = "zigstar_gw"
-				protocol = "tcp"
-			} else if strings.Contains(entry.Service, "_uzg-01._tcp") {
-				serviceType = "uzg-01"
-				protocol = "tcp"
-			} else if strings.Contains(entry.Service, "_tubeszb._tcp") {
-				serviceType = "tubeszb"
-				protocol = "tcp"
-			}
-
-			service := ServiceInfo{
-				Name:     entry.Instance,
-				Host:     host,
-				Port:     entry.Port,
-				Type:     serviceType,
-				Protocol: protocol,
-				FQDN:     entry.Instance,
-				TXT:      txtMap,
-			}
-
-			entries[key] = service
-			fmt.Printf("[mdns] found: %s on %s:%d (%s, %s)\n", serviceType, host, entry.Port, txtMap["board"], txtMap["serial_number"])
-
-		case <-ctx.Done():
-			break readLoop
+		if serviceType.Protocol == "serial" || serviceType.Type == "local" {
+			includeLocal = true
+			break
 		}
 	}
 
-	// collect results
-	for _, s := range entries {
-		results = append(results, s)
+	// Создаем WaitGroup для синхронизации горутин
+	var wg sync.WaitGroup
+
+	// Запускаем поиск для каждого типа сервиса
+	for _, serviceType := range typeList {
+		// Пропускаем не-сетевые сервисы
+		if serviceType.Protocol != "tcp" && serviceType.Protocol != "udp" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(st ServiceType) {
+			defer wg.Done()
+
+			serviceName := fmt.Sprintf("_%s._%s", st.Type, st.Protocol)
+			fmt.Printf("[mdns] looking for %s\n", serviceName)
+
+			// Создаем новый резолвер для каждого сервиса
+			resolver, err := zeroconf.NewResolver(nil)
+			if err != nil {
+				fmt.Printf("[mdns] failed to create resolver for %s: %v\n", serviceName, err)
+				return
+			}
+
+			// Создаем контекст с таймаутом для этого конкретного сервиса
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
+			defer cancel()
+
+			// Канал для получения найденных устройств
+			entries := make(chan *zeroconf.ServiceEntry, 10)
+
+			// Запускаем Browse в отдельной горутине
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						// Игнорируем панику от библиотеки zeroconf
+						fmt.Printf("[mdns] recovered from panic in %s: %v\n", serviceName, r)
+					}
+				}()
+
+				err := resolver.Browse(ctx, serviceName, "local.", entries)
+				if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+					fmt.Printf("[mdns] browse error for %s: %v\n", serviceName, err)
+				}
+			}()
+
+			// Обрабатываем найденные устройства
+			for {
+				select {
+				case entry, ok := <-entries:
+					if !ok {
+						return
+					}
+
+					mu.Lock()
+
+					// Определяем хост
+					host := ""
+					if len(entry.AddrIPv4) > 0 {
+						host = entry.AddrIPv4[0].String()
+					} else if len(entry.AddrIPv6) > 0 {
+						host = entry.AddrIPv6[0].String()
+					} else if entry.HostName != "" {
+						host = entry.HostName
+					} else {
+						host = getAdvertiseHost()
+					}
+
+					key := fmt.Sprintf("%s|%s|%d", entry.Instance, host, entry.Port)
+
+					// Избегаем дублирования
+					if _, exists := foundDevices[key]; !exists {
+						// Парсим TXT записи
+						txtMap := make(map[string]string)
+						for _, txt := range entry.Text {
+							parts := strings.SplitN(txt, "=", 2)
+							if len(parts) == 2 {
+								txtMap[parts[0]] = parts[1]
+							}
+						}
+
+						service := ServiceInfo{
+							Name:     entry.Instance,
+							Host:     host,
+							Port:     entry.Port,
+							Type:     st.Type,
+							Protocol: st.Protocol,
+							FQDN:     entry.Instance,
+							TXT:      txtMap,
+						}
+
+						foundDevices[key] = service
+						fmt.Printf("[mdns] found: %s on %s:%d (%s, %s)\n", st.Type, host, entry.Port, txtMap["board"], txtMap["serial_number"])
+					}
+
+					mu.Unlock()
+
+				case <-ctx.Done():
+					return
+				}
+			}
+		}(serviceType)
+	}
+
+	// Ждем завершения всех горутин или общего таймаута
+	done := make(chan bool)
+	go func() {
+		wg.Wait()
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		// Все горутины завершились
+	case <-time.After(time.Duration(timeoutMs) * time.Millisecond):
+		// Общий таймаут
+		fmt.Printf("[mdns] scan timeout reached\n")
+	}
+
+	// Собираем результаты
+	mu.Lock()
+	for _, service := range foundDevices {
+		results = append(results, service)
+	}
+	mu.Unlock()
+
+	// Если нужно, добавляем локальные серийные порты
+	if includeLocal {
+		local := listLocalSerialAsServices()
+		if len(local) > 0 {
+			fmt.Printf("[mdns] adding %d local serial services\n", len(local))
+			results = append(results, local...)
+		}
 	}
 
 	fmt.Printf("[mdns] scan done, found %d\n", len(results))
