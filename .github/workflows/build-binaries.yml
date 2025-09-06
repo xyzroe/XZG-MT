@@ -155,11 +155,15 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Change working directory to web-page
+        run: cd web-page
+        shell: bash
+
       - name: Install dependencies
         run: npm ci
 
       - name: Build project
-        run: npm run build:web
+        run: npm run build
 
       - name: Upload web-page artifacts
         uses: actions/upload-artifact@v4
