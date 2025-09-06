@@ -1,0 +1,503 @@
+package main
+
+import (
+	"fmt"
+	"io"
+	"net"
+	"strings"
+	"sync"
+	"time"
+
+	"go.bug.st/serial"
+)
+
+type SerialPortInfo struct {
+	Path         string
+	Manufacturer string
+	SerialNumber string
+	VendorID     string
+	ProductID    string
+}
+
+type SerialState struct {
+	DTR      bool
+	RTS      bool
+	BaudRate int
+}
+
+type ServerInfo struct {
+	Server net.Listener
+	Port   int
+}
+
+var (
+	openSerialPorts     = make(map[string]serial.Port)
+	serialPortRefCount  = make(map[string]int)
+	tcpPortToSerialPath = make(map[int]string)
+	serialPortStates    = make(map[string]SerialState)
+	serialServers       = make(map[string]ServerInfo)
+	serialPortDetails   = make(map[string]SerialPortInfo)
+	serialMutex         sync.RWMutex
+)
+
+var validRates = []int{9600, 19200, 38400, 57600, 115200, 230400, 460800, 500000}
+
+func isValidBaudRate(baud int) bool {
+	for _, rate := range validRates {
+		if rate == baud {
+			return true
+		}
+	}
+	return false
+}
+
+func listSerialPorts() []SerialPortInfo {
+	var ports []SerialPortInfo
+	
+	// Get list of available ports
+	portList, err := serial.GetPortsList()
+	if err != nil {
+		if debugMode {
+			fmt.Printf("[serial] error getting port list: %v\n", err)
+		}
+		return ports
+	}
+	
+	// Filter ports to avoid duplicates on macOS
+	seenPorts := make(map[string]bool)
+	
+	for _, portName := range portList {
+		// On macOS, prefer /dev/tty.* over /dev/cu.* to avoid duplicates
+		// Both work the same, but tty is more commonly used
+		if strings.HasPrefix(portName, "/dev/cu.") {
+			// Convert cu.* to tty.* for consistency
+			ttyName := strings.Replace(portName, "/dev/cu.", "/dev/tty.", 1)
+			if seenPorts[ttyName] {
+				continue // Skip if tty version already exists
+			}
+			portName = ttyName
+		}
+		
+		if seenPorts[portName] {
+			continue // Skip duplicates
+		}
+		
+		seenPorts[portName] = true
+		
+		info := SerialPortInfo{
+			Path:         portName,
+			Manufacturer: "Unknown",
+		}
+		ports = append(ports, info)
+	}
+	
+	if debugMode {
+		fmt.Printf("[serial] found %d serial ports\n", len(ports))
+		for _, port := range ports {
+			fmt.Printf("[serial] - %s\n", port.Path)
+		}
+	}
+	
+	return ports
+}
+
+func openSerialPort(path string, baudRate int) serial.Port {
+	fmt.Printf("[serial] attempting to open serial port %s at %d baud\n", path, baudRate)
+	
+	mode := &serial.Mode{
+		BaudRate: baudRate,
+		DataBits: 8,
+		Parity:   serial.NoParity,
+		StopBits: serial.OneStopBit,
+	}
+	
+	port, err := serial.Open(path, mode)
+	if err != nil {
+		fmt.Printf("[serial] failed to open port %s: %v\n", path, err)
+		return nil
+	}
+	
+	fmt.Printf("[serial] successfully opened serial port %s at %d baud\n", path, baudRate)
+	return port
+}
+
+func closeSerial(port serial.Port) {
+	if port != nil {
+		fmt.Printf("[serial] closing serial port\n")
+		port.Close()
+	}
+}
+
+func writeSerial(port serial.Port, data []byte) (int, error) {
+	if port == nil {
+		fmt.Printf("[serial] mock write %d bytes: %x\n", len(data), data)
+		// Log to debug file for testing
+		// In real implementation, you might want to log to a file
+		return len(data), nil
+	}
+	
+	fmt.Printf("[serial] writing %d bytes to real serial port: %x\n", len(data), data)
+	n, err := port.Write(data)
+	if err != nil {
+		fmt.Printf("[serial] write error: %v\n", err)
+		return 0, err
+	}
+	
+	fmt.Printf("[serial] successfully wrote %d bytes to serial port\n", n)
+	return n, nil
+}
+
+func readSerial(port serial.Port, maxBytes int) ([]byte, error) {
+	if port == nil {
+		return nil, nil
+	}
+	
+	buffer := make([]byte, maxBytes)
+	n, err := port.Read(buffer)
+	if err != nil {
+		if err != io.EOF {
+			fmt.Printf("[serial] read error: %v\n", err)
+		}
+		return nil, err
+	}
+	
+	if n > 0 {
+		return buffer[:n], nil
+	}
+	
+	return nil, nil
+}
+
+func setSerialDTR(port serial.Port, state bool) {
+	if port != nil {
+		fmt.Printf("[serial] DTR set to %v\n", state)
+		if err := port.SetDTR(state); err != nil {
+			fmt.Printf("[serial] DTR set error: %v\n", err)
+		} else {
+			// Small delay to ensure the signal is processed
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
+func setSerialRTS(port serial.Port, state bool) {
+	if port != nil {
+		fmt.Printf("[serial] RTS set to %v\n", state)
+		if err := port.SetRTS(state); err != nil {
+			fmt.Printf("[serial] RTS set error: %v\n", err)
+		} else {
+			// Small delay to ensure the signal is processed
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
+// setSerialDTRRTS sets both DTR and RTS pins simultaneously
+func setSerialDTRRTS(port serial.Port, dtr, rts bool) {
+	if port != nil {
+		fmt.Printf("[serial] DTR set to %v, RTS set to %v\n", dtr, rts)
+		
+		// Set DTR
+		if err := port.SetDTR(dtr); err != nil {
+			fmt.Printf("[serial] DTR set error: %v\n", err)
+		}
+		
+		// Set RTS
+		if err := port.SetRTS(rts); err != nil {
+			fmt.Printf("[serial] RTS set error: %v\n", err)
+		}
+		
+		// Small delay to ensure the signals are processed
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func reopenSerialPort(path string, newBaudRate int) bool {
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	
+	if port, exists := openSerialPorts[path]; exists {
+		closeSerial(port)
+		delete(openSerialPorts, path)
+		delete(serialPortRefCount, path)
+	}
+	
+	time.Sleep(100 * time.Millisecond)
+	fmt.Printf("[serial] closed serial port for %s, new baudrate %d will be used\n", path, newBaudRate)
+	return true
+}
+
+func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	
+	if info, exists := serialServers[path]; exists {
+		return &info, nil
+	}
+	
+	// Create TCP server
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return nil, err
+	}
+	
+	port := listener.Addr().(*net.TCPAddr).Port
+	
+	// Handle incoming connections
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				if debugMode {
+					fmt.Printf("[serial] connection error: %v\n", err)
+				}
+				continue
+			}
+			
+			fmt.Printf("[serial] client connected for %s\n", path)
+			
+			// Get current baud rate from state
+			currentState := getSerialPortState(path)
+			currentBaudRate := currentState.BaudRate
+			
+			var serialPort serial.Port
+			
+			// Check if we have existing serial port
+			if existingPort, exists := openSerialPorts[path]; exists {
+				serialPort = existingPort
+				serialMutex.Lock()
+				serialPortRefCount[path]++
+				serialMutex.Unlock()
+				fmt.Printf("[serial] reusing existing serial port for %s, refs: %d\n", path, serialPortRefCount[path])
+			} else {
+				serialPort = openSerialPort(path, currentBaudRate)
+				if serialPort != nil {
+					serialMutex.Lock()
+					openSerialPorts[path] = serialPort
+					serialPortRefCount[path] = 1
+					serialMutex.Unlock()
+					fmt.Printf("[serial] opened serial port for %s with baudrate %d\n", path, currentBaudRate)
+				}
+			}
+			
+			// Handle connection
+			go handleSerialConnection(conn, serialPort, path)
+		}
+	}()
+	
+	fmt.Printf("[serial] TCP server for %s listening on %d with baudrate %d\n", path, port, baudRate)
+	
+	info := ServerInfo{
+		Server: listener,
+		Port:   port,
+	}
+	serialServers[path] = info
+	tcpPortToSerialPath[port] = path
+	
+	return &info, nil
+}
+
+func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) {
+	defer conn.Close()
+	
+	// Bidirectional data forwarding
+	done := make(chan bool)
+	
+	// Serial -> TCP forwarding
+	go func() {
+		defer func() { done <- true }()
+		for {
+			data, err := readSerial(serialPort, 1024)
+			if err != nil {
+				fmt.Printf("[serial] Serial->TCP: error: %v\n", err)
+				return
+			}
+			if len(data) > 0 {
+				fmt.Printf("[serial] Serial->TCP: received %d bytes from serial: %x\n", len(data), data)
+				if _, err := conn.Write(data); err != nil {
+					fmt.Printf("[serial] Serial->TCP: error sending to client: %v\n", err)
+					return
+				}
+				fmt.Printf("[serial] Serial->TCP: sent %d bytes to TCP client\n", len(data))
+			} else {
+				time.Sleep(1 * time.Millisecond)
+			}
+		}
+	}()
+	
+	// TCP -> Serial forwarding
+	go func() {
+		defer func() { done <- true }()
+		buffer := make([]byte, 1024)
+		for {
+			n, err := conn.Read(buffer)
+			if err != nil {
+				fmt.Printf("[serial] TCP->Serial: client disconnected\n")
+				return
+			}
+			if n > 0 {
+				fmt.Printf("[serial] TCP->Serial: received %d bytes from TCP: %x\n", n, buffer[:n])
+				_, err := writeSerial(serialPort, buffer[:n])
+				if err != nil {
+					fmt.Printf("[serial] TCP->Serial: error writing to serial: %v\n", err)
+					return
+				}
+				fmt.Printf("[serial] TCP->Serial: wrote %d bytes to serial port\n", n)
+			}
+		}
+	}()
+	
+	// Wait for either direction to stop
+	<-done
+	
+	// Cleanup
+	serialMutex.Lock()
+	refCount := serialPortRefCount[path]
+	if refCount > 1 {
+		serialPortRefCount[path]--
+		fmt.Printf("[serial] connection closed for %s, refs remaining: %d\n", path, refCount-1)
+	} else {
+		if port, exists := openSerialPorts[path]; exists {
+			closeSerial(port)
+			delete(openSerialPorts, path)
+		}
+		delete(serialPortRefCount, path)
+		fmt.Printf("[serial] connection closed for %s, port closed\n", path)
+	}
+	serialMutex.Unlock()
+}
+
+func scanAndSyncSerialPorts() {
+	ports := listSerialPorts()
+	foundPaths := make(map[string]bool)
+	
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	
+	for _, portInfo := range ports {
+		pathName := portInfo.Path
+		if pathName == "" {
+			continue
+		}
+		
+		foundPaths[pathName] = true
+		serialPortDetails[pathName] = portInfo
+		
+		if _, exists := serialServers[pathName]; !exists {
+			go func(path string) {
+				_, err := ensureSerialTcpServer(path, 115200)
+				if err != nil {
+					fmt.Printf("[serial] failed to create tcp server for %s: %v\n", path, err)
+				}
+			}(pathName)
+		}
+	}
+	
+	// Remove servers for ports that disappeared
+	for existingPath := range serialServers {
+		if !foundPaths[existingPath] {
+			info := serialServers[existingPath]
+			info.Server.Close()
+			delete(tcpPortToSerialPath, info.Port)
+			delete(serialServers, existingPath)
+			delete(serialPortDetails, existingPath)
+			
+			if port, exists := openSerialPorts[existingPath]; exists {
+				closeSerial(port)
+				delete(openSerialPorts, existingPath)
+				delete(serialPortRefCount, existingPath)
+			}
+			
+			fmt.Printf("[serial] closed TCP server for %s\n", existingPath)
+		}
+	}
+}
+
+func startSerialMonitor() {
+	if serialScanInterval == 0 {
+		if debugMode {
+			fmt.Println("[serial] monitor disabled (SERIAL_SCAN_INTERVAL=0)")
+		}
+		return
+	}
+	
+	scanAndSyncSerialPorts()
+	
+	ticker := time.NewTicker(time.Duration(serialScanInterval) * time.Millisecond)
+	go func() {
+		for range ticker.C {
+			scanAndSyncSerialPorts()
+		}
+	}()
+	
+	if debugMode {
+		fmt.Printf("[serial] monitor started, interval %d\n", serialScanInterval)
+	}
+}
+
+func stopSerialMonitor() {
+	// Implementation would stop the ticker
+}
+
+func closeAllSerialServers() {
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	
+	for path, info := range serialServers {
+		info.Server.Close()
+		delete(tcpPortToSerialPath, info.Port)
+		delete(serialServers, path)
+		delete(serialPortDetails, path)
+		
+		if port, exists := openSerialPorts[path]; exists {
+			closeSerial(port)
+			delete(openSerialPorts, path)
+			delete(serialPortRefCount, path)
+		}
+	}
+}
+
+// Helper functions for state management
+func getSerialPortState(path string) SerialState {
+	serialMutex.RLock()
+	defer serialMutex.RUnlock()
+	
+	if state, exists := serialPortStates[path]; exists {
+		return state
+	}
+	return SerialState{DTR: false, RTS: false, BaudRate: 115200}
+}
+
+func setSerialPortState(path string, state SerialState) {
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	serialPortStates[path] = state
+}
+
+func getSerialPort(path string) serial.Port {
+	serialMutex.RLock()
+	defer serialMutex.RUnlock()
+	return openSerialPorts[path]
+}
+
+func setSerialPort(path string, port serial.Port) {
+	serialMutex.Lock()
+	defer serialMutex.Unlock()
+	openSerialPorts[path] = port
+}
+
+func getTcpPortFromPath(path string) int {
+	serialMutex.RLock()
+	defer serialMutex.RUnlock()
+	
+	if info, exists := serialServers[path]; exists {
+		return info.Port
+	}
+	return 0
+}
+
+func getSerialPathFromTcpPort(port int) string {
+	serialMutex.RLock()
+	defer serialMutex.RUnlock()
+	return tcpPortToSerialPath[port]
+}
