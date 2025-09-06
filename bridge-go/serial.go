@@ -362,7 +362,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 	defer conn.Close()
 
 	// Bidirectional data forwarding with explicit stop signalling
-	done := make(chan bool, 2) // оба направления сигнализируют о завершении
+	done := make(chan bool, 2) // both directions signal completion
 	stop := make(chan struct{})
 	var stopOnce sync.Once
 	// closeStop: close stop channel once and perform early refcount cleanup
@@ -402,7 +402,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 
 			data, err := readSerial(serialPort, 1024)
 			if err != nil {
-				// сигнализируем стопу и выходим
+				// signal stop and exit
 				if debugMode {
 					fmt.Printf("[serial] Serial->TCP: read error: %v\n", err)
 				}
@@ -445,7 +445,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 				if debugMode {
 					fmt.Printf("[serial] TCP->Serial: client read error: %v\n", err)
 				}
-				// при ошибке клиента — просигналим остановку и выйдем
+				// on client error — signal stop and exit
 				closeStop()
 				return
 			}

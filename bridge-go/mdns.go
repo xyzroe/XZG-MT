@@ -72,7 +72,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	var mu sync.Mutex
 	includeLocal := false
 
-	// Проверяем нужно ли включать локальные устройства
+	// Check whether to include local devices
 	for _, serviceType := range typeList {
 		if serviceType.Protocol == "serial" || serviceType.Type == "local" {
 			includeLocal = true
@@ -80,12 +80,12 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 		}
 	}
 
-	// Создаем WaitGroup для синхронизации горутин
+	// Create a WaitGroup to synchronize goroutines
 	var wg sync.WaitGroup
 
-	// Запускаем поиск для каждого типа сервиса
+	// Start a search for each service type
 	for _, serviceType := range typeList {
-		// Пропускаем не-сетевые сервисы
+	// Skip non-network services
 		if serviceType.Protocol != "tcp" && serviceType.Protocol != "udp" {
 			continue
 		}
@@ -97,25 +97,25 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 			serviceName := fmt.Sprintf("_%s._%s", st.Type, st.Protocol)
 			fmt.Printf("[mdns] looking for %s\n", serviceName)
 
-			// Создаем новый резолвер для каждого сервиса
+			// Create a new resolver for each service
 			resolver, err := zeroconf.NewResolver(nil)
 			if err != nil {
 				fmt.Printf("[mdns] failed to create resolver for %s: %v\n", serviceName, err)
 				return
 			}
 
-			// Создаем контекст с таймаутом для этого конкретного сервиса
+			// Create a context with timeout for this specific service
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutMs)*time.Millisecond)
 			defer cancel()
 
-			// Канал для получения найденных устройств
+			// Channel to receive discovered devices
 			entries := make(chan *zeroconf.ServiceEntry, 10)
 
-			// Запускаем Browse в отдельной горутине
+			// Run Browse in a separate goroutine
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						// Игнорируем панику от библиотеки zeroconf
+						// Ignore panic from the zeroconf library
 						fmt.Printf("[mdns] recovered from panic in %s: %v\n", serviceName, r)
 					}
 				}()
@@ -126,7 +126,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 				}
 			}()
 
-			// Обрабатываем найденные устройства
+			// Process discovered devices
 			for {
 				select {
 				case entry, ok := <-entries:
@@ -136,7 +136,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 
 					mu.Lock()
 
-					// Определяем хост
+					// Determine host
 					host := ""
 					if len(entry.AddrIPv4) > 0 {
 						host = entry.AddrIPv4[0].String()
@@ -150,9 +150,9 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 
 					key := fmt.Sprintf("%s|%s|%d", entry.Instance, host, entry.Port)
 
-					// Избегаем дублирования
+					// Avoid duplication
 					if _, exists := foundDevices[key]; !exists {
-						// Парсим TXT записи
+						// Parse TXT records
 						txtMap := make(map[string]string)
 						for _, txt := range entry.Text {
 							parts := strings.SplitN(txt, "=", 2)
@@ -184,7 +184,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 		}(serviceType)
 	}
 
-	// Ждем завершения всех горутин или общего таймаута
+	// Wait for all goroutines to finish or for a global timeout
 	done := make(chan bool)
 	go func() {
 		wg.Wait()
@@ -193,20 +193,20 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 
 	select {
 	case <-done:
-		// Все горутины завершились
+		// All goroutines finished
 	case <-time.After(time.Duration(timeoutMs) * time.Millisecond):
-		// Общий таймаут
+		// Global timeout
 		fmt.Printf("[mdns] scan timeout reached\n")
 	}
 
-	// Собираем результаты
+	// Collect results
 	mu.Lock()
 	for _, service := range foundDevices {
 		results = append(results, service)
 	}
 	mu.Unlock()
 
-	// Если нужно, добавляем локальные серийные порты
+	// If requested, add local serial ports as services
 	if includeLocal {
 		local := listLocalSerialAsServices()
 		if len(local) > 0 {
