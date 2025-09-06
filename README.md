@@ -14,32 +14,113 @@
 <a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
 </div>
 
-A combined repository that bundles a browser-based TI CC2538 / CC26x2 flasher web app with a tiny WebSocket ↔ TCP bridge for remote or remote-serial flashing.
+## About
 
-This monorepo contains two main projects and a Home Assistant add-on helper.
+XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC1352 / CC2538 / CC2652 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
-🌐 Use it at: [mt.xyzroe.cc](https://mt.xyzroe.cc)
+## Features
 
-Highlights
-
+- 🔌 Flash TI CC2538/CC26x2 via Web Serial (Chrome/Edge)
+- 📂 Load firmware from local files or the cloud
+- 💾 Backup, restore, and erase NVRAM
+- 🦾 Automatic device model and parameter detection
+- 📝 Cloud firmware with descriptions
 - 🌐 Web UI to flash TI devices from your browser (Web Serial or remote via bridge)
 - 🔌 Lightweight WS ↔ TCP bridge that can forward WebSocket clients to TCP hosts and expose local serial ports over TCP
 - 🧰 Scripts to build the web assets and to produce standalone bridge binaries
 
-## About
-
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538/CC26x2 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
-
 ## Quick start
 
-- Local USB: use the hosted web app — open the online flasher at [https://mt.xyzroe.cc](https://mt.xyzroe.cc) and connect your device via the browser's Web Serial API.
-- Remote TCP or remote USB/serial: add this repository to your Home Assistant add-on store and install the `bridge` add-on to expose remote/host serial devices to the web UI.
+### Local USB
 
-  <div align="center"> 
-  <a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
-  </div>
+🌐 Open: [mt.xyzroe.cc](https://mt.xyzroe.cc)  
+_from Chrome or Edge_
 
-On the [bridge README](bridge/README.md) page you'll find more installation options (Docker images, prebuilt binaries, or building your own) and detailed configuration notes.
+### Remote (TCP or remote USB/serial)
+
+Because browsers don't support TCP connections you need to use WebSocket ↔ TCP bridge that can forward WebSocket clients to TCP hosts and as option expose local serial ports over TCP.  
+You have some options:
+
+#### Home Assistant Add-On
+
+<div align="center"> 
+<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
+</div>
+ 
+Just click on the button above or add this repository to your Home Assistant add-on store manually and then install the add-on to expose remote TCP / host serial devices to the web UI.
+
+#### [Docker images](https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt)
+
+Prebuilt multi-arch images are published to GHCR on each release/tag.
+
+Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
+
+- Run (basic):
+
+  ```bash
+  docker run --rm -p 8765:8765 ghcr.io/xyzroe/XZG-MT:latest
+  ```
+
+- Run with mDNS:
+
+  ```bash
+  docker run --rm --network host ghcr.io/xyzroe/XZG-MT:latest
+  ```
+
+- To expose a host serial device to the container add `--device` (Linux):
+
+  ```bash
+  docker run --rm --network host \
+    --device /dev/ttyUSB0:/dev/ttyUSB0 \
+    ghcr.io/xyzroe/XZG-MT:latest
+  ```
+
+  Then query `/mdns?types=local` and connect via the advertised TCP port.
+
+- Customize port, advertised host, disable serial scan amd enable debug logs:
+
+  ```bash
+  docker run --rm \
+    -e PORT=9000 \
+    -e ADVERTISE_HOST=192.168.1.42 \
+    -e SERIAL_SCAN_INTERVAL=0 \
+    -e DEBUG_MODE=true \
+    -p 9000:9000 \
+    ghcr.io/xyzroe/XZG-MT:latest
+  ```
+
+#### Prebuilt binaries
+
+Download a ready-to-run binary from Releases, make it executable (Linux/macOS), and run.
+
+- [Releases page](https://github.com/xyzroe/XZG-MT/releases)
+
+##### How to run:
+
+- Windows:
+
+  - Run: `XZG-MT-windows-*.exe` or double click
+
+- Linux:
+
+  1. Make executable:
+     ```bash
+     chmod +x ./XZG-MT-linux-*
+     ```
+  2. Run: `./XZG-MT-linux-*` or double click
+
+- macOS:
+
+  1. Make executable and remove quarantine:
+
+  ```bash
+  chmod +x ./XZG-MT-darwin-*
+  xattr -d com.apple.quarantine ./XZG-MT-darwin-*
+  ```
+
+  2. Run: `./XZG-MT-darwin-*` or double click
+
+To run on custom port: `./XZG-MT-* 9999`
 
 ## Where to read more
 
