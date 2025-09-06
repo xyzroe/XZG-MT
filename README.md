@@ -14,37 +14,34 @@
 <a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
 </div>
 
-## About
+## 📖 About
 
 XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC1352 / CC2538 / CC2652 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
-## Features
+## ⭐ Features
 
-- 🔌 Flash TI CC2538/CC26x2 via Web Serial (Chrome/Edge)
-- 📂 Load firmware from local files or the cloud
-- 💾 Backup, restore, and erase NVRAM
-- 🦾 Automatic device model and parameter detection
+- 🔌 Work with local TI CC1352 / CC2538 / CC2652 via Web Serial (Chrome/Edge) or remote via WS-TCP bridge
+- 📂 Flash firmware from custom local file or select from provided
+- 🦾 Automatic chip model, flash size, IEEE and firmware version detection
 - 📝 Cloud firmware with descriptions
-- 🌐 Web UI to flash TI devices from your browser (Web Serial or remote via bridge)
-- 🔌 Lightweight WS ↔ TCP bridge that can forward WebSocket clients to TCP hosts and expose local serial ports over TCP
-- 🧰 Scripts to build the web assets and to produce standalone bridge binaries
+- 💾 Backup, restore, and erase NVRAM
 
-## Quick start
+## 🚀 Quick start
 
-### Local USB
+### 🔌 Local USB
 
 <div align="center"> 
 🌐 Open: <a href="https://mt.xyzroe.cc" target="_blank">mt.xyzroe.cc</a><br>
 <i>from Chrome or Edge</i>
 </div>
 
-### Remote (TCP or remote USB/serial)
+### 📡 Remote (TCP or remote USB/serial)
 
 Because browsers don't support TCP connections you need to use WebSocket ↔ TCP bridge that can forward WebSocket clients to TCP hosts and as option expose local serial ports over TCP.
 
 You have some options:
 
-#### Home Assistant Add-On
+#### 🏠 Home Assistant Add-On
 
 <div align="center"> 
 <a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT" target="_blank"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
@@ -52,7 +49,7 @@ You have some options:
  
 Just click on the button above or add this repository to your Home Assistant add-on store manually and then install the add-on to expose remote TCP / host serial devices to the web UI.
 
-#### [Docker images](https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt)
+#### 🐳 [Docker images](https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt)
 
 Prebuilt multi-arch images are published to GHCR on each release/tag.
 
@@ -92,13 +89,13 @@ Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
     ghcr.io/xyzroe/XZG-MT:latest
   ```
 
-#### Prebuilt binaries
+#### 📦 Prebuilt binaries
 
 Download a ready-to-run binary from Releases, make it executable (Linux/macOS), and run.
 
 - [Releases page](https://github.com/xyzroe/XZG-MT/releases)
 
-##### How to run:
+##### ⚡ How to run:
 
 - Windows:
 
@@ -125,7 +122,7 @@ Download a ready-to-run binary from Releases, make it executable (Linux/macOS), 
 
 To run on custom port: `./XZG-MT-* 9999`
 
-## Where to read more
+## 📚 Where to read more
 
 Read the individual project READMEs for full documentation and advanced options:
 
@@ -134,16 +131,7 @@ Read the individual project READMEs for full documentation and advanced options:
 - ⚠️ WebSocket bridge (Node) — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
-## Repository structure
-
-- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
-- bridge-go/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
-- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
-- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
-- LICENSE — License for the whole repository (MIT).
-- repository.json — repository metadata.
-
-## Tech & badges
+## 🛠️ Tech & badges
 
 Below are key technologies, libraries and tools used across the projects (click the badges for quick context):
 
@@ -166,18 +154,27 @@ Below are key technologies, libraries and tools used across the projects (click 
   <img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS" />
 </div>
 
-## License
+## 📁 Repository structure
+
+- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
+- bridge-go/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
+- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
+- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
+- LICENSE — License for the whole repository (MIT).
+- repository.json — repository metadata.
+
+## 📜 License
 
 MIT — see `LICENSE` for details.
 
-## Community
+## 👥 Community
 
-- 💬 Telegram: [https://t.me/xzg_fw](https://t.me/xzg_fw)
-- 🗨️ Discord: [https://discord.gg/A5ge3cYRKW](https://discord.gg/A5ge3cYRKW)
+- 💬 [Telegram group](https://t.me/xzg_fw)
+- 🗨️ [Discord server](https://discord.gg/A5ge3cYRKW)
 
 If you found an issue or want to request a feature, please open an issue in this repository.
 
-## Support
+## 💖 Support
 
 If you find this project useful and want to support further development, you can sponsor or donate to the author:
 
@@ -186,15 +183,14 @@ If you find this project useful and want to support further development, you can
   <a href="https://www.buymeacoffee.com/xyzroe" title="Buy Me a Coffee"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00.svg?logo=buy-me-a-coffee&logoColor=black" style="margin:6px;"/></a>
   <a href="https://www.paypal.com/paypalme/xyzroe" title="PayPal Me"><img alt="PayPal" src="https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal" style="margin:6px;"/></a>
   <a href="https://nowpayments.io/donation/xyzroe" title="Crypto donation via NOWPayments"><img alt="NOWPayments" src="https://img.shields.io/badge/Crypto-NOWPayments-purple.svg?logo=bitcoin" style="margin:6px;"/></a>
+<br><br>
+  Thank you — every little contribution helps keep the project alive and maintained. 🙏
 </div>
-  
-  
-Thank you — every little contribution helps keep the project alive and maintained. 🙏
 
 ---
 
 <div align="center">
-  <sub>Made with <span aria-hidden="true">❤️</span> for the Zigbee community!</sub>
+  <sub>Made with <span aria-hidden="true">❤️</span> from Berlin!</sub>
 </div>
   
 ---
