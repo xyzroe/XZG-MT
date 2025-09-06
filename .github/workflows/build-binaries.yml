@@ -244,12 +244,17 @@ jobs:
           ref: ${{ needs.version-bump.outputs.new_sha }}
           fetch-depth: 0
 
-      - name: Download all artifacts
+      - name: Download node artifacts
         uses: actions/download-artifact@v4
         with:
+          name: all-binaries
           path: dist-release
-          pattern: *-binaries
-          merge-multiple: true
+
+      - name: Download go artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: go-binaries
+          path: dist-release
 
       - name: Show downloaded files
         run: ls -Rla dist-release || true
