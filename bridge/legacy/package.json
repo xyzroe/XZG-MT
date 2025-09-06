@@ -1,7 +1,7 @@
 {
   "name": "bridge-legacy",
   "private": true,
-  "version": "0.2.5-legacy",
+  "version": "0.2.6-legacy",
   "description": "Legacy build (Node 12) of bridge for Windows 7/2008 R2.",
   "type": "commonjs",
   "main": "bridge.legacy.js",
