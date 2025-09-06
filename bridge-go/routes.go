@@ -19,11 +19,11 @@ func setupRoutes(e *echo.Echo) {
 			c.Response().Header().Set("Access-Control-Allow-Headers", "Content-Type,Accept,Origin,X-Requested-With,Authorization")
 			c.Response().Header().Set("Access-Control-Allow-Private-Network", "true")
 			c.Response().Header().Set("Access-Control-Max-Age", "86400")
-			
+
 			if c.Request().Method == "OPTIONS" {
 				return c.NoContent(204)
 			}
-			
+
 			return next(c)
 		}
 	})
@@ -46,63 +46,63 @@ func handleWebSocketUpgrade(c echo.Context) error {
 	// Get target host and port from query parameters
 	host := c.QueryParam("host")
 	portStr := c.QueryParam("port")
-	
+
 	if host == "" || portStr == "" {
 		return c.String(http.StatusBadRequest, "Missing host or port parameter")
 	}
-	
+
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
 		return c.String(http.StatusBadRequest, "Invalid port parameter")
 	}
-	
+
 	// Upgrade to WebSocket
 	upgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
 			return true // Allow all origins
 		},
 	}
-	
+
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
 	}
 	defer ws.Close()
-	
+
 	// Handle WebSocket connection
 	handleWebSocketConnection(ws, host, port)
-	
+
 	return nil
 }
 
 func handleMdnsScan(c echo.Context) error {
 	typesParam := c.QueryParam("types")
 	timeoutStr := c.QueryParam("timeout")
-	
+
 	timeout := 2000 // default timeout
 	if timeoutStr != "" {
 		if t, err := strconv.Atoi(timeoutStr); err == nil {
 			timeout = t
 		}
 	}
-	
+
 	// Ensure timeout is within reasonable bounds
 	if timeout < 500 {
 		timeout = 500
 	} else if timeout > 10000 {
 		timeout = 10000
 	}
-	
+
 	types := strings.Split(typesParam, ",")
 	var normalizedTypes []ServiceType
 	var wantsLocalSerial bool
-	
+
 	for _, t := range types {
 		t = strings.TrimSpace(t)
 		if t == "" {
 			continue
 		}
-		
+
 		if isLocalSerialToken(t) {
 			wantsLocalSerial = true
 		} else {
@@ -111,24 +111,24 @@ func handleMdnsScan(c echo.Context) error {
 			}
 		}
 	}
-	
+
 	var results []ServiceInfo
-	
+
 	// Scan mDNS services
 	if len(normalizedTypes) > 0 {
 		results = scanMdns(normalizedTypes, timeout)
 	}
-	
+
 	// Add local serial services
 	if wantsLocalSerial {
 		locals := listLocalSerialAsServices()
 		results = append(results, locals...)
 	}
-	
+
 	response := map[string]interface{}{
 		"devices": results,
 	}
-	
+
 	return c.JSON(http.StatusOK, response)
 }
 
@@ -138,20 +138,20 @@ func handleSerialControl(c echo.Context) error {
 	dtrStr := c.QueryParam("dtr")
 	rtsStr := c.QueryParam("rts")
 	baudStr := c.QueryParam("baud")
-	
+
 	// Get path from TCP port if not provided directly
 	if path == "" && tcpPortStr != "" {
 		if tcpPort, err := strconv.Atoi(tcpPortStr); err == nil {
 			path = getSerialPathFromTcpPort(tcpPort)
 		}
 	}
-	
+
 	if path == "" || (dtrStr == "" && rtsStr == "" && baudStr == "") {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Missing path/tcpPort or dtr/rts/baud param",
 		})
 	}
-	
+
 	// Parse baud rate if provided
 	var baud int
 	if baudStr != "" {
@@ -162,18 +162,18 @@ func handleSerialControl(c echo.Context) error {
 				"error": "Invalid baud rate",
 			})
 		}
-		
+
 		if !isValidBaudRate(baud) {
 			return c.JSON(http.StatusBadRequest, map[string]interface{}{
-				"error": "Invalid baud rate",
+				"error":      "Invalid baud rate",
 				"validRates": validRates,
 			})
 		}
 	}
-	
+
 	// Get current state
 	currentState := getSerialPortState(path)
-	
+
 	// Handle baud rate change
 	if baud > 0 && baud != currentState.BaudRate {
 		if !reopenSerialPort(path, baud) {
@@ -183,7 +183,7 @@ func handleSerialControl(c echo.Context) error {
 		}
 		currentState.BaudRate = baud
 	}
-	
+
 	// Update state
 	setObj := currentState
 	if dtrStr != "" {
@@ -195,9 +195,9 @@ func handleSerialControl(c echo.Context) error {
 	if baud > 0 {
 		setObj.BaudRate = baud
 	}
-	
+
 	setSerialPortState(path, setObj)
-	
+
 	// Apply DTR/RTS if they were changed
 	if dtrStr != "" || rtsStr != "" {
 		serial := getSerialPort(path)
@@ -208,43 +208,43 @@ func handleSerialControl(c echo.Context) error {
 				setSerialPort(path, serial)
 			}
 		}
-		
+
 		if serial != nil {
 			// Set both DTR and RTS simultaneously for better timing
 			setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
 		}
 	}
-	
+
 	response := map[string]interface{}{
-		"ok": true,
-		"path": path,
+		"ok":      true,
+		"path":    path,
 		"tcpPort": getTcpPortFromPath(path),
-		"set": setObj,
+		"set":     setObj,
 	}
-	
+
 	return c.JSON(http.StatusOK, response)
 }
 
 func handleStaticFiles(c echo.Context) error {
 	path := c.Request().URL.Path
-	
+
 	// Remove leading slash
 	if strings.HasPrefix(path, "/") {
 		path = path[1:]
 	}
-	
+
 	// Default to index.html
 	if path == "" {
 		path = "index.html"
 	}
-	
+
 	// Try to get embedded file
 	if content, found := getEmbeddedFile(path); found {
 		contentType := getContentType(path)
 		c.Response().Header().Set("Content-Type", contentType)
 		return c.String(http.StatusOK, content)
 	}
-	
+
 	// File not found
 	return c.String(http.StatusNotFound, "File not found")
 }

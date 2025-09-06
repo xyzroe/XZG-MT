@@ -3,27 +3,28 @@ package main
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/gorilla/websocket"
 )
 
 func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort int) {
-	fmt.Printf("[websocket] establishing TCP connection to %s:%d\n", targetHost, targetPort)
-	
+	fmt.Printf("[websocket] establishing TCP connection to %s\n", net.JoinHostPort(targetHost, strconv.Itoa(targetPort)))
+
 	// Create TCP connection to target
-	tcpConn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", targetHost, targetPort))
+	tcpConn, err := net.Dial("tcp", net.JoinHostPort(targetHost, strconv.Itoa(targetPort)))
 	if err != nil {
-		fmt.Printf("[websocket] failed to connect to %s:%d: %v\n", targetHost, targetPort, err)
+		fmt.Printf("[websocket] failed to connect to %s: %v\n", net.JoinHostPort(targetHost, strconv.Itoa(targetPort)), err)
 		ws.Close()
 		return
 	}
 	defer tcpConn.Close()
-	
-	fmt.Printf("[websocket] TCP connection established to %s:%d\n", targetHost, targetPort)
-	
+
+	fmt.Printf("[websocket] TCP connection established to %s\n", net.JoinHostPort(targetHost, strconv.Itoa(targetPort)))
+
 	// Set up bidirectional forwarding
 	done := make(chan bool)
-	
+
 	// TCP -> WebSocket forwarding
 	go func() {
 		defer func() { done <- true }()
@@ -48,7 +49,7 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 			}
 		}
 	}()
-	
+
 	// WebSocket -> TCP forwarding
 	go func() {
 		defer func() { done <- true }()
@@ -58,12 +59,12 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 				fmt.Printf("[websocket] WS->TCP: read error: %v\n", err)
 				return
 			}
-			
+
 			if messageType == websocket.CloseMessage {
 				fmt.Printf("[websocket] WS->TCP: WebSocket close frame received\n")
 				return
 			}
-			
+
 			if messageType == websocket.BinaryMessage || messageType == websocket.TextMessage {
 				if debugMode {
 					fmt.Printf("[websocket] WS->TCP: received %d bytes from WebSocket: %x\n", len(data), data)
@@ -78,9 +79,9 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 			}
 		}
 	}()
-	
+
 	// Wait for either direction to close
 	<-done
-	
-	fmt.Printf("[websocket] connection closing for %s:%d\n", targetHost, targetPort)
+
+	fmt.Printf("[websocket] connection closing for %s\n", net.JoinHostPort(targetHost, strconv.Itoa(targetPort)))
 }

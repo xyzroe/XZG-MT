@@ -1,6 +1,7 @@
 # XZG-MT Go Bridge Makefile
 
-VERSION := 1.0.0
+#read version from # read from ../web-page/package.json or set 0.0.0 if error
+VERSION := $(shell cat ../web-page/package.json | jq -r .version || echo "0.0.0")
 BUILD_DIR := dist
 MAIN_FILE := main.go
 
@@ -14,7 +15,7 @@ build:
 	@echo "Building XZG-MT Go Bridge v$(VERSION)"
 	@echo "=================================="
 	@mkdir -p $(BUILD_DIR)
-	@./build.sh
+	@USE_UPX=1 ./build.sh
 
 # Build for current platform only
 .PHONY: build-local
@@ -28,7 +29,7 @@ build-local:
 .PHONY: run
 run:
 	@echo "Running XZG-MT Go Bridge locally..."
-	@go run $(MAIN_FILE)
+	@go run -ldflags "-X main.VERSION=$(VERSION)" .
 
 # Clean build artifacts
 .PHONY: clean
