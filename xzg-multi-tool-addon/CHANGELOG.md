@@ -1,10 +1,61 @@
+## v0.2.7
+
+### 🚀 Features
+
+- feat: First Go only bridge release
+
+### 🐛 Bug Fixes
+
+- fix: update output filename format in build script (#16) by @xyzroe
+
+## v0.2.6
+
+### 🚀 Features
+
+- feat: Add a Go implementation of Bridge. Reduce size! Binaries and Docker images (#12) by @xyzroe.
+- feat: UI impoves (#11) by @xyzroe
+
+### 🐛 Bug Fixes
+
+- fix: update Go version to 1.21 in build workflow (#15) by @xyzroe
+- fix: update artifact download steps to specify names for node and go (#14) by @xyzroe
+- fix: update job dependencies in build workflow and (#13) by @xyzroe
+- feat: UI impoves (#11) by @xyzroe
+
+## v0.2.3
+
+### 🚀 Features
+
+- fix: use actual version while web page build (#10) by @xyzroe
+
+### 🐛 Bug Fixes
+
+- fix: use actual version while web page build (#10) by @xyzroe
+
+## v0.2.2
+
+### 🐛 Bug Fixes
+
+- fix: update checkout references to use new SHA from version bump step (#9) by @xyzroe
+
+## v0.2.1
+
+- fix: serial module import; feature: some UI enhancements (#8) by @xyzroe
+
+### 🐛 Bug Fixes
+
+- fix: update name-template in release-drafter.yml (#7) by @xyzroe
+- fix: prepend 'v' to version headers and some cleanup in CHANGELOG (#6) by @xyzroe
+- fix: correct workflow_dispatch indentation in draft-release-notes.yml (#5) by @xyzroe
+- fix: update protocol options in documentation to remove mistakes (#4) by @xyzroe
+
 ## v0.2.0
 
-## 🚀 Features
+### 🚀 Features
 
 - fix: update permissions to include pull-requests read access (#1) by @xyzroe
 
-## 🐛 Bug Fixes
+### 🐛 Bug Fixes
 
 - fix: conditionally log debug messages (#2) by @xyzroe
 
