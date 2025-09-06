@@ -236,7 +236,7 @@ jobs:
   release:
     name: Publish Release
     runs-on: ubuntu-latest
-    needs: [build-bin, version-bump]
+    needs: [build-bin, build-go, version-bump]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -247,8 +247,9 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: all-binaries
           path: dist-release
+          pattern: *-binaries
+          merge-multiple: true
 
       - name: Show downloaded files
         run: ls -Rla dist-release || true
@@ -391,6 +392,7 @@ jobs:
       - name: Build go binaries for multiple platforms
         shell: bash
         run: |
+          cd bridge-go
           make deps
           make build
 
