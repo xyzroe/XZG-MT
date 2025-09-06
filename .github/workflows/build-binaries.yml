@@ -347,3 +347,129 @@ jobs:
           build-args: |
             COMMIT_SHA=${{ steps.short_sha.outputs.sha }}
             COMMIT_SHA_FULL=${{ github.sha }}
+
+  build-go:
+    name: Build Go binaries (macos-latest)
+    runs-on: macos-latest
+    needs: [version-bump, build-web-deploy]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
+
+      - name: Ensure full git history and export short SHA
+        shell: bash
+        run: |
+          git fetch --prune --unshallow || true
+          short_sha=$(git rev-parse --short HEAD)
+          echo "sha=$short_sha" >> "$GITHUB_OUTPUT"
+          echo "COMMIT_SHA=$short_sha" >> "$GITHUB_ENV"
+        id: short_sha
+
+      - name: Download web-page artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-page-artifacts
+          path: tmp/web-artifacts
+          if-no-files-found: error
+
+      - name: Copy web assets into bridge-go/web
+        shell: bash
+        run: |
+          set -e
+          mkdir -p bridge-go/web
+          cp -a tmp/web-artifacts/. bridge-go/web/ || true
+          ls -la bridge-go/web || true
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build go binaries for multiple platforms
+        shell: bash
+        run: |
+          make deps
+          make build
+
+      - name: Upload go binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-binaries
+          path: |
+            bridge-go/dist/**
+          if-no-files-found: error
+
+  docker-go:
+    name: Build & Push Docker image (bridge-go)
+    runs-on: ubuntu-latest
+    needs: [version-bump, build-web-deploy]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version-bump.outputs.new_sha }}
+          fetch-depth: 0
+
+      - name: Download web-page artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-page-artifacts
+          path: tmp/web-artifacts
+          if-no-files-found: error
+
+      - name: Copy web assets into bridge-go/web
+        shell: bash
+        run: |
+          set -e
+          mkdir -p bridge-go/web
+          cp -a tmp/web-artifacts/. bridge-go/web/ || true
+          ls -la bridge-go/web || true
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for bridge-go
+        id: meta-go
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}-go
+          tags: |
+            type=raw,value=${{ needs.version-bump.outputs.version }}
+            type=raw,value=latest
+
+      - name: Compute short commit SHA
+        id: short_sha_go
+        run: |
+          echo "sha=$(echo ${GITHUB_SHA} | cut -c1-8)" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push bridge-go Docker image (multi-arch)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./bridge-go/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ steps.meta-go.outputs.tags }}
+          labels: ${{ steps.meta-go.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.version-bump.outputs.version }}
+            COMMIT_SHA=${{ steps.short_sha_go.outputs.sha }}

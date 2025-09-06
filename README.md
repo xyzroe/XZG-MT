@@ -45,14 +45,16 @@ On the [bridge README](bridge/README.md) page you'll find more installation opti
 
 Read the individual project READMEs for full documentation and advanced options:
 
-- Web UI: [README](web-page/README.md)
-- WebSocket bridge: [README](bridge/README.md)
-- Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
+- 🌐 Web UI: [README](web-page/README.md)
+- 🚀 WebSocket bridge (Go) — [README](bridge-go/README.md)
+- ⚠️ WebSocket bridge (Node) — [README](bridge/README.md)
+- 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
 ## Repository structure
 
-- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets. See `web-page/README.md` for full docs.
-- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers. See `bridge/README.md`.
+- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
+- bridge-go/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
+- bridge/ — The small Node.js app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
 - xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
 - LICENSE — License for the whole repository (MIT).
 - repository.json — repository metadata.
@@ -75,9 +77,10 @@ Below are key technologies, libraries and tools used across the projects (click 
   <img src="https://img.shields.io/badge/copyfiles-static_copy-grey" alt="copyfiles" />
   <img src="https://img.shields.io/badge/nodemon-dev_watch-red" alt="nodemon" />
   <img src="https://img.shields.io/badge/Docker-container-blue" alt="docker" />
+  <img src="https://img.shields.io/badge/Go-%3E%3D1.21-cyan" alt="Go" />
+  <img src="https://img.shields.io/badge/golangci--lint-linter-brightgreen" alt="golangci-lint" />
+  <img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS" />
 </div>
-
-The list above was composed from the `package.json` files in `web-page/` and `bridge/` and highlights the main runtime, build and developer dependencies used in this repository.
 
 ## License
 
