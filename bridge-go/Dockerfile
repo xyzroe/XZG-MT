@@ -2,10 +2,11 @@
 # - builder: compile a static linux binary
 # - runtime: small alpine image with HA-friendly utilities
 
+
+FROM --platform=$BUILDPLATFORM golang:1.20-alpine AS builder
 ARG VERSION=0.0.0
 ARG TARGETOS
 ARG TARGETARCH
-FROM --platform=$BUILDPLATFORM golang:1.20-alpine AS builder
 
 WORKDIR /src
 
