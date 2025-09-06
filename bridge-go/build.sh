@@ -95,7 +95,7 @@ for target in "${TARGETS[@]}"; do
     echo "Building for $os/$arch..."
     
     # Set output filename
-    output_name="XZG-MT-Go-${os}-${arch}"
+    output_name="XZG-MT-${os}-${arch}"
     if [ "$os" = "windows" ]; then
         output_name="${output_name}.exe"
     fi
