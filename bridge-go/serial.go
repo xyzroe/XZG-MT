@@ -361,16 +361,52 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) {
 	defer conn.Close()
 
-	// Bidirectional data forwarding
-	done := make(chan bool)
+	// Bidirectional data forwarding with explicit stop signalling
+	done := make(chan bool, 2) // оба направления сигнализируют о завершении
+	stop := make(chan struct{})
+	var stopOnce sync.Once
+	// closeStop: close stop channel once and perform early refcount cleanup
+	closeStop := func() {
+		stopOnce.Do(func() {
+			// decrement refcount and close serial port if this was the last reference
+			serialMutex.Lock()
+			defer serialMutex.Unlock()
+			if cnt, ok := serialPortRefCount[path]; ok {
+				if cnt <= 1 {
+					// last reference: remove and close port to unblock readers
+					delete(serialPortRefCount, path)
+					if p, exists := openSerialPorts[path]; exists {
+						if debugMode {
+							fmt.Printf("[serial] early-closing serial port for %s\n", path)
+						}
+						closeSerial(p)
+						delete(openSerialPorts, path)
+					}
+				} else {
+					serialPortRefCount[path] = cnt - 1
+				}
+			}
+			close(stop)
+		})
+	}
 
 	// Serial -> TCP forwarding
 	go func() {
 		defer func() { done <- true }()
 		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+
 			data, err := readSerial(serialPort, 1024)
 			if err != nil {
-				fmt.Printf("[serial] Serial->TCP: error: %v\n", err)
+				// сигнализируем стопу и выходим
+				if debugMode {
+					fmt.Printf("[serial] Serial->TCP: read error: %v\n", err)
+				}
+				closeStop()
 				return
 			}
 			if len(data) > 0 {
@@ -378,7 +414,10 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 					fmt.Printf("[serial] Serial->TCP: received %d bytes from serial: %x\n", len(data), data)
 				}
 				if _, err := conn.Write(data); err != nil {
-					fmt.Printf("[serial] Serial->TCP: error sending to client: %v\n", err)
+					if debugMode {
+						fmt.Printf("[serial] Serial->TCP: error sending to client: %v\n", err)
+					}
+					closeStop()
 					return
 				}
 				if debugMode {
@@ -395,9 +434,19 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 		defer func() { done <- true }()
 		buffer := make([]byte, 1024)
 		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+
 			n, err := conn.Read(buffer)
 			if err != nil {
-				fmt.Printf("[serial] TCP->Serial: client disconnected\n")
+				if debugMode {
+					fmt.Printf("[serial] TCP->Serial: client read error: %v\n", err)
+				}
+				// при ошибке клиента — просигналим остановку и выйдем
+				closeStop()
 				return
 			}
 			if n > 0 {
@@ -406,7 +455,10 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 				}
 				_, err := writeSerial(serialPort, buffer[:n])
 				if err != nil {
-					fmt.Printf("[serial] TCP->Serial: error writing to serial: %v\n", err)
+					if debugMode {
+						fmt.Printf("[serial] TCP->Serial: error writing to serial: %v\n", err)
+					}
+					closeStop()
 					return
 				}
 				if debugMode {
@@ -416,22 +468,28 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 		}
 	}()
 
-	// Wait for either direction to stop
+	// Wait for both directions to stop
+	<-done
 	<-done
 
-	// Cleanup
+	// Cleanup: if early cleanup already removed entries, just log; otherwise finish refcount work
 	serialMutex.Lock()
-	refCount := serialPortRefCount[path]
-	if refCount > 1 {
-		serialPortRefCount[path]--
-		fmt.Printf("[serial] connection closed for %s, refs remaining: %d\n", path, refCount-1)
-	} else {
-		if port, exists := openSerialPorts[path]; exists {
-			closeSerial(port)
-			delete(openSerialPorts, path)
-		}
-		delete(serialPortRefCount, path)
+	if cnt, exists := serialPortRefCount[path]; exists {
+		if cnt > 1 {
+			serialPortRefCount[path] = cnt - 1
+		fmt.Printf("[serial] connection closed for %s, refs remaining: %d\n", path, cnt-1)
+		} else {
+			// last ref: close port if still present
+			if port, ok := openSerialPorts[path]; ok {
+				closeSerial(port)
+				delete(openSerialPorts, path)
+			}
+			delete(serialPortRefCount, path)
 		fmt.Printf("[serial] connection closed for %s, port closed\n", path)
+		}
+	} else {
+		// already cleaned up by early closeStop
+		fmt.Printf("[serial] connection closed for %s (already cleaned)\n", path)
 	}
 	serialMutex.Unlock()
 }
