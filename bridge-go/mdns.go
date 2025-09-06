@@ -85,7 +85,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 
 	// Start a search for each service type
 	for _, serviceType := range typeList {
-	// Skip non-network services
+		// Skip non-network services
 		if serviceType.Protocol != "tcp" && serviceType.Protocol != "udp" {
 			continue
 		}

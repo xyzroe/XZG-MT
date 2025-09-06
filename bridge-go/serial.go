@@ -299,47 +299,47 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 				continue
 			}
 
-			   // Try to set TCP options (disable Nagle and increase buffers) to reduce latency
-            if tcpConn, ok := conn.(*net.TCPConn); ok {
-                // disable Nagle
-                _ = tcpConn.SetNoDelay(true)
-                // enlarge buffers a bit (ignore errors)
-                _ = tcpConn.SetReadBuffer(64 * 1024)
-                _ = tcpConn.SetWriteBuffer(64 * 1024)
-                // optional: enable keepalive to help persistent connections
-                _ = tcpConn.SetKeepAlive(true)
-            }
-            fmt.Printf("[serial] client connected for %s\n", path)
+			// Try to set TCP options (disable Nagle and increase buffers) to reduce latency
+			if tcpConn, ok := conn.(*net.TCPConn); ok {
+				// disable Nagle
+				_ = tcpConn.SetNoDelay(true)
+				// enlarge buffers a bit (ignore errors)
+				_ = tcpConn.SetReadBuffer(64 * 1024)
+				_ = tcpConn.SetWriteBuffer(64 * 1024)
+				// optional: enable keepalive to help persistent connections
+				_ = tcpConn.SetKeepAlive(true)
+			}
+			fmt.Printf("[serial] client connected for %s\n", path)
 
-            // Get current baud rate and control-line state from stored state
-            currentState := getSerialPortState(path)
-            currentBaudRate := currentState.BaudRate
+			// Get current baud rate and control-line state from stored state
+			currentState := getSerialPortState(path)
+			currentBaudRate := currentState.BaudRate
 
-            var serialPort serial.Port
+			var serialPort serial.Port
 
-            // Check if we have existing serial port
-            if existingPort, exists := openSerialPorts[path]; exists && existingPort != nil {
-                serialPort = existingPort
-                serialMutex.Lock()
-                serialPortRefCount[path]++
-                serialMutex.Unlock()
-                fmt.Printf("[serial] reusing existing serial port for %s, refs: %d\n", path, serialPortRefCount[path])
-                // Ensure control lines reflect desired state for this session
-                // (best-effort; ignore errors)
-                setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
-            } else {
-                serialPort = openSerialPort(path, currentBaudRate)
-                if serialPort != nil {
-                    // After opening, apply saved DTR/RTS immediately (critical for many bootloaders)
-                    setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
+			// Check if we have existing serial port
+			if existingPort, exists := openSerialPorts[path]; exists && existingPort != nil {
+				serialPort = existingPort
+				serialMutex.Lock()
+				serialPortRefCount[path]++
+				serialMutex.Unlock()
+				fmt.Printf("[serial] reusing existing serial port for %s, refs: %d\n", path, serialPortRefCount[path])
+				// Ensure control lines reflect desired state for this session
+				// (best-effort; ignore errors)
+				setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
+			} else {
+				serialPort = openSerialPort(path, currentBaudRate)
+				if serialPort != nil {
+					// After opening, apply saved DTR/RTS immediately (critical for many bootloaders)
+					setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
 
-                    serialMutex.Lock()
-                    openSerialPorts[path] = serialPort
-                    serialPortRefCount[path] = 1
-                    serialMutex.Unlock()
-                    fmt.Printf("[serial] opened serial port for %s with baudrate %d\n", path, currentBaudRate)
-                }
-            }
+					serialMutex.Lock()
+					openSerialPorts[path] = serialPort
+					serialPortRefCount[path] = 1
+					serialMutex.Unlock()
+					fmt.Printf("[serial] opened serial port for %s with baudrate %d\n", path, currentBaudRate)
+				}
+			}
 
 			// Handle connection
 			go handleSerialConnection(conn, serialPort, path)
@@ -477,7 +477,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 	if cnt, exists := serialPortRefCount[path]; exists {
 		if cnt > 1 {
 			serialPortRefCount[path] = cnt - 1
-		fmt.Printf("[serial] connection closed for %s, refs remaining: %d\n", path, cnt-1)
+			fmt.Printf("[serial] connection closed for %s, refs remaining: %d\n", path, cnt-1)
 		} else {
 			// last ref: close port if still present
 			if port, ok := openSerialPorts[path]; ok {
@@ -485,7 +485,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 				delete(openSerialPorts, path)
 			}
 			delete(serialPortRefCount, path)
-		fmt.Printf("[serial] connection closed for %s, port closed\n", path)
+			fmt.Printf("[serial] connection closed for %s, port closed\n", path)
 		}
 	} else {
 		// already cleaned up by early closeStop
