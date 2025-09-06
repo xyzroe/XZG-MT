@@ -35,12 +35,16 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 				return
 			}
 			if n > 0 {
-				fmt.Printf("[websocket] TCP->WS: received %d bytes from TCP: %x\n", n, buffer[:n])
+				if debugMode {
+					fmt.Printf("[websocket] TCP->WS: received %d bytes from TCP: %x\n", n, buffer[:n])
+				}
 				if err := ws.WriteMessage(websocket.BinaryMessage, buffer[:n]); err != nil {
 					fmt.Printf("[websocket] TCP->WS: write error: %v\n", err)
 					return
 				}
-				fmt.Printf("[websocket] TCP->WS: sent %d bytes to WebSocket\n", n)
+				if debugMode {
+					fmt.Printf("[websocket] TCP->WS: sent %d bytes to WebSocket\n", n)
+				}
 			}
 		}
 	}()
@@ -61,12 +65,16 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 			}
 			
 			if messageType == websocket.BinaryMessage || messageType == websocket.TextMessage {
-				fmt.Printf("[websocket] WS->TCP: received %d bytes from WebSocket: %x\n", len(data), data)
+				if debugMode {
+					fmt.Printf("[websocket] WS->TCP: received %d bytes from WebSocket: %x\n", len(data), data)
+				}
 				if _, err := tcpConn.Write(data); err != nil {
 					fmt.Printf("[websocket] WS->TCP: write error: %v\n", err)
 					return
 				}
-				fmt.Printf("[websocket] WS->TCP: sent %d bytes to TCP\n", len(data))
+				if debugMode {
+					fmt.Printf("[websocket] WS->TCP: sent %d bytes to TCP\n", len(data))
+				}
 			}
 		}
 	}()
