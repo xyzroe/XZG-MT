@@ -19,6 +19,8 @@ TARGETS=(
     "darwin/amd64"
     "darwin/arm64"
     "windows/amd64"
+    # legacy 32-bit Windows (Windows 7 / 32-bit systems)
+    "windows/386"
     "windows/arm64"
 )
 
@@ -61,3 +63,4 @@ echo "To run a specific binary:"
 echo "  ./$BUILD_DIR/XZG-MT-linux-amd64"
 echo "  ./$BUILD_DIR/XZG-MT-darwin-arm64"
 echo "  ./$BUILD_DIR/XZG-MT-windows-amd64.exe"
+echo "  ./$BUILD_DIR/XZG-MT-windows-386.exe  # legacy 32-bit Windows build"
