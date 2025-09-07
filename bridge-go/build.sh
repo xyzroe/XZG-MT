@@ -44,7 +44,6 @@ TARGETS=(
     "darwin/amd64"
     "darwin/arm64"
     "windows/amd64"
-    # legacy 32-bit Windows (Windows 7 / 32-bit systems)
     "windows/386"
     "windows/arm64"
 )
