@@ -1,4 +1,4 @@
-# XZG-MT Go Bridge
+# XZG-MT Bridge - Go
 
 A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP bridge with mDNS discovery and local serial port exposure capabilities.
 
@@ -7,9 +7,9 @@ A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP
 - **WebSocket ↔ TCP Bridge**: Forward WebSocket connections to TCP devices
 - **mDNS Discovery**: Automatically discover devices on the local network
 - **Serial Port Support**: Expose local serial ports as TCP servers
-- **HTTP Control**: Control DTR/RTS pins and baud rates via HTTP API
+- **HTTP Control**: Control DTR/RTS pins, general GPIOs (only 🐧) and baud rates via HTTP API
 - **Embedded Web UI**: Built-in web interface for device management
-- **Cross-Platform**: Builds for Windows, macOS, and Linux (x64 and ARM64)
+- **Cross-Platform**: Builds for: **Linux**: (amd64, arm64, 386, arm, mips, mipsle, mips64, mips64le); **macOS** (darwin): (amd64, arm64); **Windows** (amd64, 386, arm64);
 
 ## Quick Start
 
@@ -90,6 +90,10 @@ Options:
 #### Serial Control
 
 - `GET /sc?path=<serial_path>&dtr=<0|1>&rts=<0|1>&baud=<rate>`: Control serial port
+
+#### GPIO Control
+
+- `GET /gpio?path=<full_system_gpio_path>&set=<0|1>`: Control GPIO port
 
 #### Static Files
 

@@ -23,11 +23,11 @@ func getEmbeddedFile(relPath string) (string, bool) {
 	}
 
 	// Normalize path separators - embed.FS always uses forward slashes
-    relPath = strings.ReplaceAll(relPath, "\\", "/")
+	relPath = strings.ReplaceAll(relPath, "\\", "/")
 
-    // Use path.Join instead of filepath.Join for embed.FS
-    // embed.FS always uses forward slashes regardless of OS
-    embeddedPath := path.Join("web", relPath)
+	// Use path.Join instead of filepath.Join for embed.FS
+	// embed.FS always uses forward slashes regardless of OS
+	embeddedPath := path.Join("web", relPath)
 
 	// Try to read the file
 	content, err := webFiles.ReadFile(embeddedPath)
