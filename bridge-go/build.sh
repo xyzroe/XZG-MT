@@ -36,10 +36,14 @@ TARGETS=(
     "linux/amd64"
     "linux/arm64"
     "linux/386"
+    "linux/arm" 
+    "linux/mips"
+    "linux/mipsle"
+    "linux/mips64"
+    "linux/mips64le"
     "darwin/amd64"
     "darwin/arm64"
     "windows/amd64"
-    # legacy 32-bit Windows (Windows 7 / 32-bit systems)
     "windows/386"
     "windows/arm64"
 )
@@ -103,6 +107,25 @@ for target in "${TARGETS[@]}"; do
     # Set GOOS and GOARCH
     export GOOS=$os
     export GOARCH=$arch
+    
+    # Disable CGO for all builds to create static binaries
+    export CGO_ENABLED=0
+
+    # Set GOMIPS for MIPS architectures to ensure compatibility with older processors like MT7688
+    if [ "$arch" = "mips" ] || [ "$arch" = "mipsle" ]; then
+        export GOMIPS=softfloat
+        echo "  → Using GOMIPS=softfloat for MIPS compatibility"
+    elif [ "$arch" = "arm" ]; then
+        export GOARM=7  # ARMv7 with VFPv3 support (most common)
+        echo "  → Using GOARM=7 for ARM compatibility"
+    elif [ "$arch" = "386" ]; then
+        export GO386=sse2  # Use SSE2 instructions for better compatibility
+        echo "  → Using GO386=sse2 for i386 compatibility"
+    else
+        unset GOMIPS
+        unset GOARM
+        unset GO386
+    fi
 
     # Common ldflags to strip debug and symbol tables.
     LDFLAGS="-s -w -X main.VERSION=$VERSION"
