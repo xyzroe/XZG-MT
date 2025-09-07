@@ -1,10 +1,6 @@
 name-template: 'v$NEXT_PATCH_VERSION'
 tag-template: 'v$NEXT_PATCH_VERSION'
 categories:
-  - title: '📚 Documentation'
-    labels:
-      - 'chore'
-      - 'docs'
   - title: '🚀 Features'
     labels:
       - 'feature'
@@ -13,6 +9,10 @@ categories:
     labels:
       - 'bug'
       - 'fix'
+  - title: '📚 Documentation'
+    labels:
+      - 'chore'
+      - 'docs'
 change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
 template: |
   $CHANGES
