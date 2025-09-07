@@ -1,3 +1,19 @@
+## v0.2.8
+
+## 📚 Documentation
+
+- chore: update README.md to enhance project description (#19, #20, #21, #22, #23) by @xyzroe
+- chore: update CHANGELOG for v0.2.7 release (#17) by @xyzroe
+
+## 🚀 Features
+
+- feat: add more build configurations (MIPS, ARM) for binaries and Docker images (#24) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- fix: embed handling on Windows (#24) by @xyzroe
+- fix: Print version while start in Docker images (#18) by @xyzroe
+
 ## v0.2.7
 
 ### 🚀 Features
