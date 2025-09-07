@@ -578,52 +578,62 @@
                         <!-- OS install "buttons" with icons + links in a row and larger buttons -->
                         <div class="d-flex gap-3">
                             <div class="text-center">
-                                <button type="button" class="btn btn-outline-secondary mb-1" title="Windows"
+                                <button type="button" class="btn btn-lg btn-outline-secondary mb-1" title="Windows"
                                     aria-label="Windows downloads">
                                     <i class="bi bi-windows me-2 fs-5" aria-hidden="true"></i>Windows
                                 </button>
                                 <div class="small d-flex justify-content-center align-items-center gap-2">
-                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-win-x64.exe"
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-amd64.exe"
                                         class="link-secondary" title="Download Windows x64 binary">x64</a>
                                     <span class="text-muted">/</span>
-                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-win7-x64.exe"
-                                        class="link-secondary" title="Download Windows legacy binary">Legacy</a>
-
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-arm64.exe"
+                                        class="link-secondary" title="Download Windows arm64 binary">arm64</a>
+                                    <span class="text-muted">/</span>
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-386.exe"
+                                        class="link-secondary" title="Download Windows x86 binary">x86</a>
                                 </div>
                             </div>
 
                             <div class="text-center">
-                                <button type="button" class="btn btn-outline-secondary btn mb-1" title="macOS"
+                                <button type="button" class="btn btn-lg btn-outline-secondary btn mb-1" title="macOS"
                                     aria-label="macOS downloads">
                                     <i class="bi bi-apple me-2 fs-5" aria-hidden="true"></i>macOS
                                 </button>
                                 <div class="small d-flex justify-content-center align-items-center gap-2">
-                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-macos-arm64"
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-darwin-arm64"
                                         class="link-secondary" title="Download macOS arm64 binary">arm64</a>
                                     <span class="text-muted">/</span>
-                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-macos-x64"
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-darwin-amd64"
                                         class="link-secondary" title="Download macOS x64 binary">x64</a>
                                 </div>
                             </div>
 
                             <div class="text-center">
-                                <button type="button" class="btn btn-outline-secondary btn mb-1" title="Linux"
+                                <button type="button" class="btn btn-lg btn-outline-secondary btn mb-1" title="Linux"
                                     aria-label="Linux downloads">
                                     <i class="bi bi-ubuntu me-2 fs-5" aria-hidden="true"></i>Linux
                                 </button>
                                 <div class="small d-flex justify-content-center align-items-center gap-2">
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-amd64"
+                                        class="link-secondary" title="Download Linux x64 binary">x64</a>
+                                    <span class="text-muted">/</span>
                                     <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-arm64"
                                         class="link-secondary" title="Download Linux arm64 binary">arm64</a>
                                     <span class="text-muted">/</span>
-                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-x64"
-                                        class="link-secondary" title="Download Linux x64 binary">x64</a>
+                                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-386"
+                                        class="link-secondary" title="Download Linux x86 binary">x86</a>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <p class="mb-2">
-                        Alternatively, you can run the bridge in a Docker container or with the provided Node.js script.
+                        On the <a href="https://github.com/xyzroe/XZG-MT/releases/latest/" target="_blank">releases
+                            page</a>, binaries built for less common systems (for example, OpenWrt) are also available.
+                    </p>
+
+                    <p class="mb-2">
+                        Alternatively, you can run the bridge in a Docker container or just run the Go project files.
                     </p>
                     <p class="mb-2">
                         See the project documentation for installation and usage instructions.
