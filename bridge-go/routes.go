@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
+	"path/filepath"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 )
@@ -37,6 +37,9 @@ func setupRoutes(e *echo.Echo) {
 
 	// Serial control endpoint
 	e.GET("/sc", handleSerialControl)
+
+	// GPIO control endpoint
+	e.GET("/gpio", handleGpioControl)
 
 	// Static file serving
 	e.GET("/*", handleStaticFiles)
@@ -130,6 +133,52 @@ func handleMdnsScan(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func handleGpioControl(c echo.Context) error {
+    // Handle GPIO control logic here
+    path := c.QueryParam("path")
+    setStr := c.QueryParam("set")
+
+    if path == "" || setStr == "" {
+        return c.JSON(http.StatusBadRequest, map[string]string{
+            "error": "Missing path or set parameter",
+        })
+    }
+
+    // Trim surrounding quotes/spaces and clean the path
+    path = strings.TrimSpace(path)
+    path = strings.Trim(path, "\"' ")
+    path = filepath.Clean(path)
+
+    var setValue int
+    var err error
+    setValue, err = strconv.Atoi(setStr)
+    if err != nil {
+        return c.JSON(http.StatusBadRequest, map[string]string{
+            "error": "Invalid set value",
+        })
+    }
+    if setValue < 0 || setValue > 1 {
+        return c.JSON(http.StatusBadRequest, map[string]string{
+            "error": "Invalid set value",
+        })
+    }
+
+    // Set GPIO state here
+    err = setGpioState(path, setValue)
+
+    ok := (err == nil)
+    resp := map[string]interface{}{
+        "ok":   ok,
+        "path": path,
+        "set":  setValue,
+    }
+    if err != nil {
+        resp["error"] = err.Error()
+    }
+
+    return c.JSON(http.StatusOK, resp)
 }
 
 func handleSerialControl(c echo.Context) error {
