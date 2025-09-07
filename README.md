@@ -57,68 +57,66 @@ Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
 
 - Run (basic):
 
-  ```bash
-  docker run --rm -p 8765:8765 ghcr.io/xyzroe/XZG-MT:latest
-  ```
+```bash
+docker run --rm -p 8765:8765 ghcr.io/xyzroe/XZG-MT:latest
+```
 
 - Run with mDNS:
 
-  ```bash
-  docker run --rm --network host ghcr.io/xyzroe/XZG-MT:latest
-  ```
+```bash
+docker run --rm --network host ghcr.io/xyzroe/XZG-MT:latest
+```
 
 - To expose a host serial device to the container add `--device` (Linux):
 
-  ```bash
-  docker run --rm --network host \
-    --device /dev/ttyUSB0:/dev/ttyUSB0 \
-    ghcr.io/xyzroe/XZG-MT:latest
-  ```
-
-  Then query `/mdns?types=local` and connect via the advertised TCP port.
+```bash
+docker run --rm --network host \
+  --device /dev/ttyUSB0:/dev/ttyUSB0 \
+  ghcr.io/xyzroe/XZG-MT:latest
+```
 
 - Customize port, advertised host, disable serial scan amd enable debug logs:
 
-  ```bash
-  docker run --rm \
-    -e PORT=9000 \
-    -e ADVERTISE_HOST=192.168.1.42 \
-    -e SERIAL_SCAN_INTERVAL=0 \
-    -e DEBUG_MODE=true \
-    -p 9000:9000 \
-    ghcr.io/xyzroe/XZG-MT:latest
-  ```
+```bash
+docker run --rm \
+  -e PORT=9000 \
+  -e ADVERTISE_HOST=192.168.1.42 \
+  -e SERIAL_SCAN_INTERVAL=0 \
+  -e DEBUG_MODE=true \
+  -p 9000:9000 \
+  ghcr.io/xyzroe/XZG-MT:latest
+```
 
 #### 📦 Prebuilt binaries
 
-Download a ready-to-run binary from Releases, make it executable (Linux/macOS), and run.
-
-- [Releases page](https://github.com/xyzroe/XZG-MT/releases)
+Download a ready-to-run binary from [Releases](https://github.com/xyzroe/XZG-MT/releases), make it executable (Linux/macOS), and run.
 
 ##### ⚡ How to run:
 
-- Windows:
+Windows:
 
-  - Run: `XZG-MT-windows-*.exe` or double click
+- Run: `XZG-MT-windows-*.exe` or double click
 
-- Linux:
+Linux:
 
-  1. Make executable:
-     ```bash
-     chmod +x ./XZG-MT-linux-*
-     ```
-  2. Run: `./XZG-MT-linux-*` or double click
+1. Make executable:
 
-- macOS:
+```bash
+chmod +x ./XZG-MT-linux-*
+```
 
-  1. Make executable and remove quarantine:
+2. Run: `./XZG-MT-linux-*` or double click
 
-  ```bash
-  chmod +x ./XZG-MT-darwin-*
-  xattr -d com.apple.quarantine ./XZG-MT-darwin-*
-  ```
+macOS:
 
-  2. Run: `./XZG-MT-darwin-*` or double click
+1. Make executable and remove quarantine:
+
+```bash
+chmod +x ./XZG-MT-darwin-*
+xattr -d com.apple.quarantine ./XZG-MT-darwin-*
+```
+
+2. Run: `./XZG-MT-darwin-*` or double click
 
 To run on custom port: `./XZG-MT-* 9999`
 
