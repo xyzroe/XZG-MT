@@ -630,22 +630,22 @@ func getSerialPathFromTcpPort(port int) string {
 }
 
 func setGpioState(path string, value int) error {
-    // accept only 0 or 1
-    if value != 0 && value != 1 {
-        return fmt.Errorf("invalid gpio value: %d (allowed: 0 or 1)", value)
-    }
+	// accept only 0 or 1
+	if value != 0 && value != 1 {
+		return fmt.Errorf("invalid gpio value: %d (allowed: 0 or 1)", value)
+	}
 
-    // open for write (do not change permissions of existing sysfs file)
-    f, err := os.OpenFile(path, os.O_WRONLY, 0)
-    if err != nil {
-        return fmt.Errorf("open %s: %w", path, err)
-    }
-    defer f.Close()
+	// open for write (do not change permissions of existing sysfs file)
+	f, err := os.OpenFile(path, os.O_WRONLY, 0)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", path, err)
+	}
+	defer f.Close()
 
-    // write value (no newline needed for sysfs, but safe to omit or include)
-    data := []byte(fmt.Sprintf("%d", value))
-    if _, err := f.Write(data); err != nil {
-        return fmt.Errorf("write %s: %w", path, err)
-    }
-    return nil
+	// write value (no newline needed for sysfs, but safe to omit or include)
+	data := []byte(fmt.Sprintf("%d", value))
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
 }
