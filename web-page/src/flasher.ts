@@ -5,14 +5,15 @@ import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/con
 
 function applyControlConfig(cfg: ControlConfig, source: string) {
   if (pinModeSelect) pinModeSelect.checked = !!cfg.remote;
-  if (bslUrlInput) bslUrlInput.value = cfg.bslPath || DEFAULT_CONTROL.bslPath;
-  if (rstUrlInput) rstUrlInput.value = cfg.rstPath || DEFAULT_CONTROL.rstPath;
-  if (baudUrlInput) baudUrlInput.value = cfg.baudPath || DEFAULT_CONTROL.baudPath;
+  if (bslUrlInput) bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
+  if (rstUrlInput) rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
+  if (baudUrlInput) baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
   saveCtrlSettings();
   // Update UI visibility/state
   //updateConnectionUI();
   //log(`Control preset applied (${source}): ${cfg.remote ? "Remote" : "Local"} BSL=${cfg.bslPath} RST=${cfg.rstPath}`);
 }
+
 function getCtrlMode(): CtrlMode {
   // If using Web Serial, always serial-direct
   if (activeConnection === "serial") return "serial-direct";
@@ -142,6 +143,9 @@ const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | nul
 const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
 const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
 const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
+const bslUrlSelect = document.getElementById("bslUrlSelect") as HTMLSelectElement | null;
+const rstUrlSelect = document.getElementById("rstUrlSelect") as HTMLSelectElement | null;
+const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElement | null;
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 const verboseIo = true;
@@ -249,6 +253,13 @@ function updateConnectionUI() {
   if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
 
   // No special-case for control URL fields: they follow section state
+
+  // const ctrlUrlSelectRow = document.getElementById("ctrlUrlSelectRow") as HTMLElement | null;
+  // if (pinModeSelect?.checked) {
+  //   ctrlUrlSelectRow?.classList.add("d-none");
+  // } else {
+  //   ctrlUrlSelectRow?.classList.remove("d-none");
+  // }
 }
 
 // Settings: store bridge host/port in localStorage
@@ -318,8 +329,8 @@ function loadCtrlSettings() {
   try {
     const mode = localStorage.getItem("pinModeSelect");
     if (pinModeSelect && mode !== null) pinModeSelect.checked = mode === "1";
-    if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value || "cmdZigBSL";
-    if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value || "cmdZigRST";
+    if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value; // || "cmdZigBSL";
+    if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
   } catch {}
 }
 function saveCtrlSettings() {
@@ -1499,6 +1510,52 @@ btnFlash.addEventListener("click", async () => {
 updateOptionsStateForFile(false);
 updateConnectionUI();
 
+// Map selected template from select to the corresponding input URL template
+function applySelectToInput(sel: HTMLSelectElement | null, input: HTMLInputElement | null) {
+  if (!sel || !input) return;
+  const v = (sel.value || "").trim();
+  if (!v) {
+    input.value = "";
+    saveCtrlSettings();
+    return;
+  }
+
+  if (v === "sp:dtr") {
+    input.value = "http://{BRIDGE}/sc?port={PORT}&dtr={SET}";
+  } else if (v === "sp:rts") {
+    input.value = "http://{BRIDGE}/sc?port={PORT}&rts={SET}";
+  } else if (v.startsWith("gpio:") || v.startsWith("led:")) {
+    // extract everything after the first ':' to preserve any further ':' characters
+    const idx = v.indexOf(":");
+    const path = idx >= 0 ? v.substring(idx + 1) : v;
+    input.value = `http://{BRIDGE}/gpio?path=${path}&set={SET}`;
+  } else if (v === "bridge") {
+    input.value = "http://{BRIDGE}/sc?port={PORT}&baud={SET}";
+  } else if (v === "none") {
+    input.value = "";
+  } else if (v == "xzg:bsl") {
+    input.value = "http://{HOST}/cmdZigBSL";
+  } else if (v == "xzg:rst") {
+    input.value = "http://{HOST}/cmdZigRST";
+  } else if (v == "esphome:bsl") {
+    input.value = "http://{HOST}/switch/zBSL/{SET}";
+  } else if (v == "esphome:rst") {
+    input.value = "http://{HOST}/switch/zRST_gpio/{SET}";
+  }
+
+  // else {
+  //   input.value = `http://{BRIDGE}/gpio?path=${encodeURIComponent(v)}&set={SET}`;
+  // }
+
+  saveCtrlSettings();
+  //log(`Applied template ${v} -> ${input.id}`);
+}
+
+// Attach change listeners to the template selects so they populate inputs
+bslUrlSelect?.addEventListener("change", () => applySelectToInput(bslUrlSelect, bslUrlInput));
+rstUrlSelect?.addEventListener("change", () => applySelectToInput(rstUrlSelect, rstUrlInput));
+baudUrlSelect?.addEventListener("change", () => applySelectToInput(baudUrlSelect, baudUrlInput));
+
 // Log actions
 const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonElement | null;
 const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
@@ -1548,6 +1605,9 @@ async function refreshMdnsList() {
   //   // ignore
   //   console.log(e);
   // }
+
+  // Refresh control lists
+  refreshControlLists();
   try {
     const types = [
       "_zig_star_gw._tcp.local.",
@@ -1641,9 +1701,181 @@ mdnsSelect?.addEventListener("change", () => {
   currentConnMeta = { type: t, protocol: pr };
   // Auto-apply presets on selection change
   applyControlConfig(deriveControlConfig(currentConnMeta), "mdns");
+  updateConnectionUI();
 });
 
 // auto-refresh list on load (non-blocking)
 refreshMdnsList().catch(() => {});
+
+// Populate control template selects (BSL / RST) from bridge /gl endpoint
+async function refreshControlLists() {
+  if (!bslUrlSelect || !rstUrlSelect) return;
+  try {
+    const base = getBridgeBase();
+    const url = `${base}/gl`;
+    let j: any = {};
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`gl http ${resp.status}`);
+      j = await resp.json();
+    } catch (e: any) {
+      log("Control lists fetch failed: " + (e?.message || String(e)));
+      // j остаётся {} — последующий код будет работать с пустыми списками
+    }
+
+    // Normalize gpio and leds
+    const gpioItems: Array<any> = [];
+    if (j && j.gpio) {
+      // Accept array or object map
+      if (Array.isArray(j.gpio)) {
+        gpioItems.push(...j.gpio);
+      } else if (typeof j.gpio === "object") {
+        // convert map to array of { path?, label?, value? }
+        for (const k of Object.keys(j.gpio)) {
+          const v = j.gpio[k];
+          if (v && typeof v === "object") gpioItems.push(v as any);
+          else gpioItems.push({ path: String(k), label: String(k), value: String(v) });
+        }
+      }
+    }
+
+    const ledItems: Array<any> = Array.isArray(j?.leds) ? j.leds : [];
+
+    function buildSelect(sel: HTMLSelectElement, defaultSerial: string) {
+      sel.innerHTML = "";
+
+      const title = document.createElement("optgroup");
+      if (sel === bslUrlSelect) title.label = "🟨 BSL";
+      else if (sel === rstUrlSelect) title.label = "🟩 Reset";
+      //add blank option None
+      const oNone = document.createElement("option");
+      oNone.value = "";
+      oNone.textContent = "None";
+      title.appendChild(oNone);
+      sel.appendChild(title);
+      // make default option selected
+      if (defaultSerial === "") {
+        oNone.selected = true;
+      }
+
+      // add shared Serial optgroup
+      addSerialOptgroup(sel, defaultSerial || null);
+
+      // add ESPHome optgroup
+      addESPHomeOptgroup(sel, defaultSerial || null);
+
+      // GPIO optgroup
+      const gg = document.createElement("optgroup");
+      gg.label = "GPIOs";
+      if (gpioItems.length) {
+        for (const it of gpioItems) {
+          const o = document.createElement("option");
+          const label = it.label || it.name || it.path || String(it);
+          const path = it.path || it.name || label;
+          o.value = `gpio:${path}`;
+          o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");
+          sel.appendChild(o);
+        }
+      } else {
+        const o = document.createElement("option");
+        o.disabled = true;
+        o.textContent = "no exported GPIOs";
+        gg.appendChild(o);
+        sel.appendChild(gg);
+      }
+
+      // Leds optgroup
+      const lg = document.createElement("optgroup");
+      lg.label = "LEDs";
+      if (ledItems.length) {
+        for (const it of ledItems) {
+          const o = document.createElement("option");
+          const label = it.label || it.name || it.path || "led";
+          const path = it.path || label;
+          o.value = `led:${path}`;
+          o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");
+          lg.appendChild(o);
+        }
+        sel.appendChild(lg);
+      } else {
+        const o = document.createElement("option");
+        o.disabled = true;
+        o.textContent = "no exported LEDs";
+        lg.appendChild(o);
+        sel.appendChild(lg);
+      }
+
+      // add XZG optgroup
+      addXZGOptgroup(sel, defaultSerial || null);
+    }
+
+    // Fill both selects
+    // Default choices: BSL -> RTS, RST -> DTR
+    buildSelect(bslUrlSelect, "");
+    buildSelect(rstUrlSelect, "");
+
+    //log(`Control lists updated: GPIO=${gpioItems.length} Leds=${ledItems.length}`);
+  } catch (e: any) {
+    log("Control lists refresh error: " + (e?.message || String(e)));
+  }
+}
+
+// Serial optgroup helper (shared within this function)
+function addSerialOptgroup(target: HTMLSelectElement, def: string | null) {
+  const sg = document.createElement("optgroup");
+  sg.label = "Serial";
+  const oDtr = document.createElement("option");
+  oDtr.value = "sp:dtr";
+  oDtr.textContent = "DTR";
+  const oRts = document.createElement("option");
+  oRts.value = "sp:rts";
+  oRts.textContent = "RTS";
+  sg.appendChild(oDtr);
+  sg.appendChild(oRts);
+  target.appendChild(sg);
+  if (def) {
+    try {
+      target.value = def;
+    } catch {}
+  }
+}
+
+function addXZGOptgroup(target: HTMLSelectElement, def: string | null) {
+  const xg = document.createElement("optgroup");
+  xg.label = "XZG Firmware";
+  const oBsl = document.createElement("option");
+  oBsl.value = "xzg:bsl";
+  oBsl.textContent = "BSL mode";
+  xg.appendChild(oBsl);
+  const oRst = document.createElement("option");
+  oRst.value = "xzg:rst";
+  oRst.textContent = "RST mode";
+  xg.appendChild(oRst);
+  target.appendChild(xg);
+  if (def) {
+    try {
+      target.value = def;
+    } catch {}
+  }
+}
+
+function addESPHomeOptgroup(target: HTMLSelectElement, def: string | null) {
+  const xg = document.createElement("optgroup");
+  xg.label = "ESP Home";
+  const oBsl = document.createElement("option");
+  oBsl.value = "esphome:bsl";
+  oBsl.textContent = "BSL pin";
+  xg.appendChild(oBsl);
+  const oRst = document.createElement("option");
+  oRst.value = "esphome:rst";
+  oRst.textContent = "RST pin";
+  xg.appendChild(oRst);
+  target.appendChild(xg);
+  if (def) {
+    try {
+      target.value = def;
+    } catch {}
+  }
+}
 
 // Escape key handler to close firmware notes and bridge info modals

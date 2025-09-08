@@ -197,10 +197,12 @@
                             </div>
                         </div>
                         <div id="tcpLinksPanel" class="d-none">
+
+
                             <!-- Control strategy: Pin vs Mode -->
-                            <div class="col-12 mb-4">
-                                <div id="pinModeWrap" class="d-flex align-items-center justify-content-center gap-2"
-                                    title="Choose Pin control or Mode control">
+                            <div class="text-muted mb-2">Control strategy</div>
+                            <div class="col-12 mb-2">
+                                <div id="pinModeWrap" class="d-flex align-items-center justify-content-center gap-2">
                                     <span class="text-muted">Pin</span>
                                     <div
                                         class="form-check form-switch d-flex align-items-center justify-content-center">
@@ -217,21 +219,33 @@
                                     </button>
                                 </div>
                             </div>
-                            <!-- Unified control URLs (behavior depends on Pin/Mode switch)
-                            <div id="ctrlUrlRow" class="row g-2 align-items-center mb-4">
-                                <div class="col-12 col-md-12">
-                                    <input id="bslUrlInput" class="form-control" placeholder="BSL URL" />
+
+                            <!-- Control templates row -->
+                            <div id="ctrlUrlSelectRow">
+                                <div class="text-muted mb-2">Templates</div>
+                                <div class="row g-2 align-items-center mb-3">
+                                    <div class="col-md-4">
+                                        <select id="bslUrlSelect" class="form-select">
+                                            <option value=""> - </option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="rstUrlSelect" class="form-select">
+                                            <option value=""> - </option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <select id="baudUrlSelect" class="form-select">
+                                            <optgroup label="🟥 Baud change"></optgroup>
+                                            <option value="none">None</option>
+                                            <option value="bridge">Bridge</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="col-12 col-md-12">
-                                    <input id="rstUrlInput" class="form-control" placeholder="RST URL" />
-                                </div>
-                                <div class="col-12 col-md-12">
-                                    <input id="baudUrlInput" class="form-control" placeholder="Baud URL" />
-                                </div>
-                                <div class="col-12 small text-muted">
-                                    <div>Placeholders: {HOST}, {PORT}, {BRIDGE}, {SET}.</div>
-                                </div>
-                            </div> -->
+                            </div>
+
+                            <!-- Manual input fields -->
+                            <div class="text-muted mb-2">Manual input</div>
                             <div id="ctrlUrlRow" class="mb-4">
                                 <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
                                     <input id="bslUrlInput" class="form-control" placeholder="BSL URL" />

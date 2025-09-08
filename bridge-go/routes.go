@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -40,6 +41,9 @@ func setupRoutes(e *echo.Echo) {
 
 	// GPIO control endpoint
 	e.GET("/gpio", handleGpioControl)
+
+	// GPIO list endpoint
+	e.GET("/gl", handleGpioList)
 
 	// Static file serving
 	e.GET("/*", handleStaticFiles)
@@ -176,6 +180,55 @@ func handleGpioControl(c echo.Context) error {
 	}
 	if err != nil {
 		resp["error"] = err.Error()
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func handleGpioList(c echo.Context) error {
+	// Return only already-exported GPIOs and LEDs in compact format
+	type SimpleEntry struct {
+		Path  string `json:"path"`
+		Label string `json:"label"`
+		Value string `json:"value"`
+	}
+
+	var gpioOut []SimpleEntry
+	// exported gpio directories are /sys/class/gpio/gpioN
+	exported, _ := filepath.Glob("/sys/class/gpio/gpio*")
+	for _, g := range exported {
+		base := filepath.Base(g) // could be gpioN or gpiochipNNN
+		if !strings.HasPrefix(base, "gpio") {
+			continue
+		}
+		numStr := strings.TrimPrefix(base, "gpio")
+		// ensure remainder is a number (skip gpiochipNNN etc)
+		if _, err := strconv.Atoi(numStr); err != nil {
+			continue
+		}
+		valPath := filepath.Join(g, "value")
+		val := ""
+		if b, err := ioutil.ReadFile(valPath); err == nil {
+			val = strings.TrimSpace(string(b))
+		}
+		gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: numStr, Value: val})
+	}
+
+	var ledsOut []SimpleEntry
+	leds, _ := ioutil.ReadDir("/sys/class/leds/")
+	for _, led := range leds {
+		name := led.Name()
+		bPath := filepath.Join("/sys/class/leds", name, "brightness")
+		val := ""
+		if b, err := ioutil.ReadFile(bPath); err == nil {
+			val = strings.TrimSpace(string(b))
+		}
+		ledsOut = append(ledsOut, SimpleEntry{Path: bPath, Label: name, Value: val})
+	}
+
+	resp := map[string]interface{}{
+		"gpio": gpioOut,
+		"leds": ledsOut,
 	}
 
 	return c.JSON(http.StatusOK, resp)

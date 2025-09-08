@@ -70,15 +70,15 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	var results []ServiceInfo
 	foundDevices := make(map[string]ServiceInfo)
 	var mu sync.Mutex
-	includeLocal := false
+	// includeLocal := false
 
-	// Check whether to include local devices
-	for _, serviceType := range typeList {
-		if serviceType.Protocol == "serial" || serviceType.Type == "local" {
-			includeLocal = true
-			break
-		}
-	}
+	// // Check whether to include local devices
+	// for _, serviceType := range typeList {
+	// 	if serviceType.Protocol == "serial" || serviceType.Type == "local" {
+	// 		includeLocal = true
+	// 		break
+	// 	}
+	// }
 
 	// Create a WaitGroup to synchronize goroutines
 	var wg sync.WaitGroup
@@ -207,13 +207,13 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	mu.Unlock()
 
 	// If requested, add local serial ports as services
-	if includeLocal {
-		local := listLocalSerialAsServices()
-		if len(local) > 0 {
-			fmt.Printf("[mdns] adding %d local serial services\n", len(local))
-			results = append(results, local...)
-		}
-	}
+	// if includeLocal {
+	// 	local := listLocalSerialAsServices()
+	// 	if len(local) > 0 {
+	// 		fmt.Printf("[mdns] adding %d local serial services\n", len(local))
+	// 		results = append(results, local...)
+	// 	}
+	// }
 
 	fmt.Printf("[mdns] scan done, found %d\n", len(results))
 	return results
@@ -228,12 +228,18 @@ func listLocalSerialAsServices() []ServiceInfo {
 
 	for pathName, info := range serialServers {
 		details := serialPortDetails[pathName]
+
+		proto := "usb"
+		if strings.Contains(pathName, "/dev/ttyS") {
+			proto = "serial"
+		}
+
 		service := ServiceInfo{
 			Name:     pathName,
 			Host:     hostIP,
 			Port:     info.Port,
 			Type:     "local",
-			Protocol: "serial",
+			Protocol: proto,
 			FQDN:     pathName,
 			TXT: map[string]string{
 				"board":         details.Manufacturer,

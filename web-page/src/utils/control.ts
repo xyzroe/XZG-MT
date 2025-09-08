@@ -4,8 +4,8 @@ export type ControlConfig = { remote: boolean; bslPath: string; rstPath: string;
 
 export const DEFAULT_CONTROL: ControlConfig = {
   remote: true,
-  bslPath: "http://{HOST}/cmdZigBSL",
-  rstPath: "http://{HOST}/cmdZigRST",
+  bslPath: "",
+  rstPath: "",
   baudPath: "",
 };
 
@@ -35,12 +35,22 @@ export const CONTROL_PRESETS: Array<{
     },
   },
   {
-    name: "Local Serial via Bridge",
-    test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
+    name: "Local USB via Bridge",
+    test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "usb",
     config: {
       remote: false,
       bslPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
       rstPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
+      baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
+    },
+  },
+  {
+    name: "Local Serial via Bridge",
+    test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
+    config: {
+      remote: false,
+      bslPath: "",
+      rstPath: "",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
     },
   },
