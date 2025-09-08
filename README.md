@@ -99,6 +99,24 @@ Windows:
 
 Linux:
 
+<details>
+  <summary>Select the correct binary for your platform</summary>
+  
+- linux/arm64 — aarch64_generic, aarch64, arm64
+- linux/arm — armhf, arm_cortex-a7_neon-vfpv4, arm_cortex-a9_neon
+- linux/amd64 — amd64
+- linux/386 — i386 / 32-bit x86
+- linux/mips — mips_24kc
+- linux/mipsle — mipsel_24kc
+- linux/mips64 — mips64
+- linux/mips64le — mips64le
+
+Note: linux/arm targets ARMv7 (GOARM=7). MIPS and MIPSLE builds use GOMIPS=softfloat for compatibility with older devices (for example, MT7688).
+
+</details>
+<br>  
+ 
+ 
 1. Make executable:
 
 ```bash
