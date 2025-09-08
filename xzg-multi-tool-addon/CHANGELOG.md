@@ -1,3 +1,9 @@
+## v0.2.10
+
+## 🚀 Features
+
+- feat: more comfortable selection of GPIOs (#27) by @xyzroe
+
 ## v0.2.8
 
 ## 🚀 Features
