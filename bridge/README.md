@@ -1,117 +1,22 @@
-# bridge
+# XZG-MT Bridge - Node.js
 
-<div align="center"> 
-<a href="https://github.com/xyzroe/XZG-MT/releases"><img src="https://img.shields.io/github/release/xyzroe/XZG-MT.svg" alt="GitHub version"></img></a>
-<a href="https://github.com/xyzroe/XZG-MT/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/XZG-MT/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
-<a href="https://github.com/xyzroe/XZG-MT/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/XZG-MT/total.svg" alt="GitHub download"></img></a>
-<a href="https://github.com/xyzroe/XZG-MT/issues"><img src="https://img.shields.io/github/issues/xyzroe/XZG-MT" alt="GitHub Issues or Pull Requests"></img></a>
-<a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
-</div>
+> ⚠️ **ARCHIVED / UNMAINTAINED**
+>
+> This directory contains the legacy Node.js bridge implementation and is no longer actively maintained. It will not receive updates or security fixes.
+> Prefer the Go bridge (../bridge-go) or the official Docker images on GHCR for supported builds and fixes.
+>
+> If you rely on this code, consider forking and maintaining your own copy.
 
-Tiny WebSocket ↔ TCP bridge for local development. It can also discover devices via mDNS and expose local serial ports over TCP for quick tests.
+A Node.js implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP bridge with mDNS discovery and local serial port exposure capabilities.
 
-Warning: development helper only. Don’t expose it to the public Internet.
+## Features
 
-## What it’s for
-
-- Bridge a WebSocket client to any TCP host:port
-- Optionally discover targets via mDNS
-- Optionally expose each local serial port as a TCP server and control DTR/RTS
-
-## Quick start - Home Assistant Add-On
-
-<div align="center"> 
-<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2Fbridge"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
-</div>
-
-## Quick start — Docker
-
-- [Docker images page](https://github.com/xyzroe/XZG-MT/pkgs/container/bridge)
-
-Prebuilt multi-arch images are published to GHCR on each release/tag.
-
-- Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
-
-Run (basic):
-
-```bash
-docker run --rm -p 8765:8765 -e ADVERTISE_HOST=192.168.1.42 ghcr.io/xyzroe/XZG-MT:latest
-```
-
-Customize port or advertised host:
-
-```bash
-docker run --rm \
-  -e PORT=9000 \
-  -e ADVERTISE_HOST=192.168.1.42 \
-  -p 9000:9000 \
-  ghcr.io/xyzroe/XZG-MT:latest
-```
-
-mDNS and local serial notes:
-
-- mDNS discovery inside containers require host networking on Linux. If needed:
-  ```bash
-  docker run --rm --network host ghcr.io/xyzroe/XZG-MT:latest
-  ```
-- To expose a host serial device to the container add `--device` (Linux):
-  ```bash
-  docker run --rm --network host \
-    --device /dev/ttyUSB0:/dev/ttyUSB0 \
-    ghcr.io/xyzroe/XZG-MT:latest
-  ```
-  Then query `/mdns?types=local` and connect via the advertised TCP port.
-
-## Quick start — prebuilt binaries
-
-No Node.js required. Download a ready-to-run binary from Releases, make it executable (Linux/macOS), and run. The port argument is optional; default is 8765.
-
-- [Releases page](https://github.com/xyzroe/XZG-MT/releases)
-
-How to run:
-
-- Windows:
-
-  - Run: `XZG-MT-windows-*.exe` or double click
-
-- Linux:
-
-  1. Make executable:
-     ```
-     chmod +x ./XZG-MT-linux-arm64
-     ```
-     or
-     ```
-     chmod +x ./XZG-MT-linux-x64
-     ```
-  2. Run: `./XZG-MT-linux-*` or double click
-
-- macOS:
-
-  1. Make executable and remove quarantine:
-
-  ```
-  chmod +x ./XZG-MT-macos-arm64
-  xattr -d com.apple.quarantine ./XZG-MT-macos-arm64
-  ```
-
-  or
-
-  ```
-  chmod +x ./XZG-MT-macos-x64
-  xattr -d com.apple.quarantine ./XZG-MT-macos-x64
-  ```
-
-  2. Run: `./XZG-MT-macos-*` or double click
-
-  On start it prints the effective URL and needed modules statuses, e.g.
-
-  ```
-  [bridge] listening ws://192.168.1.42:8765
-  [startup] modules: ws=ok, bonjour=ok, serial=ok
-  ```
-
-To run on custom port: `./XZG-MT-* 9999`
+- **WebSocket ↔ TCP Bridge**: Forward WebSocket connections to TCP devices
+- **mDNS Discovery**: Automatically discover devices on the local network
+- **Serial Port Support**: Expose local serial ports as TCP servers
+- **HTTP Control**: Control DTR/RTS pins and baud rates via HTTP API
+- **Embedded Web UI**: Built-in web interface for device management
+- **Cross-Platform**: Builds for Windows, macOS, and Linux (x64 and ARM64)
 
 ## Quick start — Node.js
 

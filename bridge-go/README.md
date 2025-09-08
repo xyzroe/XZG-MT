@@ -146,3 +146,9 @@ make clean
 # Build for all platforms
 make build
 ```
+
+### Building Docker image
+
+```bash
+docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge-go/Dockerfile .
+```
