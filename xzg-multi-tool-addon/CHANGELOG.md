@@ -1,3 +1,12 @@
+## v0.2.11
+
+- docs: enhance README files (#28) by @xyzroe
+
+## 🚀 Features
+
+- feat: add imply gate logic for BSL enter (#30) by @xyzroe
+- feat: more comfortable selection of GPIOs (#27) by @xyzroe
+
 ## v0.2.10
 
 ## 🚀 Features
