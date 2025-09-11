@@ -148,6 +148,7 @@ const rstUrlSelect = document.getElementById("rstUrlSelect") as HTMLSelectElemen
 const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElement | null;
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
+const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
 const verboseIo = true;
 
 let serial: SerialWrap | null = null;
@@ -1277,14 +1278,25 @@ const setLines = async (rstLow: boolean, bslLow: boolean, assumeSwap: boolean) =
 };
 
 async function bslUseLines(assumeSwap: boolean) {
-  await setLines(true, true, assumeSwap);
-  await sleep(250);
-  await setLines(false, true, assumeSwap);
-  await sleep(250);
-  await setLines(false, false, assumeSwap);
-  await sleep(250);
-  await setLines(false, true, assumeSwap);
-  await sleep(500);
+  if (implyGateToggle?.checked != true) {
+    await setLines(true, true, assumeSwap);
+    await sleep(250);
+    await setLines(false, true, assumeSwap);
+    await sleep(250);
+    await setLines(false, false, assumeSwap);
+    await sleep(250);
+    await setLines(false, true, assumeSwap);
+    await sleep(500);
+  } else {
+    await setLines(true, true, assumeSwap);
+    await sleep(250);
+    await setLines(true, false, assumeSwap);
+    await sleep(250);
+    await setLines(false, true, assumeSwap);
+    await sleep(450);
+    await setLines(false, false, assumeSwap);
+    await sleep(250);
+  }
 }
 
 async function changeBaudOverTcp(baud: number): Promise<void> {
