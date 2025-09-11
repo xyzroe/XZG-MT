@@ -57,7 +57,7 @@
                     <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
                         <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>General</h3>
                     </div>
-                    <div class="col-12">
+                    <div class="col-12 mb-2">
                         <div id="findBaudWrap" class="d-flex align-items-center justify-content-center gap-2">
                             <div class="form-check form-switch d-flex align-items-center justify-content-center">
                                 <input id="findBaudToggle" class="form-check-input" type="checkbox" role="switch"
@@ -69,6 +69,22 @@
                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-trigger="hover focus click"
                                 data-bs-html="true"
                                 title="<strong>Find Baud Rate:</strong> Automatically detects the baud rate of the connected device if ping error occurs.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Help</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-2">
+                        <div id="implyGateWrap" class="d-flex align-items-center justify-content-center gap-2">
+                            <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                                <input id="implyGateToggle" class="form-check-input" type="checkbox" role="switch"
+                                    aria-label="Imply gate" />
+                            </div>
+                            <span class="text-muted">Imply gate</span>
+                            <!-- Help tooltip for Imply Gate -->
+                            <button id="implyGateHelp" type="button" class="btn btn-sm btn-link p-0 ms-2"
+                                data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                title="<strong>Imply Gate:</strong> If your dongle has an odd connection between RTS DTR and reset and IO15 (imply gate) enable this option.<br>E.g. ITead Sonoff Zigbee 3.0 USB Dongle">
                                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                                 <span class="visually-hidden">Help</span>
                             </button>
