@@ -20,6 +20,7 @@ export function filterFwByChip(man: ZwManifest, chip: string) {
     CC2652P2_launchpad: "CC2652P2_launchpad",
     CC2652P2_other: "CC2652P2_other",
     CC2652P7: "CC2652P7",
+    CC1352P7: "CC2652P7",
     CC2652RB: "CC2652RB",
   };
   const deviceName = chipMap[chip] || chip;

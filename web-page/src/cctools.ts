@@ -282,6 +282,7 @@ export function getChipDescription(chipIdPkt: Uint8Array, wafer_id: number, pg_r
   const chip_id = ((chipIdPkt[0] << 8) | chipIdPkt[1]) >>> 0;
   if (chip_id === 0xb964 || chip_id === 0xb965) return "CC2538";
   if (chip_id === 0x1202 && wafer_id === 0xbb77 && pg_rev === 0x1) return "CC2652P7";
+  if (chip_id === 0x1282 && wafer_id === 0xbb77 && pg_rev === 0x1) return "CC1352P7";
   if (chip_id === 0x3202 && wafer_id === 0xbb41 && pg_rev === 0x3 && mode_cfg === 0xc1) return "CC2652P2_launchpad";
   if (chip_id === 0x3202 && wafer_id === 0xbb41 && pg_rev === 0x3 && mode_cfg === 0xfa) return "CC2652P2_other";
   if (chip_id === 0x3202 && wafer_id === 0xbb41 && pg_rev === 0x3) return "CC2652P2";
