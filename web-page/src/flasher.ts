@@ -628,7 +628,14 @@ hexInput.addEventListener("change", async () => {
   const f = hexInput.files?.[0];
   if (!f) return;
   try {
-    const buf = await f.arrayBuffer();
+    log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
+    // Read explicitly using slice to ensure full file read
+    const buf = await f.slice(0, f.size).arrayBuffer();
+    //log(`ArrayBuffer read: ${buf.byteLength} bytes`);
+    // If lengths differ, fail early so we can debug
+    if (buf.byteLength !== f.size) {
+      log(`Warning: read length (${buf.byteLength}) != file.size (${f.size})`);
+    }
     const img = parseImageFromBuffer(new Uint8Array(buf));
     hexImage = img;
     log(`Image loaded: ${f.name}, ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
