@@ -1,3 +1,13 @@
+## v0.2.13
+
+## 🚀 Features
+
+- feat: add support for CC1352P7 chip (#32) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- fix: add support for custom GPIOs' paths (#31) by @xyzroe
+
 ## v0.2.12
 
 ## 🐛 Bug Fixes

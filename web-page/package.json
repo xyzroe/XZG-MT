@@ -1,6 +1,6 @@
 {
   "name": "xzg-multi-tool",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "A static web app for flashing TI CC2538/CC26x2 using the Web Serial API or bridge.",
   "main": "dist/flasher.js",
   "engines": {
