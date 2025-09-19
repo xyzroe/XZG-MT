@@ -1,54 +1,69 @@
-export function parseIntelHex(text: string): { startAddress: number; data: Uint8Array } {
-  let upper = 0; // extended linear address (ELA)
-  let startAddress = 0x00000000;
-  const chunks: { addr: number; bytes: Uint8Array }[] = [];
+export function parseIntelHex(fullText: string): { startAddress: number; data: Uint8Array } {
+  const lines = fullText
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  type Rec = { absBase: number; addr: number; bytes: number[]; type: number };
+  const recs: Rec[] = [];
 
-  const lines = text.replace(/\r/g, "").split("\n").filter(Boolean);
-  for (const line of lines) {
-    if (line[0] !== ":") throw new Error("HEX: bad line start");
-    const bytes = hexToBytes(line.slice(1));
-    const len = bytes[0];
-    const addr = (bytes[1] << 8) | bytes[2];
-    const type = bytes[3];
-    const data = bytes.slice(4, 4 + len);
-    const _crc = bytes[4 + len]; // optional: verify
+  let base = 0; // current base (set by type 04 <<16 or type 02 <<4)
+  let minAddr = Number.POSITIVE_INFINITY;
+  let maxAddr = 0;
 
-    switch (type) {
-      case 0x00: {
-        // data
-        const abs = (upper << 16) | addr;
-        chunks.push({ addr: abs, bytes: data });
-        break;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (!l.startsWith(":")) throw new Error(`Invalid HEX line ${i + 1}`);
+    const byteCount = parseInt(l.substr(1, 2), 16);
+    const addr = parseInt(l.substr(3, 4), 16);
+    const type = parseInt(l.substr(7, 2), 16);
+    const dataHex = l.substr(9, byteCount * 2);
+    // checksum omitted here (could validate if needed)
+
+    if (type === 0x00) {
+      const bytes: number[] = [];
+      for (let j = 0; j < byteCount; j++) {
+        bytes.push(parseInt(dataHex.substr(j * 2, 2), 16));
       }
-      case 0x01: {
-        // EOF
-        break;
-      }
-      case 0x04: {
-        // extended linear address
-        if (len !== 2) throw new Error("HEX: ELA len!=2");
-        upper = (data[0] << 8) | data[1];
-        break;
-      }
-      case 0x05: {
-        // start linear address
-        if (len !== 4) throw new Error("HEX: SLA len!=4");
-        startAddress = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
-        break;
-      }
-      default:
-        // ignore rare record types (extend as needed)
-        break;
+      const absBase = base;
+      const absAddr = absBase + addr;
+      recs.push({ absBase, addr, bytes, type });
+      minAddr = Math.min(minAddr, absAddr);
+      maxAddr = Math.max(maxAddr, absAddr + bytes.length - 1);
+    } else if (type === 0x01) {
+      // EOF record
+      break;
+    } else if (type === 0x02) {
+      // Extended Segment Address Record: bits 4..19 -> shift left 4
+      const seg = parseInt(dataHex, 16) & 0xffff;
+      base = (seg << 4) >>> 0;
+    } else if (type === 0x04) {
+      // Extended Linear Address Record: upper 16 bits
+      const upper = parseInt(dataHex, 16) & 0xffff;
+      base = (upper << 16) >>> 0;
+    } else {
+      // other record types (03,05) — ignore but keep base as is
     }
   }
 
-  // normalize into a dense buffer
-  const min = Math.min(...chunks.map((c) => c.addr));
-  const max = Math.max(...chunks.map((c) => c.addr + c.bytes.length));
-  const out = new Uint8Array(max - min).fill(0xff);
-  for (const c of chunks) out.set(c.bytes, c.addr - min);
+  if (minAddr === Number.POSITIVE_INFINITY) {
+    // no data records
+    return { startAddress: 0, data: new Uint8Array(0) };
+  }
 
-  return { startAddress: startAddress || min, data: out };
+  const size = maxAddr - minAddr + 1;
+  if (size <= 0) return { startAddress: 0, data: new Uint8Array(0) };
+  const out = new Uint8Array(size);
+  // fill with 0xFF (or 0x00) — choose 0xFF to represent erased flash
+  out.fill(0xff);
+
+  // write records
+  for (const r of recs) {
+    const abs = r.absBase + r.addr;
+    const offset = abs - minAddr;
+    out.set(Uint8Array.from(r.bytes), offset);
+  }
+
+  return { startAddress: minAddr >>> 0, data: out };
 }
 
 function hexToBytes(hex: string): Uint8Array {
