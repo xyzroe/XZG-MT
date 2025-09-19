@@ -193,26 +193,22 @@ func handleGpioList(c echo.Context) error {
 		Value string `json:"value"`
 	}
 
-	var gpioOut []SimpleEntry
-	// exported gpio directories are /sys/class/gpio/gpioN
-	exported, _ := filepath.Glob("/sys/class/gpio/gpio*")
-	for _, g := range exported {
-		base := filepath.Base(g) // could be gpioN or gpiochipNNN
-		if !strings.HasPrefix(base, "gpio") {
-			continue
-		}
-		numStr := strings.TrimPrefix(base, "gpio")
-		// ensure remainder is a number (skip gpiochipNNN etc)
-		if _, err := strconv.Atoi(numStr); err != nil {
-			continue
-		}
-		valPath := filepath.Join(g, "value")
-		val := ""
-		if b, err := ioutil.ReadFile(valPath); err == nil {
-			val = strings.TrimSpace(string(b))
-		}
-		gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: numStr, Value: val})
-	}
+    var gpioOut []SimpleEntry
+    entries, _ := ioutil.ReadDir("/sys/class/gpio")
+    for _, entry := range entries {
+        name := entry.Name()
+        // skip gpiochip* and export/unexport entries
+        if strings.HasPrefix(name, "gpiochip") || name == "export" || name == "unexport" {
+            continue
+        }
+        valPath := filepath.Join("/sys/class/gpio", name, "value")
+        val := ""
+        if b, err := ioutil.ReadFile(valPath); err == nil {
+            val = strings.TrimSpace(string(b))
+        }
+        label := name
+        gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: label, Value: val})
+    }
 
 	var ledsOut []SimpleEntry
 	leds, _ := ioutil.ReadDir("/sys/class/leds/")
