@@ -1,3 +1,9 @@
+## v0.2.12
+
+## 🐛 Bug Fixes
+
+- fix: add support for custom GPIOs' paths (#31) by @xyzroe
+
 ## v0.2.11
 
 - docs: enhance README files (#28) by @xyzroe
