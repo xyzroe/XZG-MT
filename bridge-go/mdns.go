@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -206,6 +207,17 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	}
 	mu.Unlock()
 
+	// Sort mDNS results deterministically by name then host:port
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Name != results[j].Name {
+			return results[i].Name < results[j].Name
+		}
+		if results[i].Host != results[j].Host {
+			return results[i].Host < results[j].Host
+		}
+		return results[i].Port < results[j].Port
+	})
+
 	// If requested, add local serial ports as services
 	// if includeLocal {
 	// 	local := listLocalSerialAsServices()
@@ -222,16 +234,24 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 func listLocalSerialAsServices() []ServiceInfo {
 	var services []ServiceInfo
 	hostIP := getAdvertiseHost()
+	// Collect keys then iterate in sorted order to ensure deterministic output
+	serialMutex.RLock()
+	keys := make([]string, 0, len(serialServers))
+	for pathName := range serialServers {
+		keys = append(keys, pathName)
+	}
+	serialMutex.RUnlock()
+
+	sort.Strings(keys)
 
 	serialMutex.RLock()
-	defer serialMutex.RUnlock()
-
-	for pathName, info := range serialServers {
+	for _, pathName := range keys {
+		info := serialServers[pathName]
 		details := serialPortDetails[pathName]
 
-		proto := "usb"
-		if strings.Contains(pathName, "/dev/ttyS") {
-			proto = "serial"
+		proto := "serial"
+		if strings.Contains(pathName, "USB") || strings.Contains(pathName, "usb") {
+			proto = "usb"
 		}
 
 		service := ServiceInfo{
@@ -250,6 +270,7 @@ func listLocalSerialAsServices() []ServiceInfo {
 		}
 		services = append(services, service)
 	}
+	serialMutex.RUnlock()
 
 	return services
 }

@@ -193,22 +193,22 @@ func handleGpioList(c echo.Context) error {
 		Value string `json:"value"`
 	}
 
-    var gpioOut []SimpleEntry
-    entries, _ := ioutil.ReadDir("/sys/class/gpio")
-    for _, entry := range entries {
-        name := entry.Name()
-        // skip gpiochip* and export/unexport entries
-        if strings.HasPrefix(name, "gpiochip") || name == "export" || name == "unexport" {
-            continue
-        }
-        valPath := filepath.Join("/sys/class/gpio", name, "value")
-        val := ""
-        if b, err := ioutil.ReadFile(valPath); err == nil {
-            val = strings.TrimSpace(string(b))
-        }
-        label := name
-        gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: label, Value: val})
-    }
+	var gpioOut []SimpleEntry
+	entries, _ := ioutil.ReadDir("/sys/class/gpio")
+	for _, entry := range entries {
+		name := entry.Name()
+		// skip gpiochip* and export/unexport entries
+		if strings.HasPrefix(name, "gpiochip") || name == "export" || name == "unexport" {
+			continue
+		}
+		valPath := filepath.Join("/sys/class/gpio", name, "value")
+		val := ""
+		if b, err := ioutil.ReadFile(valPath); err == nil {
+			val = strings.TrimSpace(string(b))
+		}
+		label := name
+		gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: label, Value: val})
+	}
 
 	var ledsOut []SimpleEntry
 	leds, _ := ioutil.ReadDir("/sys/class/leds/")

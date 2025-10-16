@@ -8,6 +8,10 @@ function applyControlConfig(cfg: ControlConfig, source: string) {
   if (bslUrlInput) bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
   if (rstUrlInput) rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
   if (baudUrlInput) baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
+  if (invertBsl) invertBsl.checked = cfg.invertBsl ?? DEFAULT_CONTROL.invertBsl;
+  if (invertRst) invertRst.checked = cfg.invertRst ?? DEFAULT_CONTROL.invertRst;
+  // if baudUrlInput != "" then select baudUrlSelect option bridge
+  if (baudUrlSelect) baudUrlSelect.value = cfg.baudPath ? "bridge" : "none";
   saveCtrlSettings();
   // Update UI visibility/state
   //updateConnectionUI();
@@ -149,6 +153,8 @@ const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElem
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
+const invertBsl = document.getElementById("invertBsl") as HTMLInputElement | null;
+const invertRst = document.getElementById("invertRst") as HTMLInputElement | null;
 const verboseIo = true;
 
 let serial: SerialWrap | null = null;
@@ -253,6 +259,14 @@ function updateConnectionUI() {
   if (netFwSelect) netFwSelect.disabled = !anyActive;
   if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
 
+  if (pinModeSelect?.checked) {
+    // make bslInvert and rstInvert disabled when in remote mode
+    invertBsl?.setAttribute("disabled", "true");
+    invertRst?.setAttribute("disabled", "true");
+  } else {
+    invertBsl?.removeAttribute("disabled");
+    invertRst?.removeAttribute("disabled");
+  }
   // No special-case for control URL fields: they follow section state
 
   // const ctrlUrlSelectRow = document.getElementById("ctrlUrlSelectRow") as HTMLElement | null;
@@ -332,6 +346,9 @@ function loadCtrlSettings() {
     if (pinModeSelect && mode !== null) pinModeSelect.checked = mode === "1";
     if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value; // || "cmdZigBSL";
     if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
+    if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
+    if (invertBsl) invertBsl.checked = localStorage.getItem("invertBsl") === "1";
+    if (invertRst) invertRst.checked = localStorage.getItem("invertRst") === "1";
   } catch {}
 }
 function saveCtrlSettings() {
@@ -339,6 +356,9 @@ function saveCtrlSettings() {
     if (pinModeSelect) localStorage.setItem("pinModeSelect", pinModeSelect.checked ? "1" : "0");
     if (bslUrlInput) localStorage.setItem("bslUrlInput", bslUrlInput.value.trim());
     if (rstUrlInput) localStorage.setItem("rstUrlInput", rstUrlInput.value.trim());
+    if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
+    if (invertBsl) localStorage.setItem("invertBsl", invertBsl.checked ? "1" : "0");
+    if (invertRst) localStorage.setItem("invertRst", invertRst.checked ? "1" : "0");
   } catch {}
 }
 loadCtrlSettings();
@@ -349,6 +369,9 @@ pinModeSelect?.addEventListener("change", () => {
 });
 bslUrlInput?.addEventListener("change", saveCtrlSettings);
 rstUrlInput?.addEventListener("change", saveCtrlSettings);
+baudUrlInput?.addEventListener("change", saveCtrlSettings);
+invertBsl?.addEventListener("change", saveCtrlSettings);
+invertRst?.addEventListener("change", saveCtrlSettings);
 
 // When bridge settings change, auto-refresh mDNS list (debounced)
 let bridgeRefreshTimer: number | null = null;
@@ -707,22 +730,22 @@ async function enterBsl(): Promise<void> {
       log("Auto BSL disabled for serial; skipping line sequence");
       return;
     }
-    try {
-      await bslUseLines(false);
-    } catch (e) {
-      await bslUseLines(true);
-    }
+    // try {
+    await bslUseLines();
+    // } catch (e) {
+    //   await bslUseLines(true);
+    // }
     return;
   }
 
   if (activeConnection === "tcp") {
     if (!remotePinMode) {
       // Use line sequences via remote bridge pins (two attempts)
-      try {
-        await bslUseLines(false);
-      } catch (e) {
-        await bslUseLines(true);
-      }
+      // try {
+      await bslUseLines();
+      // } catch (e) {
+      //   await bslUseLines(true);
+      // }
       //delay 500 ms
       //await sleep(500);
       return;
@@ -749,22 +772,22 @@ async function performReset(): Promise<void> {
       log("Auto reset disabled for serial; skipping line sequence");
       return;
     }
-    try {
-      await resetUseLines(false);
-    } catch (e) {
-      await resetUseLines(true);
-    }
+    //try {
+    await resetUseLines();
+    //} catch (e) {
+    // await resetUseLines(true);
+    // }
     return;
   }
 
   if (activeConnection === "tcp") {
     if (!remotePinMode) {
       // Use line sequences via remote bridge pins
-      try {
-        await resetUseLines(false);
-      } catch (e) {
-        await resetUseLines(true);
-      }
+      //try {
+      await resetUseLines();
+      // } catch (e) {
+      //   await resetUseLines(true);
+      // }
       //delay 500 ms
       //await sleep(500);
       return;
@@ -1173,14 +1196,14 @@ async function flash(doVerifyOnly = false) {
 }
 
 // Reset the device out of BSL and back into application
-async function resetUseLines(assumeSwap: boolean) {
-  await setLines(true, true, assumeSwap);
+async function resetUseLines() {
+  await setLines(true, true);
   await sleep(250);
 
-  await setLines(true, false, assumeSwap);
+  await setLines(true, false);
   await sleep(250);
 
-  await setLines(true, true, assumeSwap);
+  await setLines(true, true);
   await sleep(1000);
 }
 
@@ -1265,18 +1288,33 @@ btnNvErase?.addEventListener("click", async () => {
   });
 });
 
-const setLines = async (rstLow: boolean, bslLow: boolean, assumeSwap: boolean) => {
-  const { dtr, rts } = computeDtrRts(rstLow, bslLow, assumeSwap);
+const setLines = async (rstLow: boolean, bslLow: boolean) => {
+  const { dtr, rts } = computeDtrRts(rstLow, bslLow);
   if (activeConnection === "serial") {
-    //log(`CTRL(serial): DTR=${dtr ? "1" : "0"} RTS=${rts ? "1" : "0"}`);
+    log(`CTRL(serial): DTR=${dtr ? "1" : "0"} RTS=${rts ? "1" : "0"}`);
     await (serial as any)?.setSignals?.({ dataTerminalReady: dtr, requestToSend: rts });
     return;
   }
   // TCP: send two single requests, one per pin, using absolute URLs from inputs
   const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
   const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
-  const bslLevel = bslLow ? 0 : 1;
-  const rstLevel = rstLow ? 0 : 1;
+
+  const bslInvert = invertBsl?.checked == true;
+  const rstInvert = invertRst?.checked == true;
+
+  let bslLevel = bslLow ? 0 : 1;
+  let rstLevel = rstLow ? 0 : 1;
+
+  if (bslInvert) {
+    // log("Inverting BSL line");
+    // toggle numeric level (0/1) instead of using boolean negation
+    bslLevel = bslLevel ? 0 : 1;
+  }
+  if (rstInvert) {
+    // log("Inverting RST line");
+    rstLevel = rstLevel ? 0 : 1;
+  }
+
   //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
   const bslHasSet = /\{SET\}/.test(bslTpl);
   const rstHasSet = /\{SET\}/.test(rstTpl);
@@ -1284,24 +1322,24 @@ const setLines = async (rstLow: boolean, bslLow: boolean, assumeSwap: boolean) =
   await sendCtrlUrl(rstTpl, rstHasSet ? rstLevel : undefined);
 };
 
-async function bslUseLines(assumeSwap: boolean) {
+async function bslUseLines() {
   if (implyGateToggle?.checked != true) {
-    await setLines(true, true, assumeSwap);
+    await setLines(true, true);
     await sleep(250);
-    await setLines(false, true, assumeSwap);
+    await setLines(false, true);
     await sleep(250);
-    await setLines(false, false, assumeSwap);
+    await setLines(false, false);
     await sleep(250);
-    await setLines(false, true, assumeSwap);
+    await setLines(false, true);
     await sleep(500);
   } else {
-    await setLines(true, true, assumeSwap);
+    await setLines(true, true);
     await sleep(250);
-    await setLines(true, false, assumeSwap);
+    await setLines(true, false);
     await sleep(250);
-    await setLines(false, true, assumeSwap);
+    await setLines(false, true);
     await sleep(450);
-    await setLines(false, false, assumeSwap);
+    await setLines(false, false);
     await sleep(250);
   }
 }
