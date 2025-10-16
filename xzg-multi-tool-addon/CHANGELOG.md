@@ -1,3 +1,28 @@
+## v0.2.13
+
+## 🚀 Features
+
+- feat: add support for CC1352P7 chip (#32) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- fix: add support for custom GPIOs' paths (#31) by @xyzroe
+
+## v0.2.12
+
+## 🐛 Bug Fixes
+
+- fix: add support for custom GPIOs' paths (#31) by @xyzroe
+
+## v0.2.11
+
+- docs: enhance README files (#28) by @xyzroe
+
+## 🚀 Features
+
+- feat: add imply gate logic for BSL enter (#30) by @xyzroe
+- feat: more comfortable selection of GPIOs (#27) by @xyzroe
+
 ## v0.2.10
 
 ## 🚀 Features
