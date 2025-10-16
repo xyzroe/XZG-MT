@@ -16,11 +16,11 @@
 
 ## 📖 About
 
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC1352 / CC2538 / CC2652 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
+XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC1352 / CC2652 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
 ## ⭐ Features
 
-- 🔌 Work with local USB TI CC1352 / CC2538 / CC2652 via Web Serial or with remote via WS-TCP bridge
+- 🔌 Work with local USB TI CC1352 / CC2652 via Web Serial or with remote via WS-TCP bridge
 - 📂 Flash firmware from custom local file or select from provided
 - 🦾 Automatic chip model, flash size, IEEE and firmware version detection
 - 📝 Cloud firmware's list with description

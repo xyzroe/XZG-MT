@@ -1,12 +1,21 @@
 // Control configuration and helpers extracted from flasher.ts
 
-export type ControlConfig = { remote: boolean; bslPath: string; rstPath: string; baudPath: string };
+export type ControlConfig = {
+  remote: boolean;
+  bslPath: string;
+  rstPath: string;
+  baudPath: string;
+  invertBsl: boolean;
+  invertRst: boolean;
+};
 
 export const DEFAULT_CONTROL: ControlConfig = {
   remote: true,
   bslPath: "",
   rstPath: "",
   baudPath: "",
+  invertBsl: false,
+  invertRst: false,
 };
 
 export const CONTROL_PRESETS: Array<{
@@ -22,6 +31,8 @@ export const CONTROL_PRESETS: Array<{
       bslPath: "http://{HOST}/cmdZigBSL",
       rstPath: "http://{HOST}/cmdZigRST",
       baudPath: "",
+      invertBsl: false,
+      invertRst: false,
     },
   },
   {
@@ -66,15 +77,15 @@ export function deriveControlConfig(meta: { type?: string; protocol?: string }):
 }
 
 // Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
-export function computeDtrRts(rstLow: boolean, bslLow: boolean, assumeSwap: boolean): { dtr: boolean; rts: boolean } {
+export function computeDtrRts(rstLow: boolean, bslLow: boolean): { dtr: boolean; rts: boolean } {
   let dtr: boolean, rts: boolean;
-  if (!assumeSwap) {
-    // RST=DTR, BSL=RTS (preserve existing inversion semantics)
-    dtr = !rstLow;
-    rts = !bslLow;
-  } else {
-    dtr = !bslLow;
-    rts = !rstLow;
-  }
+  // if (!assumeSwap) {
+  // RST=DTR, BSL=RTS (preserve existing inversion semantics)
+  dtr = !rstLow;
+  rts = !bslLow;
+  // } else {
+  //   dtr = !bslLow;
+  //   rts = !rstLow;
+  // }
   return { dtr, rts };
 }
