@@ -1,3 +1,15 @@
+## v0.2.14
+
+## 🚀 Features
+
+- feat: some small adjustments (#34) by @xyzroe
+- feat: add support for CC1352P7 chip (#32) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- feat: some small adjustments (#34) by @xyzroe
+- fix: improve HEX parsing logic  (#33) by @xyzroe
+
 ## v0.2.13
 
 ## 🚀 Features
