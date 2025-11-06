@@ -53,8 +53,8 @@ export function parseIntelHex(fullText: string): { startAddress: number; data: U
   const size = maxAddr - minAddr + 1;
   if (size <= 0) return { startAddress: 0, data: new Uint8Array(0) };
   const out = new Uint8Array(size);
-  // fill with 0xFF (or 0x00) — choose 0xFF to represent erased flash
-  out.fill(0xff);
+  // fill with 0x00 to represent erased flash
+  out.fill(0x00);
 
   // write records
   for (const r of recs) {

@@ -403,7 +403,7 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
-                    <input id="hexFile" class="form-control" type="file" accept=".hex,.txt,.bin" />
+                    <input id="localFile" class="form-control" type="file" accept=".hex,.txt,.bin" />
                     <div class="small text-muted mt-1">Use a local file (*.hex or *.bin). Check your chip model.
                     </div>
                 </div>
@@ -446,6 +446,14 @@
                     <button id="btnFlash" class="btn btn-success btn-lg">
                         <i class="bi bi-lightning-charge me-1"></i>Start
                     </button>
+                </div>
+            </div>
+            <div id="flashWarning" class="row mt-4 d-none">
+                <div class="col">
+                    <div class="alert alert-warning d-flex align-items-center mb-0" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <small>Do not close or minimize this page during the flashing process!</small>
+                    </div>
                 </div>
             </div>
             <div class="row g-2 mt-3">

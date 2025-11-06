@@ -121,11 +121,12 @@ const bridgeLink = document.getElementById("bridgeLink") as HTMLAnchorElement | 
 const connectTcpBtn = document.getElementById("connectTcp") as HTMLButtonElement;
 const deviceDetectSpinner = document.getElementById("deviceDetectSpinner") as HTMLSpanElement | null;
 const portInfoEl = document.getElementById("portInfo") as HTMLInputElement | null;
-const hexInput = document.getElementById("hexFile") as HTMLInputElement;
+const localFile = document.getElementById("localFile") as HTMLInputElement;
 const optErase = document.getElementById("optErase") as HTMLInputElement;
 const optWrite = document.getElementById("optWrite") as HTMLInputElement;
 const optVerify = document.getElementById("optVerify") as HTMLInputElement;
 const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
+const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
 const progressEl = document.getElementById("progress") as HTMLDivElement;
 const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElement | null;
 const firmwareSection = document.getElementById("firmwareSection") as HTMLDivElement | null;
@@ -647,8 +648,8 @@ netFwSelect?.addEventListener("change", async () => {
   }
 });
 
-hexInput.addEventListener("change", async () => {
-  const f = hexInput.files?.[0];
+localFile.addEventListener("change", async () => {
+  const f = localFile.files?.[0];
   if (!f) return;
   try {
     log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
@@ -720,13 +721,22 @@ function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb
 
 // Unified: enter BSL for current transport (optimized per concept)
 async function enterBsl(): Promise<void> {
-  const auto = !!autoBslToggle?.checked;
-  const remotePinMode = !!pinModeSelect?.checked;
+  //  const auto = !!autoBslToggle?.checked;
+  //  const remotePinMode = !!pinModeSelect?.checked;
   const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
-  log(`Entering BSL: conn=${activeConnection ?? "none"} auto=${auto} pinMode=${remotePinMode}`);
+  if (activeConnection === "serial") {
+    log(
+      `Entering BSL: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+    );
+  } else if (activeConnection === "tcp") {
+    const strategy = pinModeSelect?.checked ? "mode" : "pin";
+    log(
+      `Entering BSL: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+    );
+  }
 
   if (activeConnection === "serial") {
-    if (!auto) {
+    if (!autoBslToggle?.checked) {
       log("Auto BSL disabled for serial; skipping line sequence");
       return;
     }
@@ -739,7 +749,7 @@ async function enterBsl(): Promise<void> {
   }
 
   if (activeConnection === "tcp") {
-    if (!remotePinMode) {
+    if (!pinModeSelect?.checked) {
       // Use line sequences via remote bridge pins (two attempts)
       // try {
       await bslUseLines();
@@ -762,13 +772,22 @@ async function enterBsl(): Promise<void> {
 
 // Unified: reset to application for current transport (optimized per concept)
 async function performReset(): Promise<void> {
-  const auto = !!autoBslToggle?.checked; // same toggle governs whether to use sequences
-  const remotePinMode = !!pinModeSelect?.checked;
+  //const auto = !!autoBslToggle?.checked; // same toggle governs whether to use sequences
+  //const remotePinMode = !!pinModeSelect?.checked;
   const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
-  log(`Resetting: conn=${activeConnection ?? "none"} auto=${auto} pinMode=${remotePinMode}`);
+  if (activeConnection === "serial") {
+    log(
+      `Resetting: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+    );
+  } else if (activeConnection === "tcp") {
+    const strategy = pinModeSelect?.checked ? "mode" : "pin";
+    log(
+      `Resetting: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+    );
+  }
 
   if (activeConnection === "serial") {
-    if (!auto) {
+    if (!autoBslToggle?.checked) {
       log("Auto reset disabled for serial; skipping line sequence");
       return;
     }
@@ -781,7 +800,7 @@ async function performReset(): Promise<void> {
   }
 
   if (activeConnection === "tcp") {
-    if (!remotePinMode) {
+    if (!pinModeSelect?.checked) {
       // Use line sequences via remote bridge pins
       //try {
       await resetUseLines();
@@ -862,6 +881,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
     } catch {}
   } catch (e: any) {
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
+    throw e;
   } finally {
     if (showBusy) deviceDetectBusy(false);
   }
@@ -875,6 +895,7 @@ async function pingWithBaudRetries(
   // Try a normal ping first
   const findBaud = !!findBaudToggle?.checked;
   try {
+    log("Pinging application…");
     const ok0 = await pingAppMT(link);
     if (
       (findBaud && activeConnection === "serial") ||
@@ -885,6 +906,7 @@ async function pingWithBaudRetries(
       if (ok0) return true;
     } else {
       // If findBaud is not enabled, we don't need to check for baud rate changes
+      //log("Ping succeeded");
       return ok0;
     }
   } catch {}
@@ -910,7 +932,7 @@ async function pingWithBaudRetries(
       if (activeConnection === "serial") {
         await (serial as any)?.reopenWithBaudrate?.(b);
         log(`Serial: switched baud to ${b} for ping retry`);
-      } else if (activeConnection === "tcp") {
+      } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
         await changeBaudOverTcp(b);
 
         log(`TCP: requested baud change to ${b} for ping retry`);
@@ -925,6 +947,7 @@ async function pingWithBaudRetries(
     await sleep(500);
 
     try {
+      log("Pinging application…");
       const ok = await pingAppMT(link);
       if (ok) {
         // keep new baud in UI
@@ -947,7 +970,7 @@ async function pingWithBaudRetries(
     if (activeConnection === "serial") {
       await (serial as any)?.reopenWithBaudrate?.(originalBaud);
       log(`Serial: restored baud to ${originalBaud}`);
-    } else if (activeConnection === "tcp") {
+    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
       await changeBaudOverTcp(originalBaud);
       log(`TCP: restored baud to ${originalBaud}`);
     }
@@ -981,12 +1004,15 @@ async function runConnectSequence(): Promise<void> {
       const ok = await pingWithBaudRetries(link);
       if (!ok) {
         log("App ping: timed out or no response");
+      } else {
+        log("App ping: successful");
       }
     } catch {
       log("App ping skipped");
     }
     try {
       const link = getActiveLink();
+      log("Checking firmware version…");
       const info = await getFwVersionMT(link);
       if (!info) {
         log("FW version request: timed out or no response");
@@ -1064,14 +1090,18 @@ netFwRefreshBtn?.addEventListener("click", () => {
 
 // --- Firmware notes modal logic ---
 
-async function flash(doVerifyOnly = false) {
+async function flash() {
   if (!hexImage) throw new Error("Load HEX first");
+
+  // Show warning
+  if (flashWarning) flashWarning.classList.remove("d-none");
+
   // If using Web Serial, bump baud to 500000 for faster flashing
   try {
     if (activeConnection === "serial") {
       await (serial as any)?.reopenWithBaudrate?.(500000);
       log("Serial: switched baud to 500000");
-    } else if (activeConnection === "tcp") {
+    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
       await changeBaudOverTcp(460800);
       log("TCP: switched baud to 460800");
     }
@@ -1106,7 +1136,7 @@ async function flash(doVerifyOnly = false) {
     chipIsCC26xx = !(chipId === 0xb964 || chipId === 0xb965);
   } catch {}
 
-  if (!doVerifyOnly && optErase.checked) {
+  if (optErase.checked) {
     log("Erase…");
     if (chipIsCC26xx) {
       // Prefer bank erase; if it fails, erase sectors across the write range
@@ -1133,20 +1163,28 @@ async function flash(doVerifyOnly = false) {
     }
   }
 
-  if (!doVerifyOnly && optWrite.checked) {
+  if (optWrite.checked) {
     log(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}…`);
     // reset progress bar
     fwProgressReset("Writing…");
-    const ff = 0xff;
+    //const ff = 0xff;
+    const zero = 0x00;
+
     for (let off = 0; off < data.length; off += chunkSize) {
       let end = Math.min(off + chunkSize, data.length);
       let chunk = data.subarray(off, end);
-      // Skip fully-0xFF chunks to avoid unnecessary writes
+      // Skip chunks that are fully 0x00 to avoid unnecessary writes
       let skip = true;
-      for (let i = 0; i < chunk.length; i++) {
-        if (chunk[i] !== ff) {
-          skip = false;
-          break;
+      const firstByte = chunk[0];
+      if (firstByte !== zero) {
+        skip = false;
+      } else {
+        // Check if all bytes match the first byte
+        for (let i = 1; i < chunk.length; i++) {
+          if (chunk[i] !== firstByte) {
+            skip = false;
+            break;
+          }
         }
       }
       if (!skip) {
@@ -1165,7 +1203,7 @@ async function flash(doVerifyOnly = false) {
     fwProgress(100, "Done");
   }
 
-  if (optVerify.checked || doVerifyOnly) {
+  if (optVerify.checked) {
     log("Verify…");
     let ok = false;
     try {
@@ -1186,12 +1224,16 @@ async function flash(doVerifyOnly = false) {
     if (activeConnection === "serial") {
       await (serial as any)?.reopenWithBaudrate?.(originalBaudRate);
       log(`Serial: switched baud to ${originalBaudRate}`);
-    } else if (activeConnection === "tcp") {
+    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
       await changeBaudOverTcp(originalBaudRate);
       log(`TCP: switched baud to ${originalBaudRate}`);
     }
   } catch {
     log("Serial: failed to switch baud");
+  }
+
+  if (flashWarning) {
+    setTimeout(() => flashWarning.classList.add("d-none"), 1000);
   }
 }
 
@@ -1291,35 +1333,39 @@ btnNvErase?.addEventListener("click", async () => {
 const setLines = async (rstLow: boolean, bslLow: boolean) => {
   const { dtr, rts } = computeDtrRts(rstLow, bslLow);
   if (activeConnection === "serial") {
-    log(`CTRL(serial): DTR=${dtr ? "1" : "0"} RTS=${rts ? "1" : "0"}`);
+    log(`CTRL(serial): DTR(BSL)=${dtr ? "1" : "0"} RTS(RTS)=${rts ? "1" : "0"}`);
     await (serial as any)?.setSignals?.({ dataTerminalReady: dtr, requestToSend: rts });
     return;
   }
-  // TCP: send two single requests, one per pin, using absolute URLs from inputs
-  const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
-  const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
+  if (activeConnection === "tcp") {
+    // TCP: send two single requests, one per pin, using absolute URLs from inputs
+    const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
+    const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
 
-  const bslInvert = invertBsl?.checked == true;
-  const rstInvert = invertRst?.checked == true;
+    const bslInvert = invertBsl?.checked == true;
+    const rstInvert = invertRst?.checked == true;
 
-  let bslLevel = bslLow ? 0 : 1;
-  let rstLevel = rstLow ? 0 : 1;
+    let bslLevel = dtr ? 1 : 0;
+    let rstLevel = rts ? 1 : 0;
 
-  if (bslInvert) {
-    // log("Inverting BSL line");
-    // toggle numeric level (0/1) instead of using boolean negation
-    bslLevel = bslLevel ? 0 : 1;
+    if (bslInvert) {
+      log("Inverting BSL line");
+      // toggle numeric level (0/1) instead of using boolean negation
+      bslLevel = bslLevel ? 0 : 1;
+    }
+    if (rstInvert) {
+      log("Inverting RST line");
+      rstLevel = rstLevel ? 0 : 1;
+    }
+
+    //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
+    const bslHasSet = /\{SET\}/.test(bslTpl);
+    const rstHasSet = /\{SET\}/.test(rstTpl);
+    log(`CTRL(tcp): setting BSL=${bslLevel} RTS=${rstLevel}`);
+    await sendCtrlUrl(bslTpl, bslHasSet ? bslLevel : undefined);
+    await sendCtrlUrl(rstTpl, rstHasSet ? rstLevel : undefined);
+    return;
   }
-  if (rstInvert) {
-    // log("Inverting RST line");
-    rstLevel = rstLevel ? 0 : 1;
-  }
-
-  //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
-  const bslHasSet = /\{SET\}/.test(bslTpl);
-  const rstHasSet = /\{SET\}/.test(rstTpl);
-  await sendCtrlUrl(bslTpl, bslHasSet ? bslLevel : undefined);
-  await sendCtrlUrl(rstTpl, rstHasSet ? rstLevel : undefined);
 };
 
 async function bslUseLines() {
@@ -1331,6 +1377,8 @@ async function bslUseLines() {
     await setLines(false, false);
     await sleep(250);
     await setLines(false, true);
+    await sleep(500);
+    await setLines(true, true);
     await sleep(500);
   } else {
     await setLines(true, true);
@@ -1401,15 +1449,17 @@ resetBtn?.addEventListener("click", async () => {
 btnPing?.addEventListener("click", async () => {
   await withButtonStatus(btnPing!, async () => {
     const link = getActiveLink();
+    log("Pinging application…");
     const ok = await pingAppMT(link);
     if (!ok) throw new Error("Ping failed");
-    else log("Ping-Pong");
+    //else log("Pong");
   });
 });
 
 btnVersion?.addEventListener("click", async () => {
   await withButtonStatus(btnVersion!, async () => {
     const link = getActiveLink();
+    log("Checking firmware version…");
     const info = await getFwVersionMT(link);
     const ok = !!info;
     if (info && firmwareVersionEl) {
@@ -1527,7 +1577,7 @@ btnNvWrite?.addEventListener("click", async () => {
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
     try {
-      await flash(false);
+      await flash();
       log("Flashing finished. Restarting device...");
       try {
         await performReset();
@@ -1544,7 +1594,7 @@ btnFlash.addEventListener("click", async () => {
       } catch (e: any) {
         log("Ping error: " + (e?.message || String(e)));
       }
-      log("Reading firmware version...");
+      log("Checking firmware version…");
       try {
         // use local wrapper to log and update UI
         const info = await getFwVersionMT(getActiveLink());
@@ -1598,6 +1648,10 @@ function applySelectToInput(sel: HTMLSelectElement | null, input: HTMLInputEleme
     input.value = "http://{HOST}/switch/zBSL/{SET}";
   } else if (v == "esphome:rst") {
     input.value = "http://{HOST}/switch/zRST_gpio/{SET}";
+  } else if (v == "tasmota:bsl") {
+    input.value = "http://{HOST}/cm?cmnd=Power2%20{SET}";
+  } else if (v == "tasmota:rst") {
+    input.value = "http://{HOST}/cm?cmnd=Power1%20{SET}";
   }
 
   // else {
@@ -1818,9 +1872,6 @@ async function refreshControlLists() {
       // add shared Serial optgroup
       addSerialOptgroup(sel, defaultSerial || null);
 
-      // add ESPHome optgroup
-      addESPHomeOptgroup(sel, defaultSerial || null);
-
       // GPIO optgroup
       const gg = document.createElement("optgroup");
       gg.label = "GPIOs";
@@ -1864,6 +1915,12 @@ async function refreshControlLists() {
 
       // add XZG optgroup
       addXZGOptgroup(sel, defaultSerial || null);
+
+      // add ESPHome optgroup
+      addESPHomeOptgroup(sel, defaultSerial || null);
+
+      // add Tasmota optgroup
+      addTasmotaOptgroup(sel, defaultSerial || null);
     }
 
     // Fill both selects
@@ -1935,4 +1992,23 @@ function addESPHomeOptgroup(target: HTMLSelectElement, def: string | null) {
   }
 }
 
+function addTasmotaOptgroup(target: HTMLSelectElement, def: string | null) {
+  const tg = document.createElement("optgroup");
+  tg.label = "Tasmota";
+  const oRst = document.createElement("option");
+  oRst.value = "tasmota:rst";
+  oRst.textContent = "Relay 1";
+  tg.appendChild(oRst);
+  const oBsl = document.createElement("option");
+  oBsl.value = "tasmota:bsl";
+  oBsl.textContent = "Relay 2";
+  tg.appendChild(oBsl);
+
+  target.appendChild(tg);
+  if (def) {
+    try {
+      target.value = def;
+    } catch {}
+  }
+}
 // Escape key handler to close firmware notes and bridge info modals
