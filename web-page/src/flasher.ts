@@ -4,7 +4,7 @@ let currentConnMeta: { type?: string; protocol?: string } = {};
 import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/control";
 
 function applyControlConfig(cfg: ControlConfig, source: string) {
-  if (pinModeSelect) pinModeSelect.checked = !!cfg.remote;
+  if (pinModeSelect) pinModeSelect.checked = cfg.pinControl ?? DEFAULT_CONTROL.pinControl;
   if (bslUrlInput) bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
   if (rstUrlInput) rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
   if (baudUrlInput) baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
