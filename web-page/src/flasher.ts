@@ -126,6 +126,7 @@ const optErase = document.getElementById("optErase") as HTMLInputElement;
 const optWrite = document.getElementById("optWrite") as HTMLInputElement;
 const optVerify = document.getElementById("optVerify") as HTMLInputElement;
 const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
+const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
 const progressEl = document.getElementById("progress") as HTMLDivElement;
 const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElement | null;
 const firmwareSection = document.getElementById("firmwareSection") as HTMLDivElement | null;
@@ -880,6 +881,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
     } catch {}
   } catch (e: any) {
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
+    throw e;
   } finally {
     if (showBusy) deviceDetectBusy(false);
   }
@@ -1088,8 +1090,12 @@ netFwRefreshBtn?.addEventListener("click", () => {
 
 // --- Firmware notes modal logic ---
 
-async function flash(doVerifyOnly = false) {
+async function flash() {
   if (!hexImage) throw new Error("Load HEX first");
+
+  // Show warning
+  if (flashWarning) flashWarning.classList.remove("d-none");
+
   // If using Web Serial, bump baud to 500000 for faster flashing
   try {
     if (activeConnection === "serial") {
@@ -1130,7 +1136,7 @@ async function flash(doVerifyOnly = false) {
     chipIsCC26xx = !(chipId === 0xb964 || chipId === 0xb965);
   } catch {}
 
-  if (!doVerifyOnly && optErase.checked) {
+  if (optErase.checked) {
     log("Erase…");
     if (chipIsCC26xx) {
       // Prefer bank erase; if it fails, erase sectors across the write range
@@ -1157,7 +1163,7 @@ async function flash(doVerifyOnly = false) {
     }
   }
 
-  if (!doVerifyOnly && optWrite.checked) {
+  if (optWrite.checked) {
     log(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}…`);
     // reset progress bar
     fwProgressReset("Writing…");
@@ -1197,7 +1203,7 @@ async function flash(doVerifyOnly = false) {
     fwProgress(100, "Done");
   }
 
-  if (optVerify.checked || doVerifyOnly) {
+  if (optVerify.checked) {
     log("Verify…");
     let ok = false;
     try {
@@ -1224,6 +1230,10 @@ async function flash(doVerifyOnly = false) {
     }
   } catch {
     log("Serial: failed to switch baud");
+  }
+
+  if (flashWarning) {
+    setTimeout(() => flashWarning.classList.add("d-none"), 1000);
   }
 }
 
@@ -1567,7 +1577,7 @@ btnNvWrite?.addEventListener("click", async () => {
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
     try {
-      await flash(false);
+      await flash();
       log("Flashing finished. Restarting device...");
       try {
         await performReset();
