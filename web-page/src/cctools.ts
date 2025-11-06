@@ -405,8 +405,7 @@ export async function getFwVersion(link: Link): Promise<{
 
 export async function pingApp(link: Link, timeoutMs = 1000): Promise<boolean> {
   const resp = await sendMtAndWait(link, 0x21, 0x01, [], timeoutMs);
-  //return !!(resp && resp.cmd0 === 0x61 && resp.cmd1 === 0x01);
-  return !!resp;
+  return !!(resp && resp.cmd0 === 0x61 && resp.cmd1 === 0x01);
 }
 
 // ----------- Legacy OSAL NV -----------
