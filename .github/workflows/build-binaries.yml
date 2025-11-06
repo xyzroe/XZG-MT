@@ -59,22 +59,6 @@ jobs:
           echo "After updating xzg-multi-tool-addon/config.json:"
           cat ../xzg-multi-tool-addon/config.json | jq '.version'
 
-          # Update legacy package.json
-          echo "Before updating legacy/package.json:"
-          cat legacy/package.json | jq '.version'
-          raw_ver='${{ steps.setver.outputs.version }}'
-          # Normalize: strip leading dashes and optional leading "v"
-          ver="$(printf '%s' "$raw_ver" | sed 's/^[-]*//; s/^v//')"
-          # Ensure "-legacy" suffix
-          if [[ "$ver" != *-legacy ]]; then
-          ver="${ver}-legacy"
-          fi
-          echo "After normalization, setting legacy/package.json version to: $ver"
-          tmp=$(mktemp)
-          jq --arg v "$ver" '.version=$v' legacy/package.json > "$tmp" && mv "$tmp" legacy/package.json
-          echo "After updating legacy/package.json:"
-          cat legacy/package.json | jq '.version'
-
           echo "Git status after updates:"
           git status --porcelain
 
