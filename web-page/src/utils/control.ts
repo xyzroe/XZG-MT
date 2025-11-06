@@ -1,7 +1,7 @@
 // Control configuration and helpers extracted from flasher.ts
 
 export type ControlConfig = {
-  remote: boolean;
+  pinControl: boolean;
   bslPath: string;
   rstPath: string;
   baudPath: string;
@@ -10,7 +10,7 @@ export type ControlConfig = {
 };
 
 export const DEFAULT_CONTROL: ControlConfig = {
-  remote: true,
+  pinControl: true,
   bslPath: "",
   rstPath: "",
   baudPath: "",
@@ -27,7 +27,7 @@ export const CONTROL_PRESETS: Array<{
     name: "ZigStar/UZG HTTP",
     test: (m) => /^(zigstar_gw|zig_star_gw|uzg-01|xzg)$/i.test(m.type || ""),
     config: {
-      remote: true,
+      pinControl: true,
       bslPath: "http://{HOST}/cmdZigBSL",
       rstPath: "http://{HOST}/cmdZigRST",
       baudPath: "",
@@ -39,30 +39,36 @@ export const CONTROL_PRESETS: Array<{
     name: "TubesZB HTTP (ESPHome)",
     test: (m) => /^(tubeszb|tubes_zb)$/i.test(m.type || ""),
     config: {
-      remote: false,
+      pinControl: false,
       bslPath: "http://{HOST}/switch/zBSL/{SET}",
       rstPath: "http://{HOST}/switch/zRST_gpio/{SET}",
       baudPath: "",
+      invertBsl: false,
+      invertRst: false,
     },
   },
   {
     name: "Local USB via Bridge",
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "usb",
     config: {
-      remote: false,
+      pinControl: false,
       bslPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
       rstPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
+      invertBsl: false,
+      invertRst: false,
     },
   },
   {
     name: "Local Serial via Bridge",
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
     config: {
-      remote: false,
+      pinControl: false,
       bslPath: "",
       rstPath: "",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
+      invertBsl: false,
+      invertRst: false,
     },
   },
 ];
