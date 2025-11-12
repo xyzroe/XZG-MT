@@ -1,0 +1,36 @@
+name: ghcr-downloads-badge
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 7 * * *"
+
+# ВАЖНО: разрешаем встроенному GITHUB_TOKEN коммитить файлы
+permissions:
+  contents: write
+
+jobs:
+  build-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Compute GHCR downloads and write badge JSON
+        env:
+          GHCR_BADGE_TOKEN: ${{ secrets.GHCR_BADGE_TOKEN }}  # <-- твой fine-grained PAT (только read Packages)
+        run: bash .github/scripts/ghcr_pulls.sh
+
+      - name: Commit badge JSON
+        run: |
+          if ! git diff --quiet badges/ghcr-downloads.json; then
+            git config user.name "gh-actions"
+            git config user.email "actions@github.com"
+            git add badges/ghcr-downloads.json
+            git commit -m "chore(badge): update ghcr downloads"
+            git push
+          else
+            echo "No changes."
+          fi
