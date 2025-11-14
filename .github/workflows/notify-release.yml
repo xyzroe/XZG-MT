@@ -29,20 +29,18 @@ jobs:
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           echo "title=🎉 New Release of MT" >> "$GITHUB_OUTPUT"
 
-      - name: Send Telegram Notification
+      - name: Send Telegram Notification about release
+        uses: appleboy/telegram-action@master
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
-        run: |
-          ESCAPED_URL=$(echo "${{ steps.release_data.outputs.url }}" | sed 's/\./\\./g')
-          MESSAGE="*${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*\n\n[${{ steps.release_data.outputs.title }}]($ESCAPED_URL)"
-          
-          PHOTO_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
-          
-          TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto"
-          
-          DATA="--data-urlencode \"chat_id=${TELEGRAM_CHAT_ID}\" --data-urlencode \"photo=${PHOTO_URL}\" --data-urlencode \"caption=${MESSAGE}\" --data-urlencode \"parse_mode=MarkdownV2\""
-          
-          eval "curl -X POST \"$TG_URL\" $DATA"
-          echo "✅ Telegram notification sent"
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            *${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*
+            
+            [View on GitHub](${{ steps.release_data.outputs.url }})
+          photo: https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}
 
       - name: Send Discord Notification
         if: env.DISCORD_WEBHOOK != ''
