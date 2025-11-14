@@ -1,0 +1,64 @@
+name: Release Notification
+
+on:
+  release:
+    types: [published]  
+  workflow_dispatch:  
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    if: success()
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Get release data
+        id: release_data
+        run: |
+          API_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/releases/latest")
+          VERSION=$(echo "$API_RESPONSE" | jq -r '.tag_name')
+          RELEASE_URL=$(echo "$API_RESPONSE" | jq -r '.html_url')
+          
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+          echo "title=🎉 New Release of MT" >> "$GITHUB_OUTPUT"
+
+      - name: Send Telegram Notification
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        env:
+          TELEGRAM_TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+        run: |
+          MESSAGE="<b>${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}</b>%0A%0A<a href=\"${{ steps.release_data.outputs.url }}\">View on GitHub</a>"
+          ENCODED_MESSAGE=$(jq -rn --arg msg "$MESSAGE" '$msg | @uri')
+          
+          if [ -n "$TELEGRAM_TOPIC_ID" ]; then
+            TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&message_thread_id=${TELEGRAM_TOPIC_ID}&parse_mode=HTML"
+          else
+            TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&parse_mode=HTML"
+          fi
+          
+          curl -X POST "$TG_URL" --data-urlencode "text=$MESSAGE"
+          echo "✅ Telegram notification sent"
+
+      - name: Send Discord Notification
+        if: env.DISCORD_WEBHOOK != ''
+        run: |
+          curl -X POST "$DISCORD_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d @- << 'EOF'
+          {
+            "embeds": [{
+              "title": "${{ steps.release_data.outputs.title }}",
+              "description": "${{ steps.release_data.outputs.version }}",
+              "url": "${{ steps.release_data.outputs.url }}",
+              "color": 3066993
+            }]
+          }
+          EOF
+          echo "✅ Discord notification sent"
