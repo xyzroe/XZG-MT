@@ -14,11 +14,11 @@ WORKDIR /src
 RUN apk add --no-cache git
 
 # Download modules first for better caching
-COPY bridge-go/go.mod bridge-go/go.sum ./
+COPY bridge/go.mod bridge/go.sum ./
 RUN go mod download
 
 # Copy full source and build
-COPY bridge-go .
+COPY bridge .
 
 # Build a static binary for the target platform supplied by buildx.
 # When using docker buildx, TARGETOS and TARGETARCH are passed automatically.
@@ -47,7 +47,7 @@ COPY xzg-multi-tool-addon/run.sh ./run.sh
 RUN chmod +x ./run.sh ./xzg-mt-bridge || true
 
 # Add a small entrypoint wrapper to choose HA wrapper vs standalone binary
-COPY bridge-go/entrypoint.sh ./entrypoint.sh
+COPY bridge/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh || true
 
 # Default environment

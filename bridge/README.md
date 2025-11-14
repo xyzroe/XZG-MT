@@ -24,7 +24,7 @@ A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP
 
 ```bash
 git clone https://github.com/xyzroe/XZG-MT.git
-cd XZG-MT/bridge-go
+cd XZG-MT/bridge
 ```
 
 2. Install dependencies:
@@ -150,5 +150,5 @@ make build
 ### Building Docker image
 
 ```bash
-docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge-go/Dockerfile .
+docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge/Dockerfile .
 ```
