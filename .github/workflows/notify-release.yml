@@ -35,15 +35,18 @@ jobs:
           TELEGRAM_TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
           MESSAGE="<b>${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}</b>%0A%0A<a href=\"${{ steps.release_data.outputs.url }}\">View on GitHub</a>"
-          ENCODED_MESSAGE=$(jq -rn --arg msg "$MESSAGE" '$msg | @uri')
+          
+          PHOTO_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository_owner }}/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+          
+          TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto"
+          
+          DATA="--data-urlencode \"chat_id=${TELEGRAM_CHAT_ID}\" --data-urlencode \"photo=${PHOTO_URL}\" --data-urlencode \"caption=${MESSAGE}\" --data-urlencode \"parse_mode=HTML\""
           
           if [ -n "$TELEGRAM_TOPIC_ID" ]; then
-            TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&message_thread_id=${TELEGRAM_TOPIC_ID}&parse_mode=HTML"
-          else
-            TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&parse_mode=HTML"
+            DATA="$DATA --data-urlencode \"message_thread_id=${TELEGRAM_TOPIC_ID}\""
           fi
           
-          curl -X POST "$TG_URL" --data-urlencode "text=$MESSAGE"
+          eval "curl -X POST \"$TG_URL\" $DATA"
           echo "✅ Telegram notification sent"
 
       - name: Send Discord Notification
@@ -57,7 +60,10 @@ jobs:
               "title": "${{ steps.release_data.outputs.title }}",
               "description": "${{ steps.release_data.outputs.version }}",
               "url": "${{ steps.release_data.outputs.url }}",
-              "color": 3066993
+              "color": 3066993,
+              "image": {
+                "url": "https://opengraph.githubassets.com/0.1.0/${{ github.repository_owner }}/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+              }
             }]
           }
           EOF
