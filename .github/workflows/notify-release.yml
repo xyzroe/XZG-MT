@@ -32,13 +32,13 @@ jobs:
       - name: Send Telegram Notification
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
         run: |
-          MESSAGE="<b>${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}</b>%0A%0A<a href=\"${{ steps.release_data.outputs.url }}\">View on GitHub</a>"
+          MESSAGE="*${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*\n\n[${{ steps.release_data.outputs.title }}](${{ steps.release_data.outputs.url }})"
           
           PHOTO_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
           
           TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto"
           
-          DATA="--data-urlencode \"chat_id=${TELEGRAM_CHAT_ID}\" --data-urlencode \"photo=${PHOTO_URL}\" --data-urlencode \"caption=${MESSAGE}\" --data-urlencode \"parse_mode=HTML\""
+          DATA="--data-urlencode \"chat_id=${TELEGRAM_CHAT_ID}\" --data-urlencode \"photo=${PHOTO_URL}\" --data-urlencode \"caption=${MESSAGE}\" --data-urlencode \"parse_mode=MarkdownV2\""
           
           eval "curl -X POST \"$TG_URL\" $DATA"
           echo "✅ Telegram notification sent"
