@@ -1,3 +1,17 @@
+## v0.2.16
+
+## 🚀 Features
+
+- initial support of SL (#40) by @xyzroe
+- feat: add notification step for Telegram and Discord after release (#39) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- initial support of SL (#40) by @xyzroe
+- refactor: remove legacy version update steps from build workflow (#38) by @xyzroe
+- refactor: update ControlConfig to use pinControl instead of remote (#37) by @xyzroe
+- remove node.js bridge (#36) by @xyzroe
+
 ## v0.2.14
 
 ## 🚀 Features
