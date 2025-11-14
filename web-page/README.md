@@ -1,6 +1,6 @@
 # Web Page - Developer Documentation
 
-This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing TI CC1352 / CC2652 devices.
+This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing TI CC1352 / CC2652 and SL EFR32 devices.
 
 ## Project Structure
 
@@ -82,7 +82,7 @@ This creates a complete production build with:
 - Static file copying
 - Commit hash injection
 - Favicon generation and injection
-- Assets copying to bridge-go/web/
+- Assets copying to bridge/web/
 
 ### Lite Build (Development)
 
@@ -156,7 +156,7 @@ The built files in `dist/` can be served by any static web server. The applicati
 
 ### Integration with Bridge
 
-The `npm run copy:ready` command copies built files to `../bridge-go/web/` for embedding in the Go bridge binary.
+The `npm run copy:ready` command copies built files to `../bridge/web/` for embedding in the Go bridge binary.
 
 ## Contributing Guidelines
 

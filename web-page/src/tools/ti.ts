@@ -1,4 +1,4 @@
-import { sleep } from "./utils/index";
+import { sleep, toHex } from "../utils/index";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
@@ -271,7 +271,7 @@ export class LinkAdapter implements CCToolsLink {
   }
 }
 
-export async function cctoolsSync(link: Link): Promise<CCToolsClient> {
+export async function sync(link: Link): Promise<CCToolsClient> {
   const client = new CCToolsClient(new LinkAdapter(link.write, link.onData));
   await client.sync();
   return client;
@@ -401,6 +401,181 @@ export async function getFwVersion(link: Link): Promise<{
     return { transportrev, product, major, minor, maint, fwRev, payload: p };
   }
   return null;
+}
+
+export interface TiDeviceInfo {
+  chipIdHex: string;
+  chipModel?: string;
+  flashSizeBytes?: number;
+  ieeeMac?: string;
+}
+
+export async function readDeviceInfo(link: Link, log?: (msg: string) => void): Promise<TiDeviceInfo> {
+  const bsl = await sync(link);
+  const id = await bsl.chipId();
+  const chipHex = Array.from(id as Uint8Array)
+    .map((b: number) => b.toString(16).padStart(2, "0"))
+    .join("");
+  log?.(`BSL OK. ChipId packet: ${chipHex}`);
+
+  const info: TiDeviceInfo = { chipIdHex: chipHex };
+
+  try {
+    const FLASH_SIZE = 0x4003002c;
+    const IEEE_ADDR_PRIMARY = 0x500012f0;
+    const ICEPICK_DEVICE_ID = 0x50001318;
+    const TESXT_ID = 0x57fb4;
+
+    const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
+    const usr = await (bsl as any).memRead32?.(TESXT_ID);
+    if (dev && usr && dev.length >= 4 && usr.length >= 4) {
+      const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
+      const pg_rev = (dev[3] & 0xf0) >> 4;
+      info.chipModel = getChipDescription(id, wafer_id, pg_rev, usr[1]);
+      log?.(`Chip model: ${info.chipModel}`);
+    }
+
+    const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
+    if (flashSz && flashSz.length >= 4) {
+      const pages = flashSz[0];
+      let size = pages * 8192;
+      if (size >= 64 * 1024) size -= 8192;
+      info.flashSizeBytes = size;
+      log?.(`Flash size estimate: ${size} bytes`);
+    }
+
+    const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
+    const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
+    if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
+      const mac = [...mac_lo, ...mac_hi]
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("")
+        .toUpperCase();
+      const macFmt = mac
+        .match(/.{1,2}/g)
+        ?.reverse()
+        ?.join(":");
+      if (macFmt) {
+        info.ieeeMac = macFmt;
+        log?.(`IEEE MAC: ${macFmt}`);
+      }
+    }
+  } catch (err) {
+    log?.(`TI device info read partially failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  return info;
+}
+
+export interface TiFlashImage {
+  startAddress: number;
+  data: Uint8Array;
+}
+
+export interface TiFlashOptions {
+  chunkSize?: number;
+  erase: boolean;
+  write: boolean;
+  verify: boolean;
+  log?: (msg: string) => void;
+  onProgress?: (pct: number, label?: string) => void;
+  onChunkDelay?: () => Promise<void>;
+}
+
+export async function flashFirmware(link: Link, image: TiFlashImage, options: TiFlashOptions): Promise<void> {
+  const logFn = options.log ?? (() => {});
+  const onProgress = options.onProgress;
+  const chunkDelay = options.onChunkDelay;
+  const chunkSize = Math.max(16, Math.min(248, options.chunkSize ?? 248));
+  const startAddr = image.startAddress;
+  const data = image.data;
+
+  const bsl = await sync(link);
+  let chipIdStr = "";
+  let chipIsCC26xx = false;
+  try {
+    const id = await bsl.chipId();
+    chipIdStr = Array.from(id as Uint8Array)
+      .map((b: number) => b.toString(16).padStart(2, "0"))
+      .join("");
+    logFn(`ChipId: ${chipIdStr}`);
+    const chipId = ((id[0] << 8) | id[1]) >>> 0;
+    chipIsCC26xx = !(chipId === 0xb964 || chipId === 0xb965);
+  } catch (err) {
+    logFn(`ChipId read failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (options.erase) {
+    logFn("Erase…");
+    if (chipIsCC26xx) {
+      try {
+        await (bsl as any).bankErase?.();
+        logFn("Bank erase done");
+      } catch (e: any) {
+        logFn("Bank erase not supported or failed, erasing sectors…");
+        const pageSize = 4096;
+        const from = startAddr & ~(pageSize - 1);
+        const to = (startAddr + data.length + pageSize - 1) & ~(pageSize - 1);
+        for (let a = from; a < to; a += pageSize) {
+          await (bsl as any).sectorErase?.(a);
+        }
+        logFn("Sector erase done");
+      }
+    } else {
+      await bsl.erase(startAddr, data.length);
+    }
+  }
+
+  if (options.write) {
+    logFn(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}…`);
+    onProgress?.(0, "Writing…");
+    const zero = 0x00;
+
+    for (let off = 0; off < data.length; off += chunkSize) {
+      const end = Math.min(off + chunkSize, data.length);
+      const chunk = data.subarray(off, end);
+      let skip = true;
+      const firstByte = chunk[0];
+      if (firstByte !== zero) {
+        skip = false;
+      } else {
+        for (let i = 1; i < chunk.length; i++) {
+          if (chunk[i] !== firstByte) {
+            skip = false;
+            break;
+          }
+        }
+      }
+      if (!skip) {
+        await bsl.downloadTo(startAddr + off, chunk);
+      }
+      const cur = off + chunk.length;
+      const pct = Math.min(100, Math.round((cur / data.length) * 100));
+      const curAddr = startAddr + cur;
+      const endAddr = startAddr + data.length;
+      onProgress?.(pct, `${toHex(curAddr, 8)} / ${toHex(endAddr, 8)}`);
+      if (chunkDelay) await chunkDelay();
+    }
+    logFn("Write done");
+    onProgress?.(100, "Done");
+  }
+
+  if (options.verify) {
+    logFn("Verify…");
+    let ok = false;
+    try {
+      if (chipIsCC26xx && (bsl as any).crc32Cc26xx) {
+        const crc = await (bsl as any).crc32Cc26xx(startAddr, data.length);
+        logFn(`CRC32(dev)=0x${crc.toString(16).toUpperCase().padStart(8, "0")}`);
+        ok = true;
+      } else {
+        ok = await bsl.verifyCrc(startAddr, data.length);
+      }
+    } catch (err) {
+      logFn(`Verify failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    logFn(ok ? "Verify OK" : "Verify inconclusive");
+  }
 }
 
 export async function pingApp(link: Link, timeoutMs = 1000): Promise<boolean> {

@@ -75,16 +75,8 @@ import { computeDtrRts } from "./utils/control";
 let activeConnection: "serial" | "tcp" | null = null;
 import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
-import {
-  cctoolsSync as cctoolsSync,
-  getChipDescription,
-  sendMtAndWait as sendMtAndWaitMT,
-  pingApp as pingAppMT,
-  getFwVersion as getFwVersionMT,
-  nvramReadAll as nvramReadAllMT,
-  nvramEraseAll as nvramEraseAllMT,
-  nvramWriteAll as nvramWriteAllMT,
-} from "./cctools";
+import * as ti_tools from "./tools/ti";
+import { SilabsTools, enterSilabsBootloader } from "./tools/sl";
 import { filterFwByChip, fetchManifest, parseImageFromBuffer, downloadFirmwareFromUrl } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { httpGetWithFallback } from "./utils/http";
@@ -156,13 +148,19 @@ const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputEle
 const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
 const invertBsl = document.getElementById("invertBsl") as HTMLInputElement | null;
 const invertRst = document.getElementById("invertRst") as HTMLInputElement | null;
-const verboseIo = true;
 
 let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let netFwCache: any | null = null;
 let netFwItems: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> | null = null;
+let sl_tools: SilabsTools | null = null;
+
+function getSelectedFamily(): "ti" | "sl" {
+  const el = document.querySelector('input[name="chip_family"]:checked') as HTMLInputElement | null;
+  const v = (el?.value || "ti").toLowerCase();
+  return v === "sl" ? "sl" : "ti";
+}
 
 // Bootstrap tooltip init moved to index.js
 
@@ -202,9 +200,11 @@ function updateConnectionUI() {
   const serialSection = document.getElementById("serialSection") as HTMLElement | null;
   const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
   const generalSection = document.getElementById("generalSection") as HTMLElement | null;
+  const familySection = document.getElementById("familySection") as HTMLElement | null;
   setSectionDisabled(serialSection, anyActive);
   setSectionDisabled(tcpSection, anyActive);
   setSectionDisabled(generalSection, anyActive);
+  setSectionDisabled(familySection, anyActive);
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
@@ -677,7 +677,7 @@ function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb
   throw new Error("No transport connected");
 }
 
-// cctoolsSync provided by cctools (imported as bslSync for compatibility)
+// ti_toolsSync provided by ti_tools (imported as bslSync for compatibility)
 
 // // Build and send a bridge URL, allowing absolute URL or relative path to bridge base; supports {PORT}
 // async function sendBridgeCmd(pathOrUrl: string): Promise<string> {
@@ -740,11 +740,13 @@ async function enterBsl(): Promise<void> {
       log("Auto BSL disabled for serial; skipping line sequence");
       return;
     }
-    // try {
-    await bslUseLines();
-    // } catch (e) {
-    //   await bslUseLines(true);
-    // }
+    // Use Silabs auto entry when SI family is selected
+    if (getSelectedFamily() === "sl") {
+      await enterSilabsBootloader(setLines, log);
+    }
+    if (getSelectedFamily() === "ti") {
+      await bslUseLines();
+    }
     return;
   }
 
@@ -752,7 +754,13 @@ async function enterBsl(): Promise<void> {
     if (!pinModeSelect?.checked) {
       // Use line sequences via remote bridge pins (two attempts)
       // try {
-      await bslUseLines();
+
+      if (getSelectedFamily() === "sl") {
+        await enterSilabsBootloader(setLines, log);
+      }
+      if (getSelectedFamily() === "ti") {
+        await bslUseLines();
+      }
       // } catch (e) {
       //   await bslUseLines(true);
       // }
@@ -791,11 +799,16 @@ async function performReset(): Promise<void> {
       log("Auto reset disabled for serial; skipping line sequence");
       return;
     }
-    //try {
-    await resetUseLines();
-    //} catch (e) {
-    // await resetUseLines(true);
-    // }
+    // For Silabs, if in bootloader, send "2" to run application, then reset lines
+    if (getSelectedFamily() === "sl") {
+      log("Sending '2' to bootloader to run application");
+      const encoder = new TextEncoder();
+      await getActiveLink().write(encoder.encode("2\r\n"));
+      await sleep(500); // Give time for bootloader to process
+      await resetUseLines(); // Then reset the device
+    } else {
+      await resetUseLines();
+    }
     return;
   }
 
@@ -826,59 +839,71 @@ async function performReset(): Promise<void> {
 async function readChipInfo(showBusy: boolean = true): Promise<void> {
   try {
     if (showBusy) deviceDetectBusy(true);
-    const link = getActiveLink();
-    const bsl = await cctoolsSync(link);
-    const id = await bsl.chipId();
-    const chipHex = Array.from(id)
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    log(`BSL OK. ChipId packet: ${chipHex}`);
+    const family = getSelectedFamily();
+    if (family === "ti") {
+      const link = getActiveLink();
+      const bsl = await ti_tools.sync(link);
+      const id = await bsl.chipId();
+      const chipHex = Array.from(id as Uint8Array)
+        .map((b: number) => b.toString(16).padStart(2, "0"))
+        .join("");
+      log(`BSL OK. ChipId packet: ${chipHex}`);
 
-    try {
-      const FLASH_SIZE = 0x4003002c;
-      const IEEE_ADDR_PRIMARY = 0x500012f0;
-      const ICEPICK_DEVICE_ID = 0x50001318;
-      const TESXT_ID = 0x57fb4;
+      try {
+        const FLASH_SIZE = 0x4003002c;
+        const IEEE_ADDR_PRIMARY = 0x500012f0;
+        const ICEPICK_DEVICE_ID = 0x50001318;
+        const TESXT_ID = 0x57fb4;
 
-      const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
-      const usr = await (bsl as any).memRead32?.(TESXT_ID);
-      if (dev && usr && dev.length >= 4 && usr.length >= 4) {
-        const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
-        const pg_rev = (dev[3] & 0xf0) >> 4;
-        const model = getChipDescription(id, wafer_id, pg_rev, usr[1]);
-        log(`Chip model: ${model}`);
-        if (chipModelEl) chipModelEl.value = model;
-        refreshNetworkFirmwareList(model).catch((e) =>
-          log("Network FW list fetch failed: " + (e?.message || String(e)))
-        );
-      }
-
-      const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
-      if (flashSz && flashSz.length >= 4) {
-        const pages = flashSz[0];
-        let size = pages * 8192;
-        if (size >= 64 * 1024) size -= 8192;
-        log(`Flash size estimate: ${size} bytes`);
-        if (flashSizeEl) flashSizeEl.value = `${size} bytes`;
-      }
-
-      const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
-      const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
-      if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
-        const mac = [...mac_lo, ...mac_hi]
-          .map((b) => b.toString(16).padStart(2, "0"))
-          .join("")
-          .toUpperCase();
-        const macFmt = mac
-          .match(/.{1,2}/g)
-          ?.reverse()
-          ?.join(":");
-        if (macFmt) {
-          log(`IEEE MAC: ${macFmt}`);
-          if (ieeeMacEl) ieeeMacEl.value = macFmt;
+        const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
+        const usr = await (bsl as any).memRead32?.(TESXT_ID);
+        if (dev && usr && dev.length >= 4 && usr.length >= 4) {
+          const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
+          const pg_rev = (dev[3] & 0xf0) >> 4;
+          const model = ti_tools.getChipDescription(id, wafer_id, pg_rev, usr[1]);
+          log(`Chip model: ${model}`);
+          if (chipModelEl) chipModelEl.value = model;
+          refreshNetworkFirmwareList(model).catch((e) =>
+            log("Network FW list fetch failed: " + (e?.message || String(e)))
+          );
         }
-      }
-    } catch {}
+
+        const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
+        if (flashSz && flashSz.length >= 4) {
+          const pages = flashSz[0];
+          let size = pages * 8192;
+          if (size >= 64 * 1024) size -= 8192;
+          log(`Flash size estimate: ${size} bytes`);
+          if (flashSizeEl) flashSizeEl.value = `${size} bytes`;
+        }
+
+        const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
+        const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
+        if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
+          const mac = [...mac_lo, ...mac_hi]
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join("")
+            .toUpperCase();
+          const macFmt = mac
+            .match(/.{1,2}/g)
+            ?.reverse()
+            ?.join(":");
+          if (macFmt) {
+            log(`IEEE MAC: ${macFmt}`);
+            if (ieeeMacEl) ieeeMacEl.value = macFmt;
+          }
+        }
+      } catch {}
+    } else {
+      // Silabs stub path for now
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      const info = await sl_tools.getChipInfo();
+      if (chipModelEl) chipModelEl.value = info.chipName;
+      if (firmwareVersionEl) firmwareVersionEl.value = info.firmwareVersion || "";
+      refreshNetworkFirmwareList(info.chipName).catch((e) =>
+        log("Network FW list fetch failed: " + (e?.message || String(e)))
+      );
+    }
   } catch (e: any) {
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
     throw e;
@@ -896,7 +921,7 @@ async function pingWithBaudRetries(
   const findBaud = !!findBaudToggle?.checked;
   try {
     log("Pinging application…");
-    const ok0 = await pingAppMT(link);
+    const ok0 = await ti_tools.pingApp(link);
     if (
       (findBaud && activeConnection === "serial") ||
       (findBaud && activeConnection === "tcp" && (baudUrlInput?.value ?? "").trim() !== "")
@@ -948,7 +973,7 @@ async function pingWithBaudRetries(
 
     try {
       log("Pinging application…");
-      const ok = await pingAppMT(link);
+      const ok = await ti_tools.pingApp(link);
       if (ok) {
         // keep new baud in UI
         try {
@@ -995,33 +1020,67 @@ async function runConnectSequence(): Promise<void> {
         await sleep(250);
       }
     } catch {}
-    await enterBsl().catch((e: any) => log("Enter BSL failed: " + (e?.message || String(e))));
-    await readChipInfo(false);
-    await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
-    await sleep(1000);
-    try {
-      const link = getActiveLink();
-      const ok = await pingWithBaudRetries(link);
-      if (!ok) {
-        log("App ping: timed out or no response");
-      } else {
-        log("App ping: successful");
+    const family = getSelectedFamily();
+    if (family === "ti") {
+      await enterBsl().catch((e: any) => log("Enter BSL failed: " + (e?.message || String(e))));
+      await readChipInfo(false);
+      await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
+      await sleep(1000);
+      try {
+        const link = getActiveLink();
+        const ok = await pingWithBaudRetries(link);
+        if (!ok) {
+          log("App ping: timed out or no response");
+        } else {
+          log("App ping: successful");
+        }
+      } catch {
+        log("App ping skipped");
       }
-    } catch {
-      log("App ping skipped");
-    }
-    try {
-      const link = getActiveLink();
-      log("Checking firmware version…");
-      const info = await getFwVersionMT(link);
-      if (!info) {
-        log("FW version request: timed out or no response");
-      } else if (firmwareVersionEl) {
-        firmwareVersionEl.value = String(info.fwRev);
-        log(`FW version: ${info.fwRev}`);
+      try {
+        const link = getActiveLink();
+        log("Checking firmware version…");
+        const info = await ti_tools.getFwVersion(link);
+        if (!info) {
+          log("FW version request: timed out or no response");
+        } else if (firmwareVersionEl) {
+          firmwareVersionEl.value = String(info.fwRev);
+          log(`FW version: ${info.fwRev}`);
+        }
+      } catch {
+        log("FW version check skipped");
       }
-    } catch {
-      log("FW version check skipped");
+    } else {
+      // Silabs path: enter bootloader, read BL version, then reset back to app
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      try {
+        // Enter Gecko Bootloader
+        await enterBsl();
+        // Give BL a brief moment, then query menu/version
+        await sleep(200);
+        const blv = await sl_tools.getBootloaderVersion();
+        log(`Silabs bootloader: v${blv}`);
+        if (firmwareVersionEl) firmwareVersionEl.value = `BL v${blv}`;
+        if (chipModelEl && !chipModelEl.value) chipModelEl.value = "EFR32";
+      } catch (e: any) {
+        log("Silabs bootloader check failed: " + (e?.message || String(e)));
+      }
+      try {
+        await performReset();
+      } catch (e: any) {
+        log("Reset failed: " + (e?.message || String(e)));
+      }
+      // Read application firmware version via EZSP
+      await sleep(1000); // Give more time for application to start
+      try {
+        const link = getActiveLink();
+        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+        const ezspVersion = await sl_tools.getApplicationVersion();
+        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+        log(`EZSP app version: ${ezspVersion}`);
+      } catch (e: any) {
+        log("EZSP app version check failed: " + (e?.message || String(e)));
+      }
     }
   } finally {
     deviceDetectBusy(false);
@@ -1096,17 +1155,19 @@ async function flash() {
   // Show warning
   if (flashWarning) flashWarning.classList.remove("d-none");
 
-  // If using Web Serial, bump baud to 500000 for faster flashing
-  try {
-    if (activeConnection === "serial") {
-      await (serial as any)?.reopenWithBaudrate?.(500000);
-      log("Serial: switched baud to 500000");
-    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-      await changeBaudOverTcp(460800);
-      log("TCP: switched baud to 460800");
+  if (getSelectedFamily() === "ti") {
+    // If using Web Serial, bump baud to 500000 for faster flashing
+    try {
+      if (activeConnection === "serial") {
+        await (serial as any)?.reopenWithBaudrate?.(500000);
+        log("Serial: switched baud to 500000");
+      } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
+        await changeBaudOverTcp(460800);
+        log("TCP: switched baud to 460800");
+      }
+    } catch {
+      log("Serial: failed to switch baud");
     }
-  } catch {
-    log("Serial: failed to switch baud");
   }
   // BSL packet length is 1 byte; with header+cmd, safe payload per packet is <= 248 bytes
   const userChunk = 248;
@@ -1122,13 +1183,38 @@ async function flash() {
   } catch (e: any) {
     log("Enter BSL failed: " + (e?.message || String(e)));
   }
-  const bsl = await cctoolsSync(link);
+
+  // Branch for Silabs vs TI
+  if (getSelectedFamily() === "sl") {
+    if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+
+    log(`Flashing Silabs firmware: ${data.length} bytes`);
+    fwProgressReset("Flashing Silabs...");
+
+    try {
+      await sl_tools.flash(data, (progress) => {
+        const pct = Math.round(progress);
+        fwProgress(pct, `Uploading... ${pct}%`);
+      });
+
+      log("Silabs flash complete!");
+      fwProgress(100, "Done");
+    } catch (error: any) {
+      log("Silabs flash error: " + (error?.message || String(error)));
+      throw error;
+    }
+
+    return; // Exit early for Silabs path
+  }
+
+  // TI path continues below
+  const bsl = await ti_tools.sync(link);
   let chipIdStr = "";
   let chipIsCC26xx = false;
   try {
     const id = await bsl.chipId();
-    chipIdStr = Array.from(id)
-      .map((b) => b.toString(16).padStart(2, "0"))
+    chipIdStr = Array.from(id as Uint8Array)
+      .map((b: number) => b.toString(16).padStart(2, "0"))
       .join("");
     log(`ChipId: ${chipIdStr}`);
     // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
@@ -1249,11 +1335,11 @@ async function resetUseLines() {
   await sleep(1000);
 }
 
-// ----------------- NVRAM helpers (delegated to cctools) -----------------
+// ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
   nvProgressReset("Reading…");
   const link = getActiveLink();
-  const payload = await nvramReadAllMT(link, nvProgress);
+  const payload = await ti_tools.nvramReadAll(link, nvProgress);
   nvProgress(100, "Done");
   return payload;
 }
@@ -1261,14 +1347,14 @@ async function nvramReadAll(): Promise<any> {
 async function nvramEraseAll(): Promise<void> {
   nvProgressReset("Erasing…");
   const link = getActiveLink();
-  await nvramEraseAllMT(link, nvProgress);
+  await ti_tools.nvramEraseAll(link, nvProgress);
   nvProgress(100, "Erase done");
 }
 
 async function nvramWriteAll(obj: any): Promise<void> {
   nvProgressReset("Writing…");
   const link = getActiveLink();
-  await nvramWriteAllMT(link, obj, (s) => log(s), nvProgress);
+  await ti_tools.nvramWriteAll(link, obj, (s: string) => log(s), nvProgress);
   nvProgress(100, "Write done");
 }
 
@@ -1331,31 +1417,45 @@ btnNvErase?.addEventListener("click", async () => {
 });
 
 const setLines = async (rstLow: boolean, bslLow: boolean) => {
-  const { dtr, rts } = computeDtrRts(rstLow, bslLow);
+  // Apply optional inversion toggles (affect desired logic-low intent), for both serial and tcp
+  const rstLowEff = invertRst?.checked ? !rstLow : rstLow;
+  const bslLowEff = invertBsl?.checked ? !bslLow : bslLow;
+
+  // Compute base mapping for TCP endpoints (values used only for building URLs below)
+  const base = computeDtrRts(rstLowEff, bslLowEff);
+  let dtr = base.dtr;
+  let rts = base.rts;
   if (activeConnection === "serial") {
-    log(`CTRL(serial): DTR(BSL)=${dtr ? "1" : "0"} RTS(RTS)=${rts ? "1" : "0"}`);
-    await (serial as any)?.setSignals?.({ dataTerminalReady: dtr, requestToSend: rts });
+    // For Web Serial, many adapters assert low when the boolean is true.
+    // For Silabs path we want direct low/high mapping: true => line asserted/low.
+    if (getSelectedFamily() === "sl") {
+      dtr = rstLowEff; // true => pull RST low
+      rts = bslLowEff; // true => pull BOOT low
+    }
+    // Note: mapping is RST->DTR, BSL->RTS
+    log(`CTRL(serial): DTR(RST)=${dtr ? "1" : "0"} RTS(BSL)=${rts ? "1" : "0"}`);
+    const p: any = serial as any;
+    if (!p || typeof p.setSignals !== "function") {
+      log("Warning: Web Serial setSignals() not supported in this browser; cannot toggle DTR/RTS");
+      throw new Error("setSignals unsupported");
+    }
+    await p.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
     return;
   }
   if (activeConnection === "tcp") {
     // TCP: send two single requests, one per pin, using absolute URLs from inputs
     const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
     const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
-
-    const bslInvert = invertBsl?.checked == true;
-    const rstInvert = invertRst?.checked == true;
-
-    let bslLevel = dtr ? 1 : 0;
-    let rstLevel = rts ? 1 : 0;
-
-    if (bslInvert) {
-      log("Inverting BSL line");
-      // toggle numeric level (0/1) instead of using boolean negation
-      bslLevel = bslLevel ? 0 : 1;
+    let bslLevel;
+    let rstLevel;
+    if (getSelectedFamily() === "ti") {
+      bslLevel = rts ? 1 : 0;
+      rstLevel = dtr ? 1 : 0;
     }
-    if (rstInvert) {
-      log("Inverting RST line");
-      rstLevel = rstLevel ? 0 : 1;
+
+    if (getSelectedFamily() === "sl") {
+      bslLevel = rts ? 0 : 1;
+      rstLevel = dtr ? 0 : 1;
     }
 
     //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
@@ -1448,9 +1548,14 @@ resetBtn?.addEventListener("click", async () => {
 
 btnPing?.addEventListener("click", async () => {
   await withButtonStatus(btnPing!, async () => {
+    const family = getSelectedFamily();
+    if (family !== "ti") {
+      log("Ping is not supported for Silabs yet");
+      throw new Error("Unsupported for Silabs");
+    }
     const link = getActiveLink();
     log("Pinging application…");
-    const ok = await pingAppMT(link);
+    const ok = await ti_tools.pingApp(link);
     if (!ok) throw new Error("Ping failed");
     //else log("Pong");
   });
@@ -1458,15 +1563,29 @@ btnPing?.addEventListener("click", async () => {
 
 btnVersion?.addEventListener("click", async () => {
   await withButtonStatus(btnVersion!, async () => {
-    const link = getActiveLink();
     log("Checking firmware version…");
-    const info = await getFwVersionMT(link);
-    const ok = !!info;
-    if (info && firmwareVersionEl) {
-      firmwareVersionEl.value = String(info.fwRev);
-      log(`FW version: ${info.fwRev}`);
+    const family = getSelectedFamily();
+    if (family === "ti") {
+      const link = getActiveLink();
+
+      const info = await ti_tools.getFwVersion(link);
+      const ok = !!info;
+      if (info && firmwareVersionEl) {
+        firmwareVersionEl.value = String(info.fwRev);
+        log(`FW version: ${info.fwRev}`);
+      }
+      if (!ok) throw new Error("Version not available");
+    } else {
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      const ezspVersion = await sl_tools.getApplicationVersion();
+      if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+      if (ezspVersion && firmwareVersionEl) {
+        firmwareVersionEl.value = String(ezspVersion || "");
+        log(`FW version: ${ezspVersion || "unknown"}`);
+      } else {
+        throw new Error("Version not available");
+      }
     }
-    if (!ok) throw new Error("Version not available");
   });
 });
 
@@ -1586,24 +1705,39 @@ btnFlash.addEventListener("click", async () => {
         log("Restart error: " + (e?.message || String(e)));
       }
 
-      log("Pinging device...");
-      try {
-        const link = getActiveLink();
-        const ok = await pingWithBaudRetries(link);
-        if (!ok) log("Ping: timed out or no response");
-      } catch (e: any) {
-        log("Ping error: " + (e?.message || String(e)));
+      const family = getSelectedFamily();
+      if (family == "ti") {
+        log("Pinging device...");
+        try {
+          const link = getActiveLink();
+          const ok = await pingWithBaudRetries(link);
+          if (!ok) log("Ping: timed out or no response");
+        } catch (e: any) {
+          log("Ping error: " + (e?.message || String(e)));
+        }
       }
       log("Checking firmware version…");
-      try {
-        // use local wrapper to log and update UI
-        const info = await getFwVersionMT(getActiveLink());
-        if (info && firmwareVersionEl) {
-          firmwareVersionEl.value = String(info.fwRev);
-          log(`FW version: ${info.fwRev}`);
+      if (family == "sl") {
+        // After flash, re-read device info
+        await sleep(5000);
+
+        const link = getActiveLink();
+        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+        const ezspVersion = await sl_tools.getApplicationVersion();
+        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+        log(`EZSP app version: ${ezspVersion}`);
+      }
+      if (family == "ti") {
+        try {
+          // use local wrapper to log and update UI
+          const info = await ti_tools.getFwVersion(getActiveLink());
+          if (info && firmwareVersionEl) {
+            firmwareVersionEl.value = String(info.fwRev);
+            log(`FW version: ${info.fwRev}`);
+          }
+        } catch (e: any) {
+          log("Version read error: " + (e?.message || String(e)));
         }
-      } catch (e: any) {
-        log("Version read error: " + (e?.message || String(e)));
       }
       return true;
     } catch (e: any) {
@@ -2011,4 +2145,56 @@ function addTasmotaOptgroup(target: HTMLSelectElement, def: string | null) {
     } catch {}
   }
 }
+
+// UI update for chip family selection
+const chipTiRadio = document.getElementById("chip_ti") as HTMLInputElement;
+const chipSlRadio = document.getElementById("chip_si") as HTMLInputElement;
+
+function updateUIForFamily() {
+  const family = getSelectedFamily();
+  const cloudFw = document.getElementById("cloudFirmwareSection");
+  const nvram = document.getElementById("nvramSection");
+  const flashSize = document.getElementById("flashSizeWrap");
+  const ieeeMac = document.getElementById("ieeeMacWrap");
+  const fwVersion = document.getElementById("firmwareVersionWrap");
+  const localFirmwareSection = document.getElementById("localFirmwareSection");
+  const flashOptionsWrap = document.getElementById("flashOptionsWrap");
+  const findBaudWrap = document.getElementById("findBaudWrap");
+  const btnGetModel = document.getElementById("btn-get-model");
+  const btnPing = document.getElementById("btn-ping");
+
+  if (family === "sl") {
+    if (cloudFw) cloudFw.classList.add("d-none");
+    if (nvram) nvram.classList.add("d-none");
+    if (flashSize) flashSize.classList.add("d-none");
+    if (ieeeMac) ieeeMac.classList.add("d-none");
+    if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
+    if (findBaudWrap) findBaudWrap.classList.add("d-none");
+    if (btnGetModel) btnGetModel.classList.add("d-none");
+    if (btnPing) btnPing.classList.add("d-none");
+    if (fwVersion) fwVersion.className = fwVersion.className.replace("col-md-4", "col-md-12");
+    if (localFirmwareSection)
+      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
+  }
+  if (family === "ti") {
+    if (cloudFw) cloudFw.classList.remove("d-none");
+    if (nvram) nvram.classList.remove("d-none");
+    if (flashSize) flashSize.classList.remove("d-none");
+    if (ieeeMac) ieeeMac.classList.remove("d-none");
+    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
+    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
+    if (btnGetModel) btnGetModel.classList.remove("d-none");
+    if (btnPing) btnPing.classList.remove("d-none");
+    if (fwVersion) fwVersion.className = fwVersion.className.replace("col-md-12", "col-md-4");
+    if (localFirmwareSection)
+      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
+  }
+}
+
+chipTiRadio.addEventListener("change", updateUIForFamily);
+chipSlRadio.addEventListener("change", updateUIForFamily);
+
+// Initialize UI on load
+updateUIForFamily();
+
 // Escape key handler to close firmware notes and bridge info modals

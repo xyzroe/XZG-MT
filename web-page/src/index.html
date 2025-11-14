@@ -50,11 +50,41 @@
                 </label>
             </div>
         </div>
+        <!--Family selection-->
+        <div class="section">
+            <div id="familySection" class="col-md-12 d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
+                    <h3 class="h6 m-0"><i class="bi bi-cpu-fill me-1"></i>Family</h3>
+                </div>
+                <div class="col-12 mb-2">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <div class="d-flex flex-column align-items-center">
+                            <div class="radio-group d-flex flex-row gap-2">
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" id="chip_ti" name="chip_family" value="ti" checked>
+                                    <label for="chip_ti" class="mx-2"><img src="imgs/ti.png" alt="Texas Instruments"
+                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
+                                        Texas Instruments</label>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" id="chip_si" name="chip_family" value="sl">
+                                    <label for="chip_si" class="mx-2"><img src="imgs/si.png" alt="Silicon Labs"
+                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
+                                        Silicon Labs</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- General section -->
         <div class="section">
             <div class="row g-3 align-items-stretch">
+                <!-- General column -->
                 <div id="generalSection" class="col-md-12 d-flex flex-column">
-                    <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
+                    <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
                         <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>General</h3>
                     </div>
                     <div class="col-12 mb-2">
@@ -382,15 +412,15 @@
             </div>
             <div class="row g-2 form-readonly">
 
-                <div class="col-md-4">
+                <div class="col-md-4" id="flashSizeWrap">
                     <label class="form-label">Flash Size</label>
                     <input id="flashSize" class="form-control" type="text" readonly />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="ieeeMacWrap">
                     <label class="form-label">IEEE</label>
                     <input id="ieeeMac" class="form-control" type="text" readonly />
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="firmwareVersionWrap">
                     <label class="form-label">Firmware</label>
                     <input id="firmwareVersion" class="form-control" type="text" readonly />
                 </div>
@@ -401,13 +431,13 @@
         <div id="firmwareSection" class="section opacity-50 pe-none" aria-disabled="true">
             <h2 class="h6">Firmware</h2>
             <div class="row g-3">
-                <div class="col-md-6">
+                <div class="col-md-6" id="localFirmwareSection">
                     <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
-                    <input id="localFile" class="form-control" type="file" accept=".hex,.txt,.bin" />
-                    <div class="small text-muted mt-1">Use a local file (*.hex or *.bin). Check your chip model.
-                    </div>
+                    <input id="localFile" class="form-control" type="file" accept=".hex,.bin,.ota" />
+                    <div class="small text-muted mt-1">Use a local file (*.hex, *.bin or *.ota).</div>
+                    <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
                 </div>
-                <div class="col-md-6" title="Load firmware list from GitHub by detected chip model">
+                <div class="col-md-6" id="cloudFirmwareSection">
                     <h3 class="h6 mb-2"><i class="bi bi-cloud me-1"></i>Cloud</h3>
                     <div class="d-flex gap-2">
                         <select id="netFwSelect" class="form-select">
@@ -423,7 +453,7 @@
                     <div class="small text-muted mt-1">Source: xyzroe/XZG, filtered by your chip model.</div>
                 </div>
             </div>
-            <div class="row mt-3">
+            <div class="row mt-3" id="flashOptionsWrap">
                 <div class="col d-flex justify-content-center">
                     <div class="d-flex align-items-center gap-4">
                         <div class="form-check m-0">
