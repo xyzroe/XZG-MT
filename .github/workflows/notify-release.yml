@@ -31,20 +31,14 @@ jobs:
 
       - name: Send Telegram Notification
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
-        env:
-          TELEGRAM_TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
           MESSAGE="<b>${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}</b>%0A%0A<a href=\"${{ steps.release_data.outputs.url }}\">View on GitHub</a>"
           
-          PHOTO_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository_owner }}/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+          PHOTO_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
           
           TG_URL="https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto"
           
           DATA="--data-urlencode \"chat_id=${TELEGRAM_CHAT_ID}\" --data-urlencode \"photo=${PHOTO_URL}\" --data-urlencode \"caption=${MESSAGE}\" --data-urlencode \"parse_mode=HTML\""
-          
-          if [ -n "$TELEGRAM_TOPIC_ID" ]; then
-            DATA="$DATA --data-urlencode \"message_thread_id=${TELEGRAM_TOPIC_ID}\""
-          fi
           
           eval "curl -X POST \"$TG_URL\" $DATA"
           echo "✅ Telegram notification sent"
@@ -62,7 +56,7 @@ jobs:
               "url": "${{ steps.release_data.outputs.url }}",
               "color": 3066993,
               "image": {
-                "url": "https://opengraph.githubassets.com/0.1.0/${{ github.repository_owner }}/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+                "url": "https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
               }
             }]
           }
