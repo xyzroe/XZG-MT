@@ -4,12 +4,25 @@ let currentConnMeta: { type?: string; protocol?: string } = {};
 import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/control";
 
 function applyControlConfig(cfg: ControlConfig, source: string) {
-  if (pinModeSelect) pinModeSelect.checked = cfg.pinControl ?? DEFAULT_CONTROL.pinControl;
-  if (bslUrlInput) bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
-  if (rstUrlInput) rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
-  if (baudUrlInput) baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
-  if (invertBsl) invertBsl.checked = cfg.invertBsl ?? DEFAULT_CONTROL.invertBsl;
-  if (invertRst) invertRst.checked = cfg.invertRst ?? DEFAULT_CONTROL.invertRst;
+  if (pinModeSelect) pinModeSelect.checked = cfg.pinMode ?? DEFAULT_CONTROL.pinMode;
+  if (bslUrlInput)
+    if (cfg.bslPath !== undefined) bslUrlInput.value = cfg.bslPath;
+    else if (DEFAULT_CONTROL.bslPath !== undefined) bslUrlInput.value = DEFAULT_CONTROL.bslPath;
+  //bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
+  if (rstUrlInput)
+    if (cfg.rstPath !== undefined) rstUrlInput.value = cfg.rstPath;
+    else if (DEFAULT_CONTROL.rstPath !== undefined) rstUrlInput.value = DEFAULT_CONTROL.rstPath;
+  //rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
+  if (baudUrlInput)
+    if (cfg.baudPath !== undefined) baudUrlInput.value = cfg.baudPath;
+    else if (DEFAULT_CONTROL.baudPath !== undefined) baudUrlInput.value = DEFAULT_CONTROL.baudPath;
+  //baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
+  //if (invertBsl) invertBsl.checked = cfg.invertBsl ?? DEFAULT_CONTROL.invertBsl ?? false;
+  //if (invertRst) invertRst.checked = cfg.invertRst ?? DEFAULT_CONTROL.invertRst ?? false;
+  if (invertLevel) {
+    if (cfg.invertLevel !== undefined) invertLevel.checked = cfg.invertLevel;
+    else if (DEFAULT_CONTROL.invertLevel !== undefined) invertLevel.checked = DEFAULT_CONTROL.invertLevel;
+  }
   // if baudUrlInput != "" then select baudUrlSelect option bridge
   if (baudUrlSelect) baudUrlSelect.value = cfg.baudPath ? "bridge" : "none";
   saveCtrlSettings();
@@ -71,7 +84,7 @@ async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
 }
 
 // Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
-import { computeDtrRts } from "./utils/control";
+//import { computeDtrRts } from "./utils/control";
 let activeConnection: "serial" | "tcp" | null = null;
 import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
@@ -146,8 +159,9 @@ const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElem
 const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
 const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
-const invertBsl = document.getElementById("invertBsl") as HTMLInputElement | null;
-const invertRst = document.getElementById("invertRst") as HTMLInputElement | null;
+//const invertBsl = document.getElementById("invertBsl") as HTMLInputElement | null;
+//const invertRst = document.getElementById("invertRst") as HTMLInputElement | null;
+const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
 
 let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
@@ -262,11 +276,13 @@ function updateConnectionUI() {
 
   if (pinModeSelect?.checked) {
     // make bslInvert and rstInvert disabled when in remote mode
-    invertBsl?.setAttribute("disabled", "true");
-    invertRst?.setAttribute("disabled", "true");
+    //invertBsl?.setAttribute("disabled", "true");
+    //invertRst?.setAttribute("disabled", "true");
+    invertLevel?.setAttribute("disabled", "true");
   } else {
-    invertBsl?.removeAttribute("disabled");
-    invertRst?.removeAttribute("disabled");
+    //invertBsl?.removeAttribute("disabled");
+    //invertRst?.removeAttribute("disabled");
+    invertLevel?.removeAttribute("disabled");
   }
   // No special-case for control URL fields: they follow section state
 
@@ -348,8 +364,9 @@ function loadCtrlSettings() {
     if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value; // || "cmdZigBSL";
     if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
     if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
-    if (invertBsl) invertBsl.checked = localStorage.getItem("invertBsl") === "1";
-    if (invertRst) invertRst.checked = localStorage.getItem("invertRst") === "1";
+    //if (invertBsl) invertBsl.checked = localStorage.getItem("invertBsl") === "1";
+    //if (invertRst) invertRst.checked = localStorage.getItem("invertRst") === "1";
+    if (invertLevel) invertLevel.checked = localStorage.getItem("invertLevel") === "1";
   } catch {}
 }
 function saveCtrlSettings() {
@@ -358,8 +375,9 @@ function saveCtrlSettings() {
     if (bslUrlInput) localStorage.setItem("bslUrlInput", bslUrlInput.value.trim());
     if (rstUrlInput) localStorage.setItem("rstUrlInput", rstUrlInput.value.trim());
     if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
-    if (invertBsl) localStorage.setItem("invertBsl", invertBsl.checked ? "1" : "0");
-    if (invertRst) localStorage.setItem("invertRst", invertRst.checked ? "1" : "0");
+    //if (invertBsl) localStorage.setItem("invertBsl", invertBsl.checked ? "1" : "0");
+    //if (invertRst) localStorage.setItem("invertRst", invertRst.checked ? "1" : "0");
+    if (invertLevel) localStorage.setItem("invertLevel", invertLevel.checked ? "1" : "0");
   } catch {}
 }
 loadCtrlSettings();
@@ -371,8 +389,9 @@ pinModeSelect?.addEventListener("change", () => {
 bslUrlInput?.addEventListener("change", saveCtrlSettings);
 rstUrlInput?.addEventListener("change", saveCtrlSettings);
 baudUrlInput?.addEventListener("change", saveCtrlSettings);
-invertBsl?.addEventListener("change", saveCtrlSettings);
-invertRst?.addEventListener("change", saveCtrlSettings);
+//invertBsl?.addEventListener("change", saveCtrlSettings);
+//invertRst?.addEventListener("change", saveCtrlSettings);
+invertLevel?.addEventListener("change", saveCtrlSettings);
 
 // When bridge settings change, auto-refresh mDNS list (debounced)
 let bridgeRefreshTimer: number | null = null;
@@ -418,7 +437,7 @@ function setBridgeLoading() {
   bridgeStatusIcon.classList.add("text-muted");
   bridgeStatusIcon.innerHTML =
     '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-  bridgeStatusIcon.setAttribute("title", "Checking bridge…");
+  bridgeStatusIcon.setAttribute("title", "Checking bridge...");
 }
 
 function deviceDetectBusy(busy: boolean) {
@@ -920,7 +939,7 @@ async function pingWithBaudRetries(
   // Try a normal ping first
   const findBaud = !!findBaudToggle?.checked;
   try {
-    log("Pinging application…");
+    log("Pinging application...");
     const ok0 = await ti_tools.pingApp(link);
     if (
       (findBaud && activeConnection === "serial") ||
@@ -972,7 +991,7 @@ async function pingWithBaudRetries(
     await sleep(500);
 
     try {
-      log("Pinging application…");
+      log("Pinging application...");
       const ok = await ti_tools.pingApp(link);
       if (ok) {
         // keep new baud in UI
@@ -1039,7 +1058,7 @@ async function runConnectSequence(): Promise<void> {
       }
       try {
         const link = getActiveLink();
-        log("Checking firmware version…");
+        log("Checking firmware version...");
         const info = await ti_tools.getFwVersion(link);
         if (!info) {
           log("FW version request: timed out or no response");
@@ -1223,14 +1242,14 @@ async function flash() {
   } catch {}
 
   if (optErase.checked) {
-    log("Erase…");
+    log("Erase...");
     if (chipIsCC26xx) {
       // Prefer bank erase; if it fails, erase sectors across the write range
       try {
         await (bsl as any).bankErase?.();
         log("Bank erase done");
       } catch (e: any) {
-        log("Bank erase not supported or failed, erasing sectors…");
+        log("Bank erase not supported or failed, erasing sectors...");
         // Sector size heuristic: CC26xx page size 4KB; some variants 8KB. We can try 8KB if CRC verify later fails.
         const pageSize = 4096;
         const from = startAddr & ~(pageSize - 1);
@@ -1250,9 +1269,9 @@ async function flash() {
   }
 
   if (optWrite.checked) {
-    log(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}…`);
+    log(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}...`);
     // reset progress bar
-    fwProgressReset("Writing…");
+    fwProgressReset("Writing...");
     //const ff = 0xff;
     const zero = 0x00;
 
@@ -1290,7 +1309,7 @@ async function flash() {
   }
 
   if (optVerify.checked) {
-    log("Verify…");
+    log("Verify...");
     let ok = false;
     try {
       if (chipIsCC26xx && (bsl as any).crc32Cc26xx) {
@@ -1323,21 +1342,43 @@ async function flash() {
   }
 }
 
+async function bslUseLines() {
+  if (implyGateToggle?.checked != true) {
+    await setLines(true, true);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(250);
+    await setLines(false, false);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(500);
+    await setLines(true, true);
+    await sleep(500);
+  } else {
+    await setLines(true, true);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(250);
+    await setLines(false, true);
+    await sleep(450);
+    await setLines(false, false);
+    await sleep(250);
+  }
+}
+
 // Reset the device out of BSL and back into application
 async function resetUseLines() {
   await setLines(true, true);
-  await sleep(250);
-
-  await setLines(true, false);
-  await sleep(250);
-
+  await sleep(500);
+  await setLines(false, true);
+  await sleep(500);
   await setLines(true, true);
   await sleep(1000);
 }
 
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
-  nvProgressReset("Reading…");
+  nvProgressReset("Reading...");
   const link = getActiveLink();
   const payload = await ti_tools.nvramReadAll(link, nvProgress);
   nvProgress(100, "Done");
@@ -1345,14 +1386,14 @@ async function nvramReadAll(): Promise<any> {
 }
 
 async function nvramEraseAll(): Promise<void> {
-  nvProgressReset("Erasing…");
+  nvProgressReset("Erasing...");
   const link = getActiveLink();
   await ti_tools.nvramEraseAll(link, nvProgress);
   nvProgress(100, "Erase done");
 }
 
 async function nvramWriteAll(obj: any): Promise<void> {
-  nvProgressReset("Writing…");
+  nvProgressReset("Writing...");
   const link = getActiveLink();
   await ti_tools.nvramWriteAll(link, obj, (s: string) => log(s), nvProgress);
   nvProgress(100, "Write done");
@@ -1363,7 +1404,7 @@ btnNvRead?.addEventListener("click", async () => {
   await withButtonStatus(btnNvRead!, async () => {
     try {
       nvProgressSetColor("primary");
-      nvProgressReset("Reading…");
+      nvProgressReset("Reading...");
       const payload = await nvramReadAll();
       const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -1400,9 +1441,9 @@ btnNvErase?.addEventListener("click", async () => {
   await withButtonStatus(btnNvErase!, async () => {
     try {
       nvProgressSetColor("danger");
-      nvProgressReset("Erasing…");
+      nvProgressReset("Erasing...");
       await nvramEraseAll();
-      log("NVRAM erase done. Resetting…");
+      log("NVRAM erase done. Resetting...");
       try {
         await performReset();
       } catch {}
@@ -1416,81 +1457,67 @@ btnNvErase?.addEventListener("click", async () => {
   });
 });
 
-const setLines = async (rstLow: boolean, bslLow: boolean) => {
+// DTR = BSL(FLASH), RTS = RESET; (active low);
+// without NPN - rts=0 reset=0, dtr=0 bsl=0
+// with NPN invert - rts=0 reset=1, dtr=0 bsl=1
+
+const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   // Apply optional inversion toggles (affect desired logic-low intent), for both serial and tcp
-  const rstLowEff = invertRst?.checked ? !rstLow : rstLow;
-  const bslLowEff = invertBsl?.checked ? !bslLow : bslLow;
+
+  // const rstLevelEff = invertRst?.checked ? !rstLevel : rstLevel;
+  // const bslLevelEff = invertBsl?.checked ? !bslLevel : bslLevel;
+  const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
+  const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
+  // const rstLevelEff = rstLevel;
+  // const bslLevelEff = bslLevel;
 
   // Compute base mapping for TCP endpoints (values used only for building URLs below)
-  const base = computeDtrRts(rstLowEff, bslLowEff);
-  let dtr = base.dtr;
-  let rts = base.rts;
+  //const base = computeDtrRts(rstLowEff, bslLowEff);
+  let bsl = bslLevelEff;
+  let rst = rstLevelEff;
   if (activeConnection === "serial") {
     // For Web Serial, many adapters assert low when the boolean is true.
     // For Silabs path we want direct low/high mapping: true => line asserted/low.
-    if (getSelectedFamily() === "sl") {
-      dtr = rstLowEff; // true => pull RST low
-      rts = bslLowEff; // true => pull BOOT low
-    }
+    // if (getSelectedFamily() === "sl") {
+    //   dtr = rstLevelEff; // true => pull RST low
+    //   rts = bslLevelEff; // true => pull BOOT low
+    // }
     // Note: mapping is RST->DTR, BSL->RTS
-    log(`CTRL(serial): DTR(RST)=${dtr ? "1" : "0"} RTS(BSL)=${rts ? "1" : "0"}`);
+
+    log(`CTRL(serial): RTS(RST)=${rst ? "1" : "0"} DTR(BSL)=${bsl ? "1" : "0"}`);
     const p: any = serial as any;
     if (!p || typeof p.setSignals !== "function") {
       log("Warning: Web Serial setSignals() not supported in this browser; cannot toggle DTR/RTS");
       throw new Error("setSignals unsupported");
     }
-    await p.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
+    await p.setSignals({ dataTerminalReady: bsl, requestToSend: rst });
     return;
   }
   if (activeConnection === "tcp") {
     // TCP: send two single requests, one per pin, using absolute URLs from inputs
     const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
     const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
-    let bslLevel;
-    let rstLevel;
-    if (getSelectedFamily() === "ti") {
-      bslLevel = rts ? 1 : 0;
-      rstLevel = dtr ? 1 : 0;
-    }
+    // let bslLevel = bslLevelEff ? 1 : 0;
+    // let rstLevel = rstLevelEff ? 1 : 0;
+    // if (getSelectedFamily() === "ti") {
+    //   bslLevel = rts ? 1 : 0;
+    //   rstLevel = dtr ? 1 : 0;
+    // }
 
-    if (getSelectedFamily() === "sl") {
-      bslLevel = rts ? 0 : 1;
-      rstLevel = dtr ? 0 : 1;
-    }
+    // if (getSelectedFamily() === "sl") {
+    //   bslLevel = rts ? 0 : 1;
+    //   rstLevel = dtr ? 0 : 1;
+    // }
 
     //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
     const bslHasSet = /\{SET\}/.test(bslTpl);
     const rstHasSet = /\{SET\}/.test(rstTpl);
-    log(`CTRL(tcp): setting BSL=${bslLevel} RTS=${rstLevel}`);
-    await sendCtrlUrl(bslTpl, bslHasSet ? bslLevel : undefined);
-    await sendCtrlUrl(rstTpl, rstHasSet ? rstLevel : undefined);
+    log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} BSL=${bsl ? "1" : "0"} `);
+    await sendCtrlUrl(bslTpl, bslHasSet ? (bsl ? 1 : 0) : undefined);
+    await sendCtrlUrl(rstTpl, rstHasSet ? (rst ? 1 : 0) : undefined);
     return;
   }
 };
-
-async function bslUseLines() {
-  if (implyGateToggle?.checked != true) {
-    await setLines(true, true);
-    await sleep(250);
-    await setLines(false, true);
-    await sleep(250);
-    await setLines(false, false);
-    await sleep(250);
-    await setLines(false, true);
-    await sleep(500);
-    await setLines(true, true);
-    await sleep(500);
-  } else {
-    await setLines(true, true);
-    await sleep(250);
-    await setLines(true, false);
-    await sleep(250);
-    await setLines(false, true);
-    await sleep(450);
-    await setLines(false, false);
-    await sleep(250);
-  }
-}
 
 async function changeBaudOverTcp(baud: number): Promise<void> {
   if (activeConnection !== "tcp" || !tcp) throw new Error("No TCP connection");
@@ -1554,7 +1581,7 @@ btnPing?.addEventListener("click", async () => {
       throw new Error("Unsupported for Silabs");
     }
     const link = getActiveLink();
-    log("Pinging application…");
+    log("Pinging application...");
     const ok = await ti_tools.pingApp(link);
     if (!ok) throw new Error("Ping failed");
     //else log("Pong");
@@ -1563,7 +1590,7 @@ btnPing?.addEventListener("click", async () => {
 
 btnVersion?.addEventListener("click", async () => {
   await withButtonStatus(btnVersion!, async () => {
-    log("Checking firmware version…");
+    log("Checking firmware version...");
     const family = getSelectedFamily();
     if (family === "ti") {
       const link = getActiveLink();
@@ -1600,7 +1627,7 @@ btnNvWrite?.addEventListener("click", async () => {
   await withButtonStatus(btnNvWrite!, async () => {
     try {
       nvProgressSetColor("warning");
-      nvProgressReset("Writing…");
+      nvProgressReset("Writing...");
       // Open file picker on demand
       let text: string | null = null;
       const hasPicker = typeof (window as any).showOpenFilePicker === "function";
@@ -1678,7 +1705,7 @@ btnNvWrite?.addEventListener("click", async () => {
 
       const j = JSON.parse(text);
       await nvramWriteAll(j);
-      log("NVRAM write done. Resetting…");
+      log("NVRAM write done. Resetting...");
       try {
         await performReset();
       } catch {}
@@ -1707,7 +1734,7 @@ btnFlash.addEventListener("click", async () => {
 
       const family = getSelectedFamily();
       if (family == "ti") {
-        log("Pinging device...");
+        //log("Pinging device...");
         try {
           const link = getActiveLink();
           const ok = await pingWithBaudRetries(link);
@@ -1716,7 +1743,7 @@ btnFlash.addEventListener("click", async () => {
           log("Ping error: " + (e?.message || String(e)));
         }
       }
-      log("Checking firmware version…");
+      log("Checking firmware version...");
       if (family == "sl") {
         // After flash, re-read device info
         await sleep(5000);
@@ -2016,8 +2043,9 @@ async function refreshControlLists() {
           const path = it.path || it.name || label;
           o.value = `gpio:${path}`;
           o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");
-          sel.appendChild(o);
+          gg.appendChild(o);
         }
+        sel.appendChild(gg);
       } else {
         const o = document.createElement("option");
         o.disabled = true;
@@ -2032,7 +2060,7 @@ async function refreshControlLists() {
       if (ledItems.length) {
         for (const it of ledItems) {
           const o = document.createElement("option");
-          const label = it.label || it.name || it.path || "led";
+          const label = it.label || it.name || it.path || String(it);
           const path = it.path || label;
           o.value = `led:${path}`;
           o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");

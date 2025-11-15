@@ -253,7 +253,7 @@ if (netFwNotesBtn) {
     var marked = window.marked;
     if (/^https?:\/\/.*\.md$/i.test(notes.trim())) {
       fwNotesContent.innerHTML =
-        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading…';
+        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
       fetch(notes.trim())
         .then(function (r) {
           return r.ok ? r.text() : Promise.reject("Failed to load markdown");

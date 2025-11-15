@@ -30,7 +30,7 @@ export class CCToolsClient {
   }
 
   // --- low level helpers ---
-  private async waitForAck(timeoutMs = 1200): Promise<boolean> {
+  private async waitForAck(timeoutMs = 2000): Promise<boolean> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       // Accept either single-byte ACK/NACK (0xCC / 0x33) or 0x00-prefixed pairs (0x00 0xCC / 0x00 0x33)
@@ -91,7 +91,7 @@ export class CCToolsClient {
   private async sendCommandRaw(
     content: Uint8Array,
     expectPacket = false,
-    ackTimeout = 1000
+    ackTimeout = 2000
   ): Promise<Uint8Array | null> {
     // content starts with CMD byte
     const len = content.length + 2; // include size+checksum bytes per protocol
@@ -103,7 +103,10 @@ export class CCToolsClient {
     frame.set(content, 2);
     await this.link.write(frame);
     const ackOk = await this.waitForAck(ackTimeout);
-    if (!ackOk) throw new Error("CCTOOLS: NACK");
+    if (!ackOk) {
+      console.log(`CCTOOLS: NACK for command ${toHex(content[0])}`);
+      throw new Error("CCTOOLS: NACK");
+    }
     if (expectPacket) {
       return await this.receivePacket();
     }
@@ -177,21 +180,57 @@ export class CCToolsClient {
       for (let i = 0; i < pad; i++) tmp[data.length + i] = 0xff;
       data = tmp;
     }
+
+    const maxRetries = 3; // Максимум 3 попытки для чанка
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // DOWNLOAD (0x21)
+        const dl = new Uint8Array(1 + 4 + 4);
+        dl[0] = 0x21;
+        dl.set(this.encodeAddr(address), 1);
+        dl.set(this.encodeAddr(data.length), 1 + 4);
+        await this.sendCommandRaw(dl);
+        // Добавьте задержку после DOWNLOAD, чтобы устройство успело обработать
+        //await sleep(10); // 10 мс — подстройте под скорость
+        const ok1 = await this.checkLastCmd();
+        if (!ok1) throw new Error("CCTOOLS: download header failed");
+
+        // SEND DATA (0x24)
+        const sdHeader = new Uint8Array(1 + data.length);
+        sdHeader[0] = 0x24;
+        sdHeader.set(data, 1);
+        await this.sendCommandRaw(sdHeader, false, 5000);
+        const ok2 = await this.checkLastCmd();
+        if (!ok2) throw new Error("CCTOOLS: send data failed");
+
+        // Успех — выходим из цикла
+        return;
+      } catch (error) {
+        console.log(`Retry ${attempt + 1} for chunk at ${address.toString(16)}`);
+
+        if (attempt === maxRetries - 1) {
+          // Последняя попытка — выбрасываем ошибку
+          throw error;
+        }
+
+        await sleep(500); // Задержка перед повтором
+      }
+    }
     // DOWNLOAD (0x21)
-    const dl = new Uint8Array(1 + 4 + 4);
-    dl[0] = 0x21;
-    dl.set(this.encodeAddr(address), 1);
-    dl.set(this.encodeAddr(data.length), 1 + 4);
-    await this.sendCommandRaw(dl);
-    const ok1 = await this.checkLastCmd();
-    if (!ok1) throw new Error("CCTOOLS: download header failed");
-    // SEND DATA (0x24)
-    const sdHeader = new Uint8Array(1 + data.length);
-    sdHeader[0] = 0x24;
-    sdHeader.set(data, 1);
-    await this.sendCommandRaw(sdHeader, false, 5000);
-    const ok2 = await this.checkLastCmd();
-    if (!ok2) throw new Error("CCTOOLS: send data failed");
+    // const dl = new Uint8Array(1 + 4 + 4);
+    // dl[0] = 0x21;
+    // dl.set(this.encodeAddr(address), 1);
+    // dl.set(this.encodeAddr(data.length), 1 + 4);
+    // await this.sendCommandRaw(dl);
+    // const ok1 = await this.checkLastCmd();
+    // if (!ok1) throw new Error("CCTOOLS: download header failed");
+    // // SEND DATA (0x24)
+    // const sdHeader = new Uint8Array(1 + data.length);
+    // sdHeader[0] = 0x24;
+    // sdHeader.set(data, 1);
+    // await this.sendCommandRaw(sdHeader, false, 5000);
+    // const ok2 = await this.checkLastCmd();
+    // if (!ok2) throw new Error("CCTOOLS: send data failed");
   }
 
   async verifyCrc(address: number, length: number): Promise<boolean> {
@@ -506,13 +545,13 @@ export async function flashFirmware(link: Link, image: TiFlashImage, options: Ti
   }
 
   if (options.erase) {
-    logFn("Erase…");
+    logFn("Erase...");
     if (chipIsCC26xx) {
       try {
         await (bsl as any).bankErase?.();
         logFn("Bank erase done");
       } catch (e: any) {
-        logFn("Bank erase not supported or failed, erasing sectors…");
+        logFn("Bank erase not supported or failed, erasing sectors...");
         const pageSize = 4096;
         const from = startAddr & ~(pageSize - 1);
         const to = (startAddr + data.length + pageSize - 1) & ~(pageSize - 1);
@@ -527,8 +566,8 @@ export async function flashFirmware(link: Link, image: TiFlashImage, options: Ti
   }
 
   if (options.write) {
-    logFn(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}…`);
-    onProgress?.(0, "Writing…");
+    logFn(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}...`);
+    onProgress?.(0, "Writing...");
     const zero = 0x00;
 
     for (let off = 0; off < data.length; off += chunkSize) {
@@ -561,7 +600,7 @@ export async function flashFirmware(link: Link, image: TiFlashImage, options: Ti
   }
 
   if (options.verify) {
-    logFn("Verify…");
+    logFn("Verify...");
     let ok = false;
     try {
       if (chipIsCC26xx && (bsl as any).crc32Cc26xx) {
@@ -826,7 +865,7 @@ export async function nvramReadExtendedAll(
 }
 
 export async function nvramReadAll(link: Link, progress?: (pct: number, label?: string) => void): Promise<any> {
-  progress?.(0, "Reading…");
+  progress?.(0, "Reading...");
   const legacy = await nvramReadLegacyFull(link, progress);
   const extended = await nvramReadExtendedAll(link, progress);
   const payload: any = { LEGACY: legacy };
@@ -836,7 +875,7 @@ export async function nvramReadAll(link: Link, progress?: (pct: number, label?: 
 }
 
 export async function nvramEraseAll(link: Link, progress?: (pct: number, label?: string) => void): Promise<void> {
-  progress?.(0, "Erasing…");
+  progress?.(0, "Erasing...");
   const legacy = await nvramReadLegacyFull(link, progress);
   let totalL = Math.max(1, Object.keys(legacy).length);
   let doneL = 0;
@@ -883,7 +922,7 @@ export async function nvramWriteAll(
   log?: (s: string) => void,
   progress?: (pct: number, label?: string) => void
 ): Promise<void> {
-  progress?.(0, "Writing…");
+  progress?.(0, "Writing...");
   const legacy = (obj.legacy || obj.LEGACY || {}) as Record<string, string>;
   let total = Math.max(1, Object.keys(legacy).length);
   let count = 0;
