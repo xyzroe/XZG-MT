@@ -1,3 +1,26 @@
+## v0.2.17
+
+## 🚀 Features
+#### Web UI
+- feat: one global "invert levels" switch, instead of two separate (#46) by @xyzroe
+#### GitHub
+- feat: implement separate task for release notification (#41) by @xyzroe
+
+## 🐛 Bug Fixes
+#### Web UI
+- fix: GPIOs group title in drop down lists (#46) by @xyzroe
+- fix: improve BSL and RST logic for remote connections (#46) by @xyzroe
+- fix: remove reset BSL and RST URLs while changing the port. (#46) by @xyzroe
+#### Bridge
+- fix: deprecate SERIAL_SCAN_INTERVAL option and update related documentation (#45) by @xyzroe
+- fix: don't showing non-existent serial ports (#45) by @xyzroe
+- fix: errors during intensive serial-tcp communication (#45) by @xyzroe
+#### GitHub
+- fix: update Telegram notification message format to use MarkdownV2 (#44) by @xyzroe
+- fix: correct photo URL in Telegram and Discord notifications (#43) by @xyzroe
+- fix: enhance notification to include photo and update message format (#42) by @xyzroe
+
+
 ## v0.2.16
 
 ## 🚀 Features
