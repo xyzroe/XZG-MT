@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
+	// "io"
 	"net"
 	"os"
 	"path/filepath"
@@ -54,112 +54,199 @@ func isValidBaudRate(baud int) bool {
 	return false
 }
 
+// func listSerialPorts() []SerialPortInfo {
+// 	var ports []SerialPortInfo
+
+// 	// Try library-provided list first
+// 	portList, err := serial.GetPortsList()
+// 	if err != nil {
+// 		if debugMode {
+// 			fmt.Printf("[serial] error getting port list: %v\n", err)
+// 		}
+// 	} else if len(portList) == 0 {
+// 		if debugMode {
+// 			fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
+// 		}
+// 	}
+
+// 	// Always supplement library-provided list with common /dev globs so
+// 	// device names like /dev/ttyAML0 aren't missed if the library omits them.
+// 	globs := []string{
+// 		"/dev/ttyUSB*",
+// 		"/dev/ttyA*",
+// 		"/dev/ttyAM*",
+// 		"/dev/ttyAML*",
+// 		"/dev/ttyS*",
+// 		"/dev/ttyACM*",
+// 		"/dev/serial/by-id/*",
+// 	}
+
+// 	// build a quick seen map from whatever the library returned
+// 	seen := make(map[string]bool)
+// 	for _, p := range portList {
+// 		if p != "" {
+// 			seen[p] = true
+// 		}
+// 	}
+
+// 	if len(portList) == 0 {
+// 		if debugMode {
+// 			fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
+// 		}
+// 	} else {
+// 		if debugMode {
+// 			fmt.Printf("[serial] GetPortsList returned %d ports, augmenting with /dev globs\n", len(portList))
+// 		}
+// 	}
+
+// 	for _, g := range globs {
+// 		matches, _ := filepath.Glob(g)
+// 		for _, m := range matches {
+// 			// ensure file exists and is a character device (optional simple check)
+// 			if fi, err := os.Stat(m); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+// 				if !seen[m] {
+// 					portList = append(portList, m)
+// 					seen[m] = true
+// 				}
+// 			} else {
+// 				// still add even if not char device: some symlinks in by-id
+// 				if !seen[m] {
+// 					portList = append(portList, m)
+// 					seen[m] = true
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Filter ports to avoid duplicates on macOS and normalize names
+// 	seenPorts := make(map[string]bool)
+
+// 	for _, portName := range portList {
+// 		if portName == "" {
+// 			continue
+// 		}
+
+// 		// On macOS, prefer /dev/tty.* over /dev/cu.*
+// 		if strings.HasPrefix(portName, "/dev/cu.") {
+// 			ttyName := strings.Replace(portName, "/dev/cu.", "/dev/tty.", 1)
+// 			if seenPorts[ttyName] {
+// 				continue
+// 			}
+// 			portName = ttyName
+// 		}
+
+// 		if seenPorts[portName] {
+// 			continue
+// 		}
+// 		seenPorts[portName] = true
+
+// 		info := SerialPortInfo{
+// 			Path:         portName,
+// 			Manufacturer: "Unknown",
+// 		}
+// 		ports = append(ports, info)
+// 	}
+
+// 	if debugMode {
+// 		fmt.Printf("[serial] found %d serial ports\n", len(ports))
+// 		for _, port := range ports {
+// 			fmt.Printf("[serial] - %s\n", port.Path)
+// 		}
+// 	}
+
+// 	// Ensure deterministic ordering
+// 	sort.Slice(ports, func(i, j int) bool {
+// 		return ports[i].Path < ports[j].Path
+// 	})
+
+// 	return ports
+// }
 func listSerialPorts() []SerialPortInfo {
-	var ports []SerialPortInfo
+    var ports []SerialPortInfo
 
-	// Try library-provided list first
-	portList, err := serial.GetPortsList()
-	if err != nil {
-		if debugMode {
-			fmt.Printf("[serial] error getting port list: %v\n", err)
-		}
-	} else if len(portList) == 0 {
-		if debugMode {
-			fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
-		}
-	}
+    // Try library-provided list first
+    portList, err := serial.GetPortsList()
+    if err != nil {
+        if debugMode {
+            fmt.Printf("[serial] error getting port list: %v\n", err)
+        }
+        portList = []string{} // Initialize as empty if error
+    } else if len(portList) == 0 {
+        if debugMode {
+            fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
+        }
+    }
 
-	// Always supplement library-provided list with common /dev globs so
-	// device names like /dev/ttyAML0 aren't missed if the library omits them.
-	globs := []string{
-		"/dev/ttyUSB*",
-		"/dev/ttyA*",
-		"/dev/ttyAM*",
-		"/dev/ttyAML*",
-		"/dev/ttyS*",
-		"/dev/ttyACM*",
-		"/dev/serial/by-id/*",
-	}
+    // If portList is not empty, use only it; otherwise, collect from /dev globs
+    if len(portList) == 0 {
+        // Always supplement library-provided list with common /dev globs so
+        // device names like /dev/ttyAML0 aren't missed if the library omits them.
+        globs := []string{
+            "/dev/ttyUSB*",
+            "/dev/ttyA*",
+            "/dev/ttyAM*",
+            "/dev/ttyAML*",
+            "/dev/ttyS*",
+            "/dev/ttyACM*",
+            "/dev/serial/by-id/*",
+        }
 
-	// build a quick seen map from whatever the library returned
-	seen := make(map[string]bool)
-	for _, p := range portList {
-		if p != "" {
-			seen[p] = true
-		}
-	}
+        for _, g := range globs {
+            matches, _ := filepath.Glob(g)
+            for _, m := range matches {
+                // ensure file exists and is a character device (optional simple check)
+                if fi, err := os.Stat(m); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
+                    portList = append(portList, m)
+                } else {
+                    // still add even if not char device: some symlinks in by-id
+                    portList = append(portList, m)
+                }
+            }
+        }
+    }
 
-	if len(portList) == 0 {
-		if debugMode {
-			fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
-		}
-	} else {
-		if debugMode {
-			fmt.Printf("[serial] GetPortsList returned %d ports, augmenting with /dev globs\n", len(portList))
-		}
-	}
+    // Filter ports to avoid duplicates on macOS and normalize names
+    seenPorts := make(map[string]bool)
 
-	for _, g := range globs {
-		matches, _ := filepath.Glob(g)
-		for _, m := range matches {
-			// ensure file exists and is a character device (optional simple check)
-			if fi, err := os.Stat(m); err == nil && fi.Mode()&os.ModeCharDevice != 0 {
-				if !seen[m] {
-					portList = append(portList, m)
-					seen[m] = true
-				}
-			} else {
-				// still add even if not char device: some symlinks in by-id
-				if !seen[m] {
-					portList = append(portList, m)
-					seen[m] = true
-				}
-			}
-		}
-	}
+    for _, portName := range portList {
+        if portName == "" {
+            continue
+        }
 
-	// Filter ports to avoid duplicates on macOS and normalize names
-	seenPorts := make(map[string]bool)
+        // On macOS, prefer /dev/tty.* over /dev/cu.*
+        if strings.HasPrefix(portName, "/dev/cu.") {
+            ttyName := strings.Replace(portName, "/dev/cu.", "/dev/tty.", 1)
+            if seenPorts[ttyName] {
+                continue
+            }
+            portName = ttyName
+        }
 
-	for _, portName := range portList {
-		if portName == "" {
-			continue
-		}
+        if seenPorts[portName] {
+            continue
+        }
+        seenPorts[portName] = true
 
-		// On macOS, prefer /dev/tty.* over /dev/cu.*
-		if strings.HasPrefix(portName, "/dev/cu.") {
-			ttyName := strings.Replace(portName, "/dev/cu.", "/dev/tty.", 1)
-			if seenPorts[ttyName] {
-				continue
-			}
-			portName = ttyName
-		}
+        info := SerialPortInfo{
+            Path:         portName,
+            Manufacturer: "Unknown",
+        }
+        ports = append(ports, info)
+    }
 
-		if seenPorts[portName] {
-			continue
-		}
-		seenPorts[portName] = true
+    if debugMode {
+        fmt.Printf("[serial] found %d serial ports\n", len(ports))
+        for _, port := range ports {
+            fmt.Printf("[serial] - %s\n", port.Path)
+        }
+    }
 
-		info := SerialPortInfo{
-			Path:         portName,
-			Manufacturer: "Unknown",
-		}
-		ports = append(ports, info)
-	}
+    // Ensure deterministic ordering
+    sort.Slice(ports, func(i, j int) bool {
+        return ports[i].Path < ports[j].Path
+    })
 
-	if debugMode {
-		fmt.Printf("[serial] found %d serial ports\n", len(ports))
-		for _, port := range ports {
-			fmt.Printf("[serial] - %s\n", port.Path)
-		}
-	}
-
-	// Ensure deterministic ordering
-	sort.Slice(ports, func(i, j int) bool {
-		return ports[i].Path < ports[j].Path
-	})
-
-	return ports
+    return ports
 }
 
 func openSerialPort(path string, baudRate int) serial.Port {
@@ -197,12 +284,12 @@ func writeSerial(port serial.Port, data []byte) (int, error) {
 		return len(data), nil
 	}
 
-	if debugMode {
-		fmt.Printf("[serial] writing %d bytes to real serial port: %x\n", len(data), data)
-	}
+	// if debugMode {
+	// 	fmt.Printf("[serial] writing %d bytes to real serial port: %x\n", len(data), data)
+	// }
 	n, err := port.Write(data)
 	if err != nil {
-		fmt.Printf("[serial] write error: %v\n", err)
+		//fmt.Printf("[serial] write error: %v\n", err)
 		return 0, err
 	}
 
@@ -220,9 +307,9 @@ func readSerial(port serial.Port, maxBytes int) ([]byte, error) {
 	buffer := make([]byte, maxBytes)
 	n, err := port.Read(buffer)
 	if err != nil {
-		if err != io.EOF {
-			fmt.Printf("[serial] read error: %v\n", err)
-		}
+		// if err != io.EOF {
+		// 	fmt.Printf("[serial] read error: %v\n", err)
+		// }
 		return nil, err
 	}
 
@@ -319,6 +406,12 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if strings.Contains(err.Error(), "use of closed network connection") {
+                    if debugMode {
+                        fmt.Printf("[serial] listener for %s closed, stopping accept loop\n", path)
+                    }
+                    break // Exit the goroutine on shutdown
+                }
 				if debugMode {
 					fmt.Printf("[serial] connection error: %v\n", err)
 				}
@@ -430,25 +523,25 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			if err != nil {
 				// signal stop and exit
 				if debugMode {
-					fmt.Printf("[serial] Serial->TCP: read error: %v\n", err)
+					fmt.Printf("[Serial] read error: %v\n", err)
 				}
 				closeStop()
 				return
 			}
 			if len(data) > 0 {
 				if debugMode {
-					fmt.Printf("[serial] Serial->TCP: received %d bytes from serial: %x\n", len(data), data)
+					fmt.Printf("[Serial] received %d bytes: %x\n", len(data), data)
 				}
 				if _, err := conn.Write(data); err != nil {
 					if debugMode {
-						fmt.Printf("[serial] Serial->TCP: error sending to client: %v\n", err)
+						fmt.Printf("[Serial] error sending to client: %v\n", err)
 					}
 					closeStop()
 					return
 				}
-				if debugMode {
-					fmt.Printf("[serial] Serial->TCP: sent %d bytes to TCP client\n", len(data))
-				}
+				// if debugMode {
+				// 	fmt.Printf("[serial] Serial->TCP: sent %d bytes to TCP client\n", len(data))
+				// }
 			} else {
 				time.Sleep(1 * time.Millisecond)
 			}
@@ -469,7 +562,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			n, err := conn.Read(buffer)
 			if err != nil {
 				if debugMode {
-					fmt.Printf("[serial] TCP->Serial: client read error: %v\n", err)
+					fmt.Printf("[TCP] client read error: %v\n", err)
 				}
 				// on client error — signal stop and exit
 				closeStop()
@@ -477,19 +570,19 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			}
 			if n > 0 {
 				if debugMode {
-					fmt.Printf("[serial] TCP->Serial: received %d bytes from TCP: %x\n", n, buffer[:n])
+					fmt.Printf("[TCP] received %d bytes: %x\n", n, buffer[:n])
 				}
 				_, err := writeSerial(serialPort, buffer[:n])
 				if err != nil {
 					if debugMode {
-						fmt.Printf("[serial] TCP->Serial: error writing to serial: %v\n", err)
+						fmt.Printf("[TCP] error writing to serial: %v\n", err)
 					}
 					closeStop()
 					return
 				}
-				if debugMode {
-					fmt.Printf("[serial] TCP->Serial: wrote %d bytes to serial port\n", n)
-				}
+				// if debugMode {
+				// 	fmt.Printf("[serial] TCP->Serial: wrote %d bytes to serial port\n", n)
+				// }
 			}
 		}
 	}()
@@ -572,31 +665,31 @@ func scanAndSyncSerialPorts() {
 	}
 }
 
-func startSerialMonitor() {
-	if serialScanInterval == 0 {
-		if debugMode {
-			fmt.Println("[serial] monitor disabled (SERIAL_SCAN_INTERVAL=0)")
-		}
-		return
-	}
+// func startSerialMonitor() {
+// 	if serialScanInterval == 0 {
+// 		if debugMode {
+// 			fmt.Println("[serial] monitor disabled (SERIAL_SCAN_INTERVAL=0)")
+// 		}
+// 		return
+// 	}
 
-	scanAndSyncSerialPorts()
+// 	scanAndSyncSerialPorts()
 
-	ticker := time.NewTicker(time.Duration(serialScanInterval) * time.Millisecond)
-	go func() {
-		for range ticker.C {
-			scanAndSyncSerialPorts()
-		}
-	}()
+// 	ticker := time.NewTicker(time.Duration(serialScanInterval) * time.Millisecond)
+// 	go func() {
+// 		for range ticker.C {
+// 			scanAndSyncSerialPorts()
+// 		}
+// 	}()
 
-	if debugMode {
-		fmt.Printf("[serial] monitor started, interval %d\n", serialScanInterval)
-	}
-}
+// 	if debugMode {
+// 		fmt.Printf("[serial] monitor started, interval %d\n", serialScanInterval)
+// 	}
+// }
 
-func stopSerialMonitor() {
-	// Implementation would stop the ticker
-}
+// func stopSerialMonitor() {
+// 	// Implementation would stop the ticker
+// }
 
 func closeAllSerialServers() {
 	serialMutex.Lock()

@@ -128,6 +128,7 @@ func handleMdnsScan(c echo.Context) error {
 
 	// Add local serial services
 	if wantsLocalSerial {
+		scanAndSyncSerialPorts()
 		locals := listLocalSerialAsServices()
 		results = append(results, locals...)
 	}
