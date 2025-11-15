@@ -142,8 +142,7 @@ To run on custom port: `./XZG-MT-* 9999`
 Read the individual project READMEs for full documentation and advanced options:
 
 - 🌐 Web UI: [README](web-page/README.md)
-- 🚀 WebSocket bridge (Go) — [README](bridge/README.md)
-- ⚠️ WebSocket bridge (Node) — [README](bridge/README.md)
+- 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
 ## 🛠️ Tech & badges
