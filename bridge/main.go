@@ -19,7 +19,7 @@ var VERSION = "0.0.0"
 
 const (
 	DEFAULT_WS_PORT              = 8765
-	DEFAULT_SERIAL_SCAN_INTERVAL = 10000
+	//DEFAULT_SERIAL_SCAN_INTERVAL = 10000
 )
 
 var (
@@ -32,7 +32,7 @@ var (
 func main() {
 	// Parse command line arguments
 	flag.IntVar(&wsPort, "port", DEFAULT_WS_PORT, "WebSocket server port")
-	flag.IntVar(&serialScanInterval, "serial-scan-interval", DEFAULT_SERIAL_SCAN_INTERVAL, "Serial port scan interval in milliseconds")
+	//flag.IntVar(&serialScanInterval, "serial-scan-interval", DEFAULT_SERIAL_SCAN_INTERVAL, "Serial port scan interval in milliseconds")
 	flag.StringVar(&advertiseHost, "advertise-host", "", "Advertise host for mDNS")
 	flag.BoolVar(&debugMode, "debug", false, "Enable debug mode")
 	flag.Parse()
@@ -43,11 +43,11 @@ func main() {
 			// Successfully parsed
 		}
 	}
-	if interval := os.Getenv("SERIAL_SCAN_INTERVAL"); interval != "" {
-		if i, err := fmt.Sscanf(interval, "%d", &serialScanInterval); err == nil && i == 1 {
-			// Successfully parsed
-		}
-	}
+	// if interval := os.Getenv("SERIAL_SCAN_INTERVAL"); interval != "" {
+	// 	if i, err := fmt.Sscanf(interval, "%d", &serialScanInterval); err == nil && i == 1 {
+	// 		// Successfully parsed
+	// 	}
+	// }
 	if host := os.Getenv("ADVERTISE_HOST"); host != "" {
 		advertiseHost = host
 	}
@@ -65,9 +65,9 @@ func main() {
 	e.HideBanner = true
 
 	// Middleware
-	if debugMode {
-		e.Use(middleware.Logger())
-	}
+	// if debugMode {
+	// 	e.Use(middleware.Logger())
+	// }
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
@@ -75,7 +75,7 @@ func main() {
 	setupRoutes(e)
 
 	// Start serial monitor
-	go startSerialMonitor()
+	//go startSerialMonitor()
 
 	// Start server
 	go func() {
@@ -92,7 +92,7 @@ func main() {
 	fmt.Println("[shutdown] graceful shutdown starting...")
 
 	// Stop serial monitor
-	stopSerialMonitor()
+	//stopSerialMonitor()
 
 	// Close all serial servers
 	closeAllSerialServers()

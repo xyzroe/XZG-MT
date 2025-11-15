@@ -66,14 +66,14 @@ make build-local
 Options:
 
 - `-port`: WebSocket server port (default: 8765)
-- `-serial-scan-interval`: Serial port scan interval in milliseconds (default: 10000)
+- **DEPRECATED!** `-serial-scan-interval`: Serial port scan interval in milliseconds (default: 10000)
 - `-advertise-host`: Host to advertise for mDNS (default: auto-detect)
 - `-debug`: Enable debug mode (default: no)
 
 ### Environment Variables
 
 - `PORT`: WebSocket server port
-- `SERIAL_SCAN_INTERVAL`: Serial port scan interval in milliseconds
+- **DEPRECATED!** `SERIAL_SCAN_INTERVAL`: Serial port scan interval in milliseconds
 - `ADVERTISE_HOST`: Host to advertise for mDNS
 - `DEBUG_MODE`: Enable debug mode (1, true, yes, on)
 
