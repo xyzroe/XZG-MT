@@ -1,21 +1,23 @@
 // Control configuration and helpers extracted from flasher.ts
 
 export type ControlConfig = {
-  pinControl: boolean;
-  bslPath: string;
-  rstPath: string;
-  baudPath: string;
-  invertBsl: boolean;
-  invertRst: boolean;
+  pinMode: boolean;
+  bslPath?: string;
+  rstPath?: string;
+  baudPath?: string;
+  // invertBsl?: boolean;
+  // invertRst?: boolean;
+  invertLevel?: boolean;
 };
 
 export const DEFAULT_CONTROL: ControlConfig = {
-  pinControl: true,
-  bslPath: "",
-  rstPath: "",
-  baudPath: "",
-  invertBsl: false,
-  invertRst: false,
+  pinMode: true,
+  // bslPath: "",
+  // rstPath: "",
+  // baudPath: "",
+  // invertBsl: false,
+  // invertRst: false,
+  //invertLevel: false,
 };
 
 export const CONTROL_PRESETS: Array<{
@@ -27,48 +29,40 @@ export const CONTROL_PRESETS: Array<{
     name: "ZigStar/UZG HTTP",
     test: (m) => /^(zigstar_gw|zig_star_gw|uzg-01|xzg)$/i.test(m.type || ""),
     config: {
-      pinControl: true,
+      pinMode: true,
       bslPath: "http://{HOST}/cmdZigBSL",
       rstPath: "http://{HOST}/cmdZigRST",
       baudPath: "",
-      invertBsl: false,
-      invertRst: false,
     },
   },
   {
     name: "TubesZB HTTP (ESPHome)",
     test: (m) => /^(tubeszb|tubes_zb)$/i.test(m.type || ""),
     config: {
-      pinControl: false,
+      pinMode: false,
       bslPath: "http://{HOST}/switch/zBSL/{SET}",
       rstPath: "http://{HOST}/switch/zRST_gpio/{SET}",
       baudPath: "",
-      invertBsl: false,
-      invertRst: false,
     },
   },
   {
     name: "Local USB via Bridge",
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "usb",
     config: {
-      pinControl: false,
-      bslPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
-      rstPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
+      pinMode: false,
+      bslPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
+      rstPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
-      invertBsl: false,
-      invertRst: false,
     },
   },
   {
     name: "Local Serial via Bridge",
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
     config: {
-      pinControl: false,
-      bslPath: "",
-      rstPath: "",
+      pinMode: false,
+      // bslPath: "",
+      // rstPath: "",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
-      invertBsl: false,
-      invertRst: false,
     },
   },
 ];
@@ -82,16 +76,16 @@ export function deriveControlConfig(meta: { type?: string; protocol?: string }):
   return DEFAULT_CONTROL;
 }
 
-// Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
-export function computeDtrRts(rstLow: boolean, bslLow: boolean): { dtr: boolean; rts: boolean } {
-  let dtr: boolean, rts: boolean;
-  // if (!assumeSwap) {
-  // RST=DTR, BSL=RTS (preserve existing inversion semantics)
-  dtr = !rstLow;
-  rts = !bslLow;
-  // } else {
-  //   dtr = !bslLow;
-  //   rts = !rstLow;
-  // }
-  return { dtr, rts };
-}
+// // Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
+// export function computeDtrRts(rstLow: boolean, bslLow: boolean): { dtr: boolean; rts: boolean } {
+//   let dtr: boolean, rts: boolean;
+//   // if (!assumeSwap) {
+//   // RST=DTR, BSL=RTS (preserve existing inversion semantics)
+//   dtr = !rstLow;
+//   rts = !bslLow;
+//   // } else {
+//   //   dtr = !bslLow;
+//   //   rts = !rstLow;
+//   // }
+//   return { dtr, rts };
+// }

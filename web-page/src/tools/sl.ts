@@ -196,7 +196,7 @@ export class SilabsTools {
       this.write(new Uint8Array([XModemPacketType.EOT]));
     } else {
       // Send next chunk
-      console.log(`Sending chunk ${this.xmodemChunkIndex + 1}/${this.xmodemTotalChunks}`);
+      //console.log(`Sending chunk ${this.xmodemChunkIndex + 1}/${this.xmodemTotalChunks}`);
 
       const start = this.xmodemChunkIndex * XMODEM_BLOCK_SIZE;
       const end = start + XMODEM_BLOCK_SIZE;
@@ -281,11 +281,11 @@ export class SilabsTools {
         this.xmodemProgressCallback(offset, this.xmodemFirmware.length);
       }
 
-      console.log(
-        `Chunk ${this.xmodemChunkIndex + 1} ACKed, progress: ${((offset / this.xmodemFirmware!.length) * 100).toFixed(
-          1
-        )}%`
-      );
+      // console.log(
+      //   `Chunk ${this.xmodemChunkIndex + 1} ACKed, progress: ${((offset / this.xmodemFirmware!.length) * 100).toFixed(
+      //     1
+      //   )}%`
+      // );
 
       this.xmodemChunkIndex++;
       this.xmodemRetries = 0;
@@ -361,11 +361,11 @@ export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void
 
 export async function enterSilabsBootloader(setLines: SetLinesHandler, log?: (msg: string) => void): Promise<void> {
   log?.("Silabs entry bootloader: RTS/DTR exact pattern");
-  await setLines(false, true);
-  await delay(100);
   await setLines(true, false);
+  await delay(100);
+  await setLines(false, true);
   await delay(500);
-  await setLines(false, false);
+  await setLines(true, true);
   await delay(300);
 }
 

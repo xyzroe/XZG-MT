@@ -81,7 +81,6 @@ docker run --rm --network host \
 docker run --rm \
   -e PORT=9000 \
   -e ADVERTISE_HOST=192.168.1.42 \
-  -e SERIAL_SCAN_INTERVAL=0 \
   -e DEBUG_MODE=true \
   -p 9000:9000 \
   ghcr.io/xyzroe/XZG-MT:latest

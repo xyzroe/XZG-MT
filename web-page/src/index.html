@@ -120,6 +120,36 @@
                             </button>
                         </div>
                     </div>
+                    <div class="col-12 mb-2">
+                        <div id="invertLevelWrap" class="d-flex align-items-center justify-content-center gap-2">
+                            <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                                <input id="invertLevel" class="form-check-input" type="checkbox" role="switch"
+                                    aria-label="Invert levels" />
+                            </div>
+                            <span class="text-muted">Invert levels</span>
+                            <!-- Help tooltip for Invert Levels -->
+                            <button id="invertLevelHelp" type="button" class="btn btn-sm btn-link p-0 ms-2"
+                                data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                title="<strong>Invert Levels:</strong> Some devices use inverted logic levels for RST and BSL control. Enable this option to invert the control signals.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Help</span>
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <!-- <div class="col-12 mb-2 text-center">
+                        <div class="form-check form-switch d-inline-block">
+                            <input id="invertBsl" class="form-check-input" type="checkbox" role="switch" />
+                            <label class="form-check-label" for="invertBsl">BSL Invert</label>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-2 text-center">
+                        <div class="form-check form-switch d-inline-block">
+                            <input id="invertRst" class="form-check-input" type="checkbox" role="switch" />
+                            <label class="form-check-label" for="invertRst">RST Invert</label>
+                        </div>
+                    </div> -->
                 </div>
                 <!-- Serial column -->
                 <div id="serialSection" class="col-md-6 d-flex flex-column">
@@ -293,7 +323,7 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="row g-2 align-items-center mb-3">
+                                <!-- <div class="row g-2 align-items-center mb-3">
                                     <div class="col-md-4 text-center">
                                         <div class="form-check form-switch d-inline-block">
                                             <input id="invertBsl" class="form-check-input" type="checkbox"
@@ -309,9 +339,9 @@
                                         </div>
                                     </div>
                                     <div class="col-md-4 text-center">
-                                        <!-- placeholder for alignment -->
+                                        placeholder for alignment 
                                     </div>
-                                </div>
+                                </div> -->
                             </div>
 
                             <!-- Manual input fields -->
