@@ -132,13 +132,11 @@ export class CCToolsClient {
 
   async erase(address: number, length: number): Promise<void> {
     // CC2538 style: 0x26 with addr(4) + size(4).
-    // CC26xx/CC13xx: 0x26 is sector erase (addr only) and range erase is invalid (0x42).
-    // Keep this as CC2538 erase; higher-level code should prefer bankErase/sectorErase for CC26xx/CC13xx.
     const content = new Uint8Array(1 + 4 + 4);
     content[0] = 0x26;
     content.set(this.encodeAddr(address), 1);
     content.set(this.encodeAddr(length >>> 0), 1 + 4);
-    await this.sendCommandRaw(content, false, 5000);
+    await this.sendCommandRaw(content, false, 10000);
     const ok = await this.checkLastCmd();
     if (!ok) throw new Error("CCTOOLS: erase failed");
   }
@@ -181,7 +179,7 @@ export class CCToolsClient {
       data = tmp;
     }
 
-    const maxRetries = 3; // Максимум 3 попытки для чанка
+    const maxRetries = 3; // Maximum 3 attempts per chunk
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         // DOWNLOAD (0x21)
@@ -190,8 +188,8 @@ export class CCToolsClient {
         dl.set(this.encodeAddr(address), 1);
         dl.set(this.encodeAddr(data.length), 1 + 4);
         await this.sendCommandRaw(dl);
-        // Добавьте задержку после DOWNLOAD, чтобы устройство успело обработать
-        //await sleep(10); // 10 мс — подстройте под скорость
+        // Add delay after DOWNLOAD to let device process
+        //await sleep(10); // 10 ms — adjust based on speed
         const ok1 = await this.checkLastCmd();
         if (!ok1) throw new Error("CCTOOLS: download header failed");
 
@@ -203,34 +201,19 @@ export class CCToolsClient {
         const ok2 = await this.checkLastCmd();
         if (!ok2) throw new Error("CCTOOLS: send data failed");
 
-        // Успех — выходим из цикла
+        // Success — exit loop
         return;
       } catch (error) {
         console.log(`Retry ${attempt + 1} for chunk at ${address.toString(16)}`);
 
         if (attempt === maxRetries - 1) {
-          // Последняя попытка — выбрасываем ошибку
+          // Last attempt — throw error
           throw error;
         }
 
-        await sleep(500); // Задержка перед повтором
+        await sleep(500); // Delay before retry
       }
     }
-    // DOWNLOAD (0x21)
-    // const dl = new Uint8Array(1 + 4 + 4);
-    // dl[0] = 0x21;
-    // dl.set(this.encodeAddr(address), 1);
-    // dl.set(this.encodeAddr(data.length), 1 + 4);
-    // await this.sendCommandRaw(dl);
-    // const ok1 = await this.checkLastCmd();
-    // if (!ok1) throw new Error("CCTOOLS: download header failed");
-    // // SEND DATA (0x24)
-    // const sdHeader = new Uint8Array(1 + data.length);
-    // sdHeader[0] = 0x24;
-    // sdHeader.set(data, 1);
-    // await this.sendCommandRaw(sdHeader, false, 5000);
-    // const ok2 = await this.checkLastCmd();
-    // if (!ok2) throw new Error("CCTOOLS: send data failed");
   }
 
   async verifyCrc(address: number, length: number): Promise<boolean> {
@@ -256,8 +239,8 @@ export class CCToolsClient {
     if (!pkt || pkt.length < 4) throw new Error("CCTOOLS: CRC packet too short");
     const ok = await this.checkLastCmd();
     if (!ok) throw new Error("CCTOOLS: CRC status failed");
-    // LSB first
-    const crc = (pkt[0] | (pkt[1] << 8) | (pkt[2] << 16) | (pkt[3] << 24)) >>> 0;
+    // Big-endian decoding
+    const crc = (pkt[3] | (pkt[2] << 8) | (pkt[1] << 16) | (pkt[0] << 24)) >>> 0;
     return crc;
   }
 
@@ -272,18 +255,32 @@ export class CCToolsClient {
     if (!pkt || pkt.length < 4) throw new Error("CCTOOLS: CRC packet too short");
     const ok = await this.checkLastCmd();
     if (!ok) throw new Error("CCTOOLS: CRC status failed");
-    const crc = (pkt[0] | (pkt[1] << 8) | (pkt[2] << 16) | (pkt[3] << 24)) >>> 0;
+    // Big-endian decoding
+    const crc = (pkt[3] | (pkt[2] << 8) | (pkt[1] << 16) | (pkt[0] << 24)) >>> 0;
     return crc;
   }
 
-  async memRead(addr: number, widthCode: number, count: number): Promise<Uint8Array> {
-    // Read Memory (0x2A) addr(4) + width + count
-    // On CC2538/CC26xx, widthCode=1 corresponds to 4-byte width; count is number of reads.
-    const content = new Uint8Array(1 + 4 + 1 + 1);
-    content[0] = 0x2a;
-    content.set(this.encodeAddr(addr), 1);
-    content[5] = widthCode & 0xff;
-    content[6] = count & 0xff;
+  async memRead(addr: number, widthCode?: number, count?: number): Promise<Uint8Array> {
+    // Read Memory (0x2A) with two variants:
+    // CC2538: addr(4) + width(1) where width is byte count (typically 4)
+    // CC26xx: addr(4) + widthCode(1) + count(1) where widthCode=1 means 32-bit
+    let content: Uint8Array;
+
+    if (widthCode !== undefined && count !== undefined) {
+      // CC26xx style: addr + widthCode + count
+      content = new Uint8Array(1 + 4 + 1 + 1);
+      content[0] = 0x2a;
+      content.set(this.encodeAddr(addr), 1);
+      content[5] = widthCode & 0xff;
+      content[6] = count & 0xff;
+    } else {
+      // CC2538 style: addr + width (4 bytes)
+      content = new Uint8Array(1 + 4 + 1);
+      content[0] = 0x2a;
+      content.set(this.encodeAddr(addr), 1);
+      content[5] = 0x04; // width in bytes
+    }
+
     const pkt = await this.sendCommandRaw(content, true);
     if (!pkt) throw new Error("CCTOOLS: no memRead packet");
     const ok = await this.checkLastCmd();
@@ -292,7 +289,7 @@ export class CCToolsClient {
   }
 
   async memRead32(addr: number): Promise<Uint8Array> {
-    // widthCode=1 (32-bit), count=1 → expect 4 bytes
+    // CC26xx style: widthCode=1 (32-bit), count=1 → expect 4 bytes
     return this.memRead(addr, 1, 1);
   }
 }
@@ -521,103 +518,7 @@ export interface TiFlashOptions {
   onChunkDelay?: () => Promise<void>;
 }
 
-export async function flashFirmware(link: Link, image: TiFlashImage, options: TiFlashOptions): Promise<void> {
-  const logFn = options.log ?? (() => {});
-  const onProgress = options.onProgress;
-  const chunkDelay = options.onChunkDelay;
-  const chunkSize = Math.max(16, Math.min(248, options.chunkSize ?? 248));
-  const startAddr = image.startAddress;
-  const data = image.data;
-
-  const bsl = await sync(link);
-  let chipIdStr = "";
-  let chipIsCC26xx = false;
-  try {
-    const id = await bsl.chipId();
-    chipIdStr = Array.from(id as Uint8Array)
-      .map((b: number) => b.toString(16).padStart(2, "0"))
-      .join("");
-    logFn(`ChipId: ${chipIdStr}`);
-    const chipId = ((id[0] << 8) | id[1]) >>> 0;
-    chipIsCC26xx = !(chipId === 0xb964 || chipId === 0xb965);
-  } catch (err) {
-    logFn(`ChipId read failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-
-  if (options.erase) {
-    logFn("Erase...");
-    if (chipIsCC26xx) {
-      try {
-        await (bsl as any).bankErase?.();
-        logFn("Bank erase done");
-      } catch (e: any) {
-        logFn("Bank erase not supported or failed, erasing sectors...");
-        const pageSize = 4096;
-        const from = startAddr & ~(pageSize - 1);
-        const to = (startAddr + data.length + pageSize - 1) & ~(pageSize - 1);
-        for (let a = from; a < to; a += pageSize) {
-          await (bsl as any).sectorErase?.(a);
-        }
-        logFn("Sector erase done");
-      }
-    } else {
-      await bsl.erase(startAddr, data.length);
-    }
-  }
-
-  if (options.write) {
-    logFn(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}...`);
-    onProgress?.(0, "Writing...");
-    const zero = 0x00;
-
-    for (let off = 0; off < data.length; off += chunkSize) {
-      const end = Math.min(off + chunkSize, data.length);
-      const chunk = data.subarray(off, end);
-      let skip = true;
-      const firstByte = chunk[0];
-      if (firstByte !== zero) {
-        skip = false;
-      } else {
-        for (let i = 1; i < chunk.length; i++) {
-          if (chunk[i] !== firstByte) {
-            skip = false;
-            break;
-          }
-        }
-      }
-      if (!skip) {
-        await bsl.downloadTo(startAddr + off, chunk);
-      }
-      const cur = off + chunk.length;
-      const pct = Math.min(100, Math.round((cur / data.length) * 100));
-      const curAddr = startAddr + cur;
-      const endAddr = startAddr + data.length;
-      onProgress?.(pct, `${toHex(curAddr, 8)} / ${toHex(endAddr, 8)}`);
-      if (chunkDelay) await chunkDelay();
-    }
-    logFn("Write done");
-    onProgress?.(100, "Done");
-  }
-
-  if (options.verify) {
-    logFn("Verify...");
-    let ok = false;
-    try {
-      if (chipIsCC26xx && (bsl as any).crc32Cc26xx) {
-        const crc = await (bsl as any).crc32Cc26xx(startAddr, data.length);
-        logFn(`CRC32(dev)=0x${crc.toString(16).toUpperCase().padStart(8, "0")}`);
-        ok = true;
-      } else {
-        ok = await bsl.verifyCrc(startAddr, data.length);
-      }
-    } catch (err) {
-      logFn(`Verify failed: ${err instanceof Error ? err.message : String(err)}`);
-    }
-    logFn(ok ? "Verify OK" : "Verify inconclusive");
-  }
-}
-
-export async function pingApp(link: Link, timeoutMs = 1000): Promise<boolean> {
+export async function pingApp(link: Link, timeoutMs = 3000): Promise<boolean> {
   const resp = await sendMtAndWait(link, 0x21, 0x01, [], timeoutMs);
   return !!(resp && resp.cmd0 === 0x61 && resp.cmd1 === 0x01);
 }

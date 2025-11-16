@@ -16,7 +16,7 @@
 
 ## 📖 About
 
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC1352 / CC2652 and SL EFR32 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
+XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652 and SL EFR32 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
 ## ⭐ Features
 
@@ -199,6 +199,13 @@ If you find this project useful and want to support further development, you can
 <br><br>
   Thank you — every little contribution helps keep the project alive and maintained. 🙏
 </div>
+
+## 💡 Inspired by
+
+Made possible thanks to the foundational work of:
+
+- **Texas Instruments chips support** — [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by JelmerT
+- **Silicon Labs chips support** — [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by NabuCasa
 
 ---
 

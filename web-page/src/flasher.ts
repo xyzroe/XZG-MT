@@ -93,6 +93,7 @@ import { SilabsTools, enterSilabsBootloader } from "./tools/sl";
 import { filterFwByChip, fetchManifest, parseImageFromBuffer, downloadFirmwareFromUrl } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { httpGetWithFallback } from "./utils/http";
+import { crc32 as computeCrc32 } from "./utils/crc";
 
 const consoleWrapEl = document.getElementById("consoleWrap") as HTMLDivElement | null;
 const logEl = document.getElementById("log") as HTMLDivElement;
@@ -169,6 +170,8 @@ let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let netFwCache: any | null = null;
 let netFwItems: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> | null = null;
 let sl_tools: SilabsTools | null = null;
+type TiChipFamily = "cc26xx" | "cc2538";
+let detectedTiChipFamily: TiChipFamily | null = null;
 
 function getSelectedFamily(): "ti" | "sl" {
   const el = document.querySelector('input[name="chip_family"]:checked') as HTMLInputElement | null;
@@ -332,7 +335,7 @@ if (bridgePortInput) bridgePortInput.value = localStorage.getItem("bridgePort") 
 
 // Auto-fill bridge host/port from current page URL when opened as http://HOST:PORT
 // if no values are already stored in localStorage.
-// This covers localhost и прямые IP-адреса.
+// This covers localhost and direct IP addresses.
 try {
   const storedHost = localStorage.getItem("bridgeHost");
   const storedPort = localStorage.getItem("bridgePort");
@@ -742,7 +745,7 @@ function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb
 async function enterBsl(): Promise<void> {
   //  const auto = !!autoBslToggle?.checked;
   //  const remotePinMode = !!pinModeSelect?.checked;
-  const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
+  const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath || "").trim();
   if (activeConnection === "serial") {
     log(
       `Entering BSL: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
@@ -801,7 +804,7 @@ async function enterBsl(): Promise<void> {
 async function performReset(): Promise<void> {
   //const auto = !!autoBslToggle?.checked; // same toggle governs whether to use sequences
   //const remotePinMode = !!pinModeSelect?.checked;
-  const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
+  const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath || "").trim();
   if (activeConnection === "serial") {
     log(
       `Resetting: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
@@ -855,7 +858,9 @@ async function performReset(): Promise<void> {
 // Read chip information in BSL mode (no mode changes)
 // showBusy controls whether to toggle the global device spinner inside this function.
 // For the initial connect flow, we manage the spinner at a higher level and pass false here.
-async function readChipInfo(showBusy: boolean = true): Promise<void> {
+async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | null> {
+  let detectedFamily: TiChipFamily | null = null;
+  detectedTiChipFamily = null;
   try {
     if (showBusy) deviceDetectBusy(true);
     const family = getSelectedFamily();
@@ -868,52 +873,107 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
         .join("");
       log(`BSL OK. ChipId packet: ${chipHex}`);
 
-      try {
-        const FLASH_SIZE = 0x4003002c;
-        const IEEE_ADDR_PRIMARY = 0x500012f0;
-        const ICEPICK_DEVICE_ID = 0x50001318;
-        const TESXT_ID = 0x57fb4;
+      // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
+      let chipIsCC26xx = false;
 
-        const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
-        const usr = await (bsl as any).memRead32?.(TESXT_ID);
-        if (dev && usr && dev.length >= 4 && usr.length >= 4) {
-          const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
-          const pg_rev = (dev[3] & 0xf0) >> 4;
-          const model = ti_tools.getChipDescription(id, wafer_id, pg_rev, usr[1]);
-          log(`Chip model: ${model}`);
-          if (chipModelEl) chipModelEl.value = model;
-          refreshNetworkFirmwareList(model).catch((e) =>
-            log("Network FW list fetch failed: " + (e?.message || String(e)))
-          );
-        }
+      chipIsCC26xx = !(chipHex === "0000b964" || chipHex === "0000b965");
+      let chipIsCC2538 = false;
+      chipIsCC2538 = chipHex === "0000b964" || chipHex === "0000b965";
+      if (chipIsCC26xx) {
+        log("Chip family: CC26xx/CC13xx");
+      }
+      if (chipIsCC2538) {
+        log("Chip family: CC2538");
+      }
 
-        const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
-        if (flashSz && flashSz.length >= 4) {
-          const pages = flashSz[0];
-          let size = pages * 8192;
-          if (size >= 64 * 1024) size -= 8192;
-          log(`Flash size estimate: ${size} bytes`);
-          if (flashSizeEl) flashSizeEl.value = `${size} bytes`;
-        }
+      if (chipIsCC26xx) {
+        detectedFamily = "cc26xx";
+        try {
+          const FLASH_SIZE = 0x4003002c;
+          const IEEE_ADDR_PRIMARY = 0x500012f0;
+          const ICEPICK_DEVICE_ID = 0x50001318;
+          const TESXT_ID = 0x57fb4;
 
-        const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
-        const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
-        if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
-          const mac = [...mac_lo, ...mac_hi]
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join("")
-            .toUpperCase();
-          const macFmt = mac
-            .match(/.{1,2}/g)
-            ?.reverse()
-            ?.join(":");
-          if (macFmt) {
-            log(`IEEE MAC: ${macFmt}`);
-            if (ieeeMacEl) ieeeMacEl.value = macFmt;
+          const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
+          const usr = await (bsl as any).memRead32?.(TESXT_ID);
+          if (dev && usr && dev.length >= 4 && usr.length >= 4) {
+            const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
+            const pg_rev = (dev[3] & 0xf0) >> 4;
+            const model = ti_tools.getChipDescription(id, wafer_id, pg_rev, usr[1]);
+            log(`Chip model: ${model}`);
+            if (chipModelEl) chipModelEl.value = model;
+            refreshNetworkFirmwareList(model).catch((e) =>
+              log("Network FW list fetch failed: " + (e?.message || String(e)))
+            );
           }
+
+          const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
+          if (flashSz && flashSz.length >= 4) {
+            const pages = flashSz[0];
+            let size = pages * 8192;
+            if (size >= 64 * 1024) size -= 8192;
+            log(`Flash size estimate: ${size} bytes`);
+            if (flashSizeEl) flashSizeEl.value = `${size} bytes`;
+          }
+
+          const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
+          const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
+          if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
+            const mac = [...mac_lo, ...mac_hi]
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join("")
+              .toUpperCase();
+            const macFmt = mac
+              .match(/.{1,2}/g)
+              ?.reverse()
+              ?.join(":");
+            if (macFmt) {
+              log(`IEEE MAC: ${macFmt}`);
+              if (ieeeMacEl) ieeeMacEl.value = macFmt;
+            }
+          }
+        } catch {}
+      } else if (chipIsCC2538) {
+        detectedFamily = "cc2538";
+        // Read flash size from FLASH_CTRL_DIECFG0
+        const FLASH_CTRL_DIECFG0 = 0x400d3014;
+        const model = await (bsl as any).memRead?.(FLASH_CTRL_DIECFG0);
+        if (model && model.length >= 4) {
+          const sizeCode = (model[3] & 0x70) >> 4;
+          let flashSizeBytes = 0x10000; // default 64KB
+          if (sizeCode > 0 && sizeCode <= 4) {
+            flashSizeBytes = sizeCode * 0x20000; // 128KB per unit
+          }
+          log(`Flash size estimate: ${flashSizeBytes} bytes`);
+          if (flashSizeEl) flashSizeEl.value = `${flashSizeBytes} bytes`;
         }
-      } catch {}
+
+        // Read primary IEEE address from 0x00280028
+        const addr_ieee_address_primary = 0x00280028;
+        const ti_oui = [0x00, 0x12, 0x4b];
+        const ieee_addr_start = await (bsl as any).memRead?.(addr_ieee_address_primary);
+        const ieee_addr_end = await (bsl as any).memRead?.(addr_ieee_address_primary + 4);
+        if (ieee_addr_start && ieee_addr_end && ieee_addr_start.length >= 4 && ieee_addr_end.length >= 4) {
+          let ieee_addr: Uint8Array;
+          if (ieee_addr_start.slice(0, 3).every((b, i) => b === ti_oui[i])) {
+            // TI OUI at start, append end
+            ieee_addr = new Uint8Array([...ieee_addr_start, ...ieee_addr_end]);
+          } else {
+            // Otherwise, end first, then start
+            ieee_addr = new Uint8Array([...ieee_addr_end, ...ieee_addr_start]);
+          }
+          const macFmt = Array.from(ieee_addr)
+            .map((b) => b.toString(16).padStart(2, "0"))
+            .join(":")
+            .toUpperCase();
+          log(`IEEE MAC: ${macFmt}`);
+          if (ieeeMacEl) ieeeMacEl.value = macFmt;
+        }
+        // Set chip model
+        if (chipModelEl) chipModelEl.value = "CC2538";
+      }
     } else {
+      detectedFamily = null;
       // Silabs stub path for now
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       const info = await sl_tools.getChipInfo();
@@ -929,6 +989,8 @@ async function readChipInfo(showBusy: boolean = true): Promise<void> {
   } finally {
     if (showBusy) deviceDetectBusy(false);
   }
+  detectedTiChipFamily = detectedFamily;
+  return detectedFamily;
 }
 
 // ...existing code...
@@ -1168,7 +1230,7 @@ netFwRefreshBtn?.addEventListener("click", () => {
 
 // --- Firmware notes modal logic ---
 
-async function flash() {
+async function flash(detectedTiFamily?: TiChipFamily | null) {
   if (!hexImage) throw new Error("Load HEX first");
 
   // Show warning
@@ -1195,6 +1257,7 @@ async function flash() {
   const data = hexImage.data;
 
   const link = getActiveLink();
+  const chipFamily = detectedTiFamily ?? detectedTiChipFamily;
   // Ensure BSL mode before flashing/verifying depending on transport
   try {
     await enterBsl();
@@ -1211,9 +1274,9 @@ async function flash() {
     fwProgressReset("Flashing Silabs...");
 
     try {
-      await sl_tools.flash(data, (progress) => {
-        const pct = Math.round(progress);
-        fwProgress(pct, `Uploading... ${pct}%`);
+      await sl_tools.flash(data, (current, total) => {
+        const pct = Math.round((current / total) * 100);
+        fwProgress(pct, `${current} / ${total}`);
       });
 
       log("Silabs flash complete!");
@@ -1228,26 +1291,17 @@ async function flash() {
 
   // TI path continues below
   const bsl = await ti_tools.sync(link);
-  let chipIdStr = "";
-  let chipIsCC26xx = false;
-  try {
-    const id = await bsl.chipId();
-    chipIdStr = Array.from(id as Uint8Array)
-      .map((b: number) => b.toString(16).padStart(2, "0"))
-      .join("");
-    log(`ChipId: ${chipIdStr}`);
-    // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
-    const chipId = ((id[0] << 8) | id[1]) >>> 0;
-    chipIsCC26xx = !(chipId === 0xb964 || chipId === 0xb965);
-  } catch {}
 
   if (optErase.checked) {
-    log("Erase...");
-    if (chipIsCC26xx) {
+    if (chipFamily === "cc26xx") {
       // Prefer bank erase; if it fails, erase sectors across the write range
+      log("Erase...");
+      fwProgress(50, `Erasing...`);
       try {
         await (bsl as any).bankErase?.();
         log("Bank erase done");
+        fwProgress(100, `Erase done`);
+        await sleep(500);
       } catch (e: any) {
         log("Bank erase not supported or failed, erasing sectors...");
         // Sector size heuristic: CC26xx page size 4KB; some variants 8KB. We can try 8KB if CRC verify later fails.
@@ -1255,6 +1309,7 @@ async function flash() {
         const from = startAddr & ~(pageSize - 1);
         const to = (startAddr + data.length + pageSize - 1) & ~(pageSize - 1);
         for (let a = from; a < to; a += pageSize) {
+          fwProgress(Math.min(100, Math.round(((a - from) / (to - from)) * 100)), `Erasing... ${toHex(a, 8)}`);
           try {
             await (bsl as any).sectorErase?.(a);
           } catch (se: any) {
@@ -1262,9 +1317,16 @@ async function flash() {
           }
         }
         log("Sector erase done");
+        fwProgress(100, `Erase done`);
+        await sleep(500);
       }
-    } else {
+    } else if (chipFamily === "cc2538") {
+      log("Erase " + data.length + " bytes at " + toHex(startAddr, 8) + "...");
+      fwProgress(50, `Erasing...`);
       await bsl.erase(startAddr, data.length);
+      log("Erase done");
+      fwProgress(100, `Erase done`);
+      await sleep(500);
     }
   }
 
@@ -1297,10 +1359,8 @@ async function flash() {
       }
       const cur = off + chunk.length;
       const pct = Math.min(100, Math.round((cur / data.length) * 100));
-      // Show current end address out of total end address
-      const curAddr = startAddr + cur;
-      const endAddr = startAddr + data.length;
-      fwProgress(pct, `${curAddr} / ${endAddr}`);
+      // Show relative progress (bytes written / total bytes)
+      fwProgress(pct, `${cur} / ${data.length}`);
       // Avoid artificial throttling over TCP; keep tiny yield for Web Serial only
       if (activeConnection === "serial") await sleep(1);
     }
@@ -1312,15 +1372,72 @@ async function flash() {
     log("Verify...");
     let ok = false;
     try {
-      if (chipIsCC26xx && (bsl as any).crc32Cc26xx) {
-        const crc = await (bsl as any).crc32Cc26xx(startAddr, data.length);
-        log(`CRC32(dev)=0x${crc.toString(16).toUpperCase().padStart(8, "0")}`);
-        ok = true; // status success implies success; local compare optional
-      } else {
-        ok = await bsl.verifyCrc(startAddr, data.length);
+      if (chipFamily === "cc26xx" && (bsl as any).crc32Cc26xx) {
+        const crcDev = await (bsl as any).crc32Cc26xx(startAddr, data.length);
+        // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
+        const deviceData = new Uint8Array(data.length);
+        deviceData.fill(0xff); // Start with erased state (all 0xFF)
+        const zero = 0x00;
+        // Apply written chunks
+        for (let off = 0; off < data.length; off += chunkSize) {
+          let end = Math.min(off + chunkSize, data.length);
+          let chunk = data.subarray(off, end);
+          let skip = true;
+          const firstByte = chunk[0];
+          if (firstByte !== zero) {
+            skip = false;
+          } else {
+            for (let i = 1; i < chunk.length; i++) {
+              if (chunk[i] !== firstByte) {
+                skip = false;
+                break;
+              }
+            }
+          }
+          if (!skip) {
+            deviceData.set(chunk, off);
+          }
+        }
+        const crcLocal = computeCrc32(deviceData);
+        log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
+        log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);
+        ok = crcDev === crcLocal;
+      } else if (chipFamily === "cc2538") {
+        // For CC2538 we use crc32 (command 0x27 with addr+size)
+        const crcDev = await bsl.crc32(startAddr, data.length);
+        // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
+        const deviceData = new Uint8Array(data.length);
+        deviceData.fill(0xff); // Start with erased state (all 0xFF)
+        const zero = 0x00;
+        // Apply written chunks
+        for (let off = 0; off < data.length; off += chunkSize) {
+          let end = Math.min(off + chunkSize, data.length);
+          let chunk = data.subarray(off, end);
+          let skip = true;
+          const firstByte = chunk[0];
+          if (firstByte !== zero) {
+            skip = false;
+          } else {
+            for (let i = 1; i < chunk.length; i++) {
+              if (chunk[i] !== firstByte) {
+                skip = false;
+                break;
+              }
+            }
+          }
+          if (!skip) {
+            deviceData.set(chunk, off);
+          }
+        }
+        const crcLocal = computeCrc32(deviceData);
+        log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
+        log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);
+        ok = crcDev === crcLocal;
       }
-    } catch {}
-    log(ok ? "Verify OK" : "Verify inconclusive");
+    } catch (e: any) {
+      log(`Verify error: ${e?.message || String(e)}`);
+    }
+    log(ok ? "Verify OK" : "Verify FAILED");
   }
 
   // If using Web Serial, bump baud back to original that was set in ui
@@ -1462,28 +1579,12 @@ btnNvErase?.addEventListener("click", async () => {
 // with NPN invert - rts=0 reset=1, dtr=0 bsl=1
 
 const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
-  // Apply optional inversion toggles (affect desired logic-low intent), for both serial and tcp
-
-  // const rstLevelEff = invertRst?.checked ? !rstLevel : rstLevel;
-  // const bslLevelEff = invertBsl?.checked ? !bslLevel : bslLevel;
   const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
   const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
-  // const rstLevelEff = rstLevel;
-  // const bslLevelEff = bslLevel;
-
-  // Compute base mapping for TCP endpoints (values used only for building URLs below)
-  //const base = computeDtrRts(rstLowEff, bslLowEff);
+  // just for simplicity
   let bsl = bslLevelEff;
   let rst = rstLevelEff;
   if (activeConnection === "serial") {
-    // For Web Serial, many adapters assert low when the boolean is true.
-    // For Silabs path we want direct low/high mapping: true => line asserted/low.
-    // if (getSelectedFamily() === "sl") {
-    //   dtr = rstLevelEff; // true => pull RST low
-    //   rts = bslLevelEff; // true => pull BOOT low
-    // }
-    // Note: mapping is RST->DTR, BSL->RTS
-
     log(`CTRL(serial): RTS(RST)=${rst ? "1" : "0"} DTR(BSL)=${bsl ? "1" : "0"}`);
     const p: any = serial as any;
     if (!p || typeof p.setSignals !== "function") {
@@ -1495,21 +1596,9 @@ const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   }
   if (activeConnection === "tcp") {
     // TCP: send two single requests, one per pin, using absolute URLs from inputs
-    const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath).trim();
-    const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
-    // let bslLevel = bslLevelEff ? 1 : 0;
-    // let rstLevel = rstLevelEff ? 1 : 0;
-    // if (getSelectedFamily() === "ti") {
-    //   bslLevel = rts ? 1 : 0;
-    //   rstLevel = dtr ? 1 : 0;
-    // }
+    const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath || "").trim();
+    const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath || "").trim();
 
-    // if (getSelectedFamily() === "sl") {
-    //   bslLevel = rts ? 0 : 1;
-    //   rstLevel = dtr ? 0 : 1;
-    // }
-
-    //log(`CTRL(tcp): BSL=${bslLevel} -> ${bslTpl} | RST=${rstLevel} -> ${rstTpl}`);
     const bslHasSet = /\{SET\}/.test(bslTpl);
     const rstHasSet = /\{SET\}/.test(rstTpl);
     log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} BSL=${bsl ? "1" : "0"} `);
@@ -1685,7 +1774,7 @@ btnNvWrite?.addEventListener("click", async () => {
               settled = true;
               cleanup();
               resolve(null);
-            }, 0);
+            }, 10000);
           };
 
           input.addEventListener("change", onChange, { once: true });
@@ -1723,7 +1812,7 @@ btnNvWrite?.addEventListener("click", async () => {
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
     try {
-      await flash();
+      await flash(detectedTiChipFamily);
       log("Flashing finished. Restarting device...");
       try {
         await performReset();
@@ -1992,7 +2081,7 @@ async function refreshControlLists() {
       j = await resp.json();
     } catch (e: any) {
       log("Control lists fetch failed: " + (e?.message || String(e)));
-      // j остаётся {} — последующий код будет работать с пустыми списками
+      // j remains {} — subsequent code will work with empty lists
     }
 
     // Normalize gpio and leds

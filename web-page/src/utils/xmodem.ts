@@ -1,4 +1,4 @@
-import { crc16_ccitt } from "./crc";
+import { crc16 } from "./crc";
 
 export const XMODEM_BLOCK_SIZE = 128;
 
@@ -21,7 +21,7 @@ export class XmodemCRCPacket {
   }
 
   serialize(): Uint8Array {
-    const crc = crc16_ccitt(this.payload);
+    const crc = crc16(this.payload);
     const packet = new Uint8Array(3 + XMODEM_BLOCK_SIZE + 2);
 
     packet[0] = XModemPacketType.SOH;
