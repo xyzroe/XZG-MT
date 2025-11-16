@@ -1,3 +1,12 @@
+## v0.2.18
+
+## 🚀 Features
+- feat: add support of TI CC2538 (#47) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: verify CRC after flashing TI chips (#47) by @xyzroe
+- fix: some code cleanup (#47) by @xyzroe
+
 ## v0.2.17
 
 ## 🚀 Features
