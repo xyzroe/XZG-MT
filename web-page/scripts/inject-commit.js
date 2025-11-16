@@ -8,7 +8,7 @@ try {
 
   if (!existsSync(distPath)) {
     console.error("dist/index.html not found — run the build step that creates it first.");
-    process.exit(0); // не фейлить сборку, если файл отсутствует (опция) — можно выйти с кодом 1, если нужно строго
+    process.exit(0); // don't fail the build if file is missing (optional) — can exit with code 1 if strict behavior is needed
   }
 
   // Prefer commit SHA from environment (CI/build systems).

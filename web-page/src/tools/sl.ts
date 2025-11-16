@@ -1,7 +1,7 @@
 import { Link } from "./ti";
 import { sleep as delay } from "../utils/index";
 import { padToMultiple } from "../utils/crc";
-import { crc16_ccitt_ezsp } from "../utils/crc";
+import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -301,7 +301,7 @@ export class SilabsTools {
     }
   }
 
-  public async flash(firmware: Uint8Array, onProgress: (progress: number) => void): Promise<void> {
+  public async flash(firmware: Uint8Array, onProgress: (current: number, total: number) => void): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
         // Pad firmware to XMODEM block size
@@ -324,16 +324,14 @@ export class SilabsTools {
         this.xmodemTotalChunks = paddedFirmware.length / XMODEM_BLOCK_SIZE;
         this.xmodemRetries = 0;
         this.xmodemMaxRetries = 3;
-        this.xmodemProgressCallback = (current, total) => {
-          onProgress((current / total) * 100);
-        };
+        this.xmodemProgressCallback = onProgress;
 
         // Set up promise callbacks
         this.xmodemResolve = resolve;
         this.xmodemReject = reject;
 
         // Initial progress
-        onProgress(0);
+        onProgress(0, paddedFirmware.length);
 
         console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
 
@@ -478,7 +476,7 @@ class EzspAshClient {
       buildNumber = response[4] | (response[5] << 8);
     }
 
-    // // Если buildNumber не получен из version, запросить из mfglibGetVersion
+    // // If buildNumber was not obtained from version, request from mfglibGetVersion
     // if (buildNumber === null || buildNumber === 0) {
     //   try {
     //     const mfglibFrameId = 0x0c; // mfglibGetVersion
@@ -603,7 +601,8 @@ class EzspAshClient {
   }
 
   private appendCrc(data: Uint8Array): Uint8Array {
-    const crc = crc16_ccitt_ezsp(data);
+    const crc = crc16(data, 0xffff);
+
     const out = new Uint8Array(data.length + 2);
     out.set(data, 0);
     out[out.length - 2] = (crc >> 8) & 0xff;
@@ -712,7 +711,7 @@ class EzspAshClient {
     const control = data[0];
     const crc = (data[data.length - 2] << 8) | data[data.length - 1];
     const body = data.slice(0, data.length - 2);
-    const calc = crc16_ccitt_ezsp(body);
+    const calc = crc16(body, 0xffff);
     if (calc !== crc) throw new Error("Invalid frame CRC");
 
     if ((control & 0x80) === 0) {
