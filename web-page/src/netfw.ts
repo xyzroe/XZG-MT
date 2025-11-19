@@ -1,10 +1,25 @@
 import { parseIntelHex } from "./utils/intelhex";
 
-export type ZwManifest = Record<string, any> & {
-  router?: Record<string, any>;
-  coordinator?: Record<string, any>;
-  thread?: Record<string, any>;
-};
+import { netFwSelect, chipModelEl, log } from "./ui";
+
+interface ZwFirmwareInfo {
+  file: string;
+  ver: number;
+  link: string;
+  notes?: string;
+}
+
+type ZwCategory = Record<string, Record<string, ZwFirmwareInfo>>;
+
+export let netFwItems: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> | null = null;
+export let netFwCache: ZwManifest | null = null;
+
+interface ZwManifest {
+  router?: ZwCategory;
+  coordinator?: ZwCategory;
+  thread?: ZwCategory;
+  [key: string]: ZwCategory | undefined;
+}
 
 export async function fetchManifest(): Promise<ZwManifest> {
   const url = "https://raw.githubusercontent.com/xyzroe/XZG/zb_fws/ti/manifest.json";
@@ -24,9 +39,9 @@ export function filterFwByChip(man: ZwManifest, chip: string) {
     CC2652RB: "CC2652RB",
   };
   const deviceName = chipMap[chip] || chip;
-  const result: Record<string, Array<{ file: string; ver: number; link: string; notes?: string }>> = {};
+  const result: Record<string, ZwFirmwareInfo[]> = {};
   for (const cat of categories) {
-    const catObj: any = (man as any)[cat];
+    const catObj: ZwCategory | undefined = man[cat];
     if (!catObj) continue;
     for (const sub of Object.keys(catObj)) {
       if (!sub.startsWith(deviceName)) continue;
@@ -67,4 +82,70 @@ export async function downloadFirmwareFromUrl(url: string): Promise<{ startAddre
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const buf = await resp.arrayBuffer();
   return parseImageFromBuffer(new Uint8Array(buf));
+}
+
+export function getSelectedFwNotes() {
+  if (!netFwSelect || !netFwItems) return;
+  const opt = netFwSelect.selectedOptions[0];
+  if (!opt || !opt.value) return;
+  const item = netFwItems.find(function (it) {
+    return it.key === opt.value;
+  });
+  return item && item.notes;
+}
+
+function makeOptionLabel(item: { ver: number; file: string; category: string }) {
+  return `[${item.category.charAt(0).toUpperCase()}] ${item.ver} — ${item.file}`;
+}
+
+export async function refreshNetworkFirmwareList(chipModel?: string) {
+  if (!netFwSelect) return;
+  const chip = chipModel || chipModelEl?.value || "";
+  netFwSelect.innerHTML = "";
+  const def = document.createElement("option");
+  def.value = "";
+  def.textContent = chip ? `— Firmware for ${chip} —` : "— Detect device first —";
+  netFwSelect.appendChild(def);
+  if (!chip) return;
+
+  try {
+    const man = netFwCache || (netFwCache = await fetchManifest());
+    const filtered = filterFwByChip(man, chip);
+    const items: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> = [];
+    for (const category of Object.keys(filtered)) {
+      for (const it of filtered[category]!) {
+        const key = `${category}|${it.file}`;
+        items.push({
+          key,
+          link: it.link,
+          ver: it.ver,
+          notes: it.notes,
+          label: makeOptionLabel({ ver: it.ver, file: it.file, category }),
+        });
+      }
+    }
+    // sort by ver desc overall
+    items.sort((a, b) => b.ver - a.ver);
+    netFwItems = items;
+
+    window.netFwItems = netFwItems;
+    window.netFwSelect = netFwSelect;
+    for (const it of items) {
+      const o = document.createElement("option");
+      o.value = it.key;
+      o.textContent = it.label;
+      o.setAttribute("data-link", it.link);
+      netFwSelect.appendChild(o);
+    }
+    if (items.length === 0) {
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = "— No matching firmware —";
+      netFwSelect.appendChild(o);
+    }
+    log(`Cloud FW: ${items.length} options`);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    log("Cloud FW manifest error: " + msg);
+  }
 }

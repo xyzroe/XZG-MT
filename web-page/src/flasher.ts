@@ -1,34 +1,650 @@
+// Imports
+
+import { ESPLoader, Transport } from "esptool-js";
+
+import { SerialPort as SerialWrap } from "./transport/serial";
+import { TcpClient } from "./transport/tcp";
+
+import * as ti_tools from "./tools/ti";
+import { SilabsTools, enterSilabsBootloader } from "./tools/sl";
+import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
+import { sleep, toHex, bufToHex } from "./utils";
+import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/control";
+import { httpGetWithFallback } from "./utils/http";
+import { crc32 as computeCrc32 } from "./utils/crc";
+
+import {
+  pinModeSelect,
+  bslUrlInput,
+  rstUrlInput,
+  baudUrlInput,
+  invertLevel,
+  bridgeHostInput,
+  bridgePortInput,
+  tcpLinksPanel,
+  chooseSerialBtn,
+  bitrateInput,
+  chipModelEl,
+  ieeeMacEl,
+  flashSizeEl,
+  disconnectBtn,
+  hostInput,
+  portInput,
+  connectTcpBtn,
+  netFwSelect,
+  netFwNotesBtn,
+  localFile,
+  netFwRefreshBtn,
+  btnNvRead,
+  btnNvErase,
+  enterBslBtn,
+  resetBtn,
+  btnPing,
+  btnVersion,
+  firmwareVersionEl,
+  btnGetModel,
+  btnNvWrite,
+  btnFlash,
+  bslUrlSelect,
+  rstUrlSelect,
+  baudUrlSelect,
+  btnClearLog,
+  logEl,
+  showIoEl,
+  btnCopyLog,
+  mdnsRefreshBtn,
+  mdnsSelect,
+  btnAddEspFile,
+  nvProgressEl,
+  progressEl,
+  optErase,
+  optWrite,
+  optVerify,
+  flashWarning,
+  autoBslToggle,
+  implyGateToggle,
+  findBaudToggle,
+  serialSection,
+  tcpSection,
+  generalSection,
+  familySection,
+  portInfoEl,
+  actionsSection,
+  firmwareSection,
+  nvramSection,
+  espFilesContainer,
+  updateUIForFamily,
+  log,
+  setBridgeStatus,
+  setBridgeLoading,
+  deviceDetectBusy,
+} from "./ui";
+
+// Global state variables and UI elements
 // --- Control strategy mapping ---
 type CtrlMode = "zig-http" | "bridge-sc" | "serial-direct";
 let currentConnMeta: { type?: string; protocol?: string } = {};
-import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/control";
 
-function applyControlConfig(cfg: ControlConfig, source: string) {
+let activeConnection: "serial" | "tcp" | null = null;
+let esploader: ESPLoader | null = null;
+
+let serial: SerialWrap | null = null;
+let tcp: TcpClient | null = null;
+let hexImage: { startAddress: number; data: Uint8Array } | null = null;
+let sl_tools: SilabsTools | null = null;
+type TiChipFamily = "cc26xx" | "cc2538";
+let detectedTiChipFamily: TiChipFamily | null = null;
+
+chooseSerialBtn.addEventListener("click", async () => {
+  if (activeConnection) {
+    log("Error: a connection is already active");
+    return;
+  }
+  try {
+    if (!("serial" in navigator)) throw new Error("Web Serial not supported");
+    const br = parseInt(bitrateInput.value, 10) || 115200;
+    const chosen = await (navigator as any).serial.requestPort();
+    if (!chosen) throw new Error("No port selected");
+
+    if (getSelectedFamily() === "esp") {
+      log("Port selected, initializing ESP transport...");
+      const transport = new Transport(chosen);
+      const terminal = {
+        clean: () => {},
+        writeLine: (data: string) => log(data),
+        write: (data: string) => log(data),
+      };
+      esploader = new ESPLoader({ transport, baudrate: br, terminal, romBaudrate: br });
+      log("Connecting to ESP...");
+
+      const chipDesc = await esploader.main("default_reset");
+
+      if (chipModelEl) chipModelEl.value = chipDesc || (esploader as any).chip.CHIP_NAME || "ESP Unknown";
+      if (ieeeMacEl) {
+        try {
+          const mac = await (esploader as any).chip.readMac(esploader);
+          if (mac) ieeeMacEl.value = mac.toUpperCase();
+        } catch {
+          // ignore
+        }
+      }
+      if (flashSizeEl) {
+        try {
+          await (esploader as any).flashId();
+          const flashIdVal = await (esploader as any).readFlashId();
+          const flidLowbyte = (flashIdVal >> 16) & 0xff;
+          let szStr = (esploader as any).DETECTED_FLASH_SIZES?.[flidLowbyte];
+          if (!szStr) {
+            if (flashIdVal === 0) {
+              log("WARNING: Failed to communicate with the flash chip.");
+            }
+            log("Could not auto-detect Flash size. Defaulting to 4MB");
+            szStr = "4MB";
+            flashSizeEl.classList.add("border-warning", "bg-warning-subtle");
+          }
+          flashSizeEl.value = szStr;
+        } catch (e: any) {
+          log("Flash detection failed: " + (e?.message || String(e)));
+          flashSizeEl.classList.add("border-warning", "bg-warning-subtle");
+        }
+      }
+
+      activeConnection = "serial";
+      updateConnectionUI();
+      return;
+    }
+
+    await chosen.open({ baudRate: br });
+    serial?.close();
+    serial = new SerialWrap(br);
+    serial.useExistingPortAndStart(chosen);
+    // Low-level RX/TX logs
+    serial.onData((d) => {
+      log(`RX: ${bufToHex(d)}`, "rx");
+    });
+    serial.onTx((d) => {
+      log(`TX: ${bufToHex(d)}`, "tx");
+    });
+    log("Serial selected and opened");
+    // Mark connection active immediately on open
+    activeConnection = "serial";
+    updateConnectionUI();
+
+    await runConnectSequence();
+  } catch (e: any) {
+    log(`Serial error: ${e?.message || String(e)}`);
+  }
+});
+
+disconnectBtn.addEventListener("click", async () => {
+  if (!activeConnection) return;
+  if (activeConnection === "serial") {
+    try {
+      if (esploader) {
+        try {
+          await (esploader as any).transport?.disconnect?.();
+        } catch {
+          // ignore
+        }
+        try {
+          await (esploader as any).transport?.device?.close?.();
+        } catch {
+          // ignore
+        }
+        esploader = null;
+      }
+      await serial?.close();
+    } catch {
+      // ignore
+    }
+    serial = null;
+    activeConnection = null;
+    currentConnMeta = {};
+    log("Serial disconnected");
+  } else if (activeConnection === "tcp") {
+    try {
+      tcp?.close();
+    } catch {
+      // ignore
+    }
+    tcp = null;
+    activeConnection = null;
+    currentConnMeta = {};
+    log("TCP disconnected");
+  }
+  updateConnectionUI();
+});
+
+connectTcpBtn.addEventListener("click", async () => {
+  if (activeConnection) {
+    log("Error: a connection is already active");
+    return;
+  }
+  try {
+    const host = hostInput.value.trim();
+    const port = parseInt(portInput.value, 10);
+    if (!host || !port) throw new Error("Enter host/port");
+    if (tcp !== null) {
+      tcp.close();
+    }
+    const wsBase = getBridgeBase("ws");
+    tcp = new TcpClient(wsBase);
+    try {
+      await tcp.connect(host, port);
+    } catch (e: any) {
+      log("TCP connect error: " + (e?.message || String(e)));
+      throw e;
+    }
+    tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
+    tcp.onTx?.((d: Uint8Array) => log(`TX: ${bufToHex(d)}`, "tx"));
+    log(`TCP connected to ${host}:${port}`);
+
+    activeConnection = "tcp";
+    updateConnectionUI();
+    await runConnectSequence();
+  } catch (e: any) {
+    log(`TCP error: ${e?.message || String(e)}`);
+  }
+});
+
+// Enable/disable notes button on select change
+netFwSelect?.addEventListener("change", async () => {
+  if (!netFwSelect || !netFwNotesBtn) return;
+  const notes = getSelectedFwNotes();
+  netFwNotesBtn.disabled = !notes;
+  // Existing logic: load firmware
+  const opt = netFwSelect.selectedOptions[0];
+  const link = opt?.getAttribute("data-link");
+  if (!link) return;
+  try {
+    const img = await downloadFirmwareFromUrl(link);
+    hexImage = img;
+    updateOptionsStateForFile(true);
+    log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
+  } catch (e: any) {
+    log("HEX download error: " + (e?.message || String(e)));
+  }
+});
+
+localFile.addEventListener("change", async () => {
+  const f = localFile.files?.[0];
+  if (!f) return;
+  try {
+    log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
+    // Read explicitly using slice to ensure full file read
+    const buf = await f.slice(0, f.size).arrayBuffer();
+    //log(`ArrayBuffer read: ${buf.byteLength} bytes`);
+    // If lengths differ, fail early so we can debug
+    if (buf.byteLength !== f.size) {
+      log(`Warning: read length (${buf.byteLength}) != file.size (${f.size})`);
+    }
+    const img = parseImageFromBuffer(new Uint8Array(buf));
+    hexImage = img;
+    log(`Image loaded: ${f.name}, ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
+    updateOptionsStateForFile(true);
+  } catch (e: any) {
+    log("File load error: " + (e?.message || String(e)));
+  }
+});
+
+netFwRefreshBtn?.addEventListener("click", () => {
+  const model = chipModelEl?.value || "";
+  refreshNetworkFirmwareList(model);
+});
+
+// UI wiring for NVRAM
+btnNvRead?.addEventListener("click", async () => {
+  await withButtonStatus(btnNvRead!, async () => {
+    try {
+      const payload = await nvramReadAll();
+      const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      // Build filename: nvram_<model>_<ieee>_<YYYYMMDD-HHMMSS>.json
+      const modelRaw = (chipModelEl?.value || "device").trim();
+      const modelSafe = modelRaw.replace(/\s+/g, "-").replace(/[^A-Za-z0-9._-]/g, "");
+      const ieeeRaw = (ieeeMacEl?.value || "").toUpperCase();
+      const ieeeSafe = ieeeRaw.replace(/[^A-F0-9]/g, ""); // drop ':' and anything non-hex
+      const d = new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(
+        d.getMinutes()
+      )}${pad(d.getSeconds())}`;
+      const nameParts = ["NVRAM", modelSafe || "device", ieeeSafe || "unknown", ts];
+      a.download = nameParts.join("_") + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      log("NVRAM backup downloaded");
+      nvProgress(100, "Done");
+      return true;
+    } catch (e: any) {
+      log("NVRAM read error: " + (e?.message || String(e)));
+      nvProgressReset("Error");
+      throw e;
+    }
+  });
+});
+
+btnNvErase?.addEventListener("click", async () => {
+  await withButtonStatus(btnNvErase!, async () => {
+    try {
+      await nvramEraseAll();
+      log("NVRAM erase done. Resetting...");
+      try {
+        await performReset();
+      } catch {
+        // ignore
+      }
+      nvProgress(100, "Done");
+      return true;
+    } catch (e: any) {
+      log("NVRAM erase error: " + (e?.message || String(e)));
+      nvProgressReset("Error");
+      throw e;
+    }
+  });
+});
+
+enterBslBtn?.addEventListener("click", async () => {
+  await withButtonStatus(enterBslBtn!, async () => {
+    await enterBsl();
+  });
+});
+
+resetBtn?.addEventListener("click", async () => {
+  await withButtonStatus(resetBtn!, async () => {
+    await performReset();
+  });
+});
+
+btnPing?.addEventListener("click", async () => {
+  await withButtonStatus(btnPing!, async () => {
+    const family = getSelectedFamily();
+    if (family === "esp") {
+      log("Ping not supported for ESP");
+      return;
+    }
+    if (family === "sl") {
+      log("Ping is not supported for Silabs yet");
+      throw new Error("Unsupported for Silabs");
+    }
+    const link = getActiveLink();
+    log("Pinging application...");
+    const ok = await ti_tools.pingApp(link);
+    if (!ok) throw new Error("Ping failed");
+    //else log("Pong");
+  });
+});
+
+btnVersion?.addEventListener("click", async () => {
+  await withButtonStatus(btnVersion!, async () => {
+    log("Checking firmware version...");
+    const family = getSelectedFamily();
+    if (family === "esp") {
+      log("ESP: Firmware version check not implemented");
+    }
+    if (family === "ti") {
+      const link = getActiveLink();
+
+      const info = await ti_tools.getFwVersion(link);
+      const ok = !!info;
+      if (info && firmwareVersionEl) {
+        firmwareVersionEl.value = String(info.fwRev);
+        log(`FW version: ${info.fwRev}`);
+      }
+      if (!ok) throw new Error("Version not available");
+    }
+    if (family === "sl") {
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      const ezspVersion = await sl_tools.getApplicationVersion();
+      if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+      if (ezspVersion && firmwareVersionEl) {
+        firmwareVersionEl.value = String(ezspVersion || "");
+        log(`FW version: ${ezspVersion || "unknown"}`);
+      } else {
+        throw new Error("Version not available");
+      }
+    }
+  });
+});
+
+// Get Model action: detect chip and memory without flashing
+btnGetModel?.addEventListener("click", async () => {
+  await withButtonStatus(btnGetModel!, async () => {
+    await readChipInfo();
+  });
+});
+
+btnNvWrite?.addEventListener("click", async () => {
+  await withButtonStatus(btnNvWrite!, async () => {
+    try {
+      // Open file picker on demand
+      let text: string | null = null;
+      const hasPicker = typeof (window as any).showOpenFilePicker === "function";
+      if (hasPicker) {
+        try {
+          const handles = await (window as any).showOpenFilePicker({
+            multiple: false,
+            types: [
+              {
+                description: "JSON Files",
+                accept: { "application/json": [".json"] },
+              },
+            ],
+          });
+          const handle = handles && handles[0];
+          if (handle) {
+            const file = await handle.getFile();
+            text = await file.text();
+          }
+        } catch (e: any) {
+          // User canceled: do NOT fallback to avoid reopening dialog
+          if (e && (e.name === "AbortError" || e.code === 20)) {
+            log("NVRAM JSON file not selected");
+            throw e; // propagate to show ❌
+          }
+          // Non-cancel error: fallback below
+        }
+      }
+      if (text == null && !hasPicker) {
+        // Fallback for browsers without showOpenFilePicker
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/json";
+        input.style.position = "fixed";
+        input.style.left = "-10000px";
+        document.body.appendChild(input);
+        const picked = await new Promise<File | null>((resolve) => {
+          let settled = false;
+          const cleanup = () => {
+            input.removeEventListener("change", onChange);
+            window.removeEventListener("focus", onFocus);
+          };
+          const onChange = () => {
+            if (settled) return;
+            settled = true;
+            const f = input.files && input.files[0] ? input.files[0] : null;
+            cleanup();
+            resolve(f);
+          };
+          const onFocus = () => {
+            // When the dialog closes (either by cancel or pick), focus returns to window.
+            // If no change event fired, treat as cancel.
+            setTimeout(() => {
+              if (settled) return;
+              settled = true;
+              cleanup();
+              resolve(null);
+            }, 10000);
+          };
+
+          input.addEventListener("change", onChange, { once: true });
+          window.addEventListener("focus", onFocus, { once: true });
+          input.click();
+        });
+        if (picked) {
+          text = await picked.text();
+        }
+        input.remove();
+      }
+      if (!text) {
+        const err = new Error("NVRAM JSON file not selected");
+        log(err.message);
+        throw err;
+      }
+
+      const j = JSON.parse(text);
+      await nvramWriteAll(j);
+      log("NVRAM write done. Resetting...");
+      try {
+        await performReset();
+      } catch {
+        // ignore
+      }
+      nvProgress(100, "Done");
+      return true;
+    } catch (e: any) {
+      log("NVRAM write error: " + (e?.message || String(e)));
+      nvProgressReset("Error");
+      throw e;
+    }
+  });
+});
+
+// Flash start button with status feedback
+btnFlash.addEventListener("click", async () => {
+  await withButtonStatus(btnFlash, async () => {
+    try {
+      await flash(detectedTiChipFamily);
+      log("Flashing finished. Restarting device...");
+      try {
+        await performReset();
+        log("Restart done");
+      } catch (e: any) {
+        log("Restart error: " + (e?.message || String(e)));
+      }
+      const family = getSelectedFamily();
+      if (family == "esp") {
+        // don't ping and version check for ESP
+        return true;
+      }
+
+      if (family == "ti") {
+        //log("Pinging device...");
+        try {
+          const ok = await pingWithBaudRetries(getActiveLink());
+          if (!ok) log("Ping: timed out or no response");
+        } catch (e: any) {
+          log("Ping error: " + (e?.message || String(e)));
+        }
+      }
+
+      log("Checking firmware version...");
+      if (family == "sl") {
+        // After flash, re-read device info
+        await sleep(5000);
+
+        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+        const ezspVersion = await sl_tools.getApplicationVersion();
+        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+        log(`EZSP app version: ${ezspVersion}`);
+      }
+      if (family == "ti") {
+        try {
+          // use local wrapper to log and update UI
+          const info = await ti_tools.getFwVersion(getActiveLink());
+          if (info && firmwareVersionEl) {
+            firmwareVersionEl.value = String(info.fwRev);
+            log(`FW version: ${info.fwRev}`);
+          }
+        } catch (e: any) {
+          log("Version read error: " + (e?.message || String(e)));
+        }
+      }
+      return true;
+    } catch (e: any) {
+      log("Flash error: " + (e?.message || String(e)));
+      throw e;
+    }
+  });
+});
+
+bslUrlSelect?.addEventListener("change", () => applySelectToInput(bslUrlSelect, bslUrlInput));
+rstUrlSelect?.addEventListener("change", () => applySelectToInput(rstUrlSelect, rstUrlInput));
+baudUrlSelect?.addEventListener("change", () => applySelectToInput(baudUrlSelect, baudUrlInput));
+
+btnClearLog?.addEventListener("click", () => {
+  logEl.innerHTML = "";
+});
+btnCopyLog?.addEventListener("click", async () => {
+  const lines = Array.from(logEl.querySelectorAll<HTMLElement>(".log-line"))
+    .filter((el) => {
+      // when showIo is unchecked, omit RX/TX lines (they have classes log-rx / log-tx)
+      if (typeof showIoEl !== "undefined" && showIoEl !== null && !showIoEl.checked) {
+        if (el.classList.contains("log-rx") || el.classList.contains("log-tx")) return false;
+      }
+      return true;
+    })
+    .map((el) => el.innerText)
+    .join("\n");
+  try {
+    await navigator.clipboard.writeText(lines);
+    log("Log copied to clipboard");
+  } catch (e: any) {
+    log("Copy failed: " + (e?.message || String(e)));
+  }
+});
+
+mdnsRefreshBtn?.addEventListener("click", () => {
+  if (activeConnection) return;
+  refreshMdnsList();
+});
+mdnsSelect?.addEventListener("change", () => {
+  if (!mdnsSelect) return;
+  if (mdnsSelect.selectedOptions[0].value === "manual") {
+    tcpLinksPanel?.classList.remove("d-none");
+  }
+  const opt = mdnsSelect.selectedOptions[0];
+  const h = opt?.getAttribute("data-host") || "";
+  const p = Number(opt?.getAttribute("data-port") || 0);
+  if (h) hostInput.value = h;
+  if (p) portInput.value = String(p);
+  // Capture metadata for strategy
+  const t = opt?.getAttribute("data-type") || undefined;
+  const pr = opt?.getAttribute("data-protocol") || undefined;
+  currentConnMeta = { type: t, protocol: pr };
+  // Auto-apply presets on selection change
+  applyControlConfig(deriveControlConfig(currentConnMeta));
+  updateConnectionUI();
+});
+
+btnAddEspFile?.addEventListener("click", addEspFileRow);
+
+function applyControlConfig(cfg: ControlConfig) {
   if (pinModeSelect) pinModeSelect.checked = cfg.pinMode ?? DEFAULT_CONTROL.pinMode;
   if (bslUrlInput)
     if (cfg.bslPath !== undefined) bslUrlInput.value = cfg.bslPath;
     else if (DEFAULT_CONTROL.bslPath !== undefined) bslUrlInput.value = DEFAULT_CONTROL.bslPath;
-  //bslUrlInput.value = cfg.bslPath ?? DEFAULT_CONTROL.bslPath;
+
   if (rstUrlInput)
     if (cfg.rstPath !== undefined) rstUrlInput.value = cfg.rstPath;
     else if (DEFAULT_CONTROL.rstPath !== undefined) rstUrlInput.value = DEFAULT_CONTROL.rstPath;
-  //rstUrlInput.value = cfg.rstPath ?? DEFAULT_CONTROL.rstPath;
+
   if (baudUrlInput)
     if (cfg.baudPath !== undefined) baudUrlInput.value = cfg.baudPath;
     else if (DEFAULT_CONTROL.baudPath !== undefined) baudUrlInput.value = DEFAULT_CONTROL.baudPath;
-  //baudUrlInput.value = cfg.baudPath ?? DEFAULT_CONTROL.baudPath;
-  //if (invertBsl) invertBsl.checked = cfg.invertBsl ?? DEFAULT_CONTROL.invertBsl ?? false;
-  //if (invertRst) invertRst.checked = cfg.invertRst ?? DEFAULT_CONTROL.invertRst ?? false;
-  if (invertLevel) {
+
+  if (invertLevel)
     if (cfg.invertLevel !== undefined) invertLevel.checked = cfg.invertLevel;
     else if (DEFAULT_CONTROL.invertLevel !== undefined) invertLevel.checked = DEFAULT_CONTROL.invertLevel;
-  }
-  // if baudUrlInput != "" then select baudUrlSelect option bridge
+
   if (baudUrlSelect) baudUrlSelect.value = cfg.baudPath ? "bridge" : "none";
   saveCtrlSettings();
   // Update UI visibility/state
   //updateConnectionUI();
-  //log(`Control preset applied (${source}): ${cfg.remote ? "Remote" : "Local"} BSL=${cfg.bslPath} RST=${cfg.rstPath}`);
 }
 
 function getCtrlMode(): CtrlMode {
@@ -46,16 +662,9 @@ function getCtrlMode(): CtrlMode {
   return "zig-http";
 }
 
-// Signal template picker from user fields
-function getSignalTemplate(): string | null {
-  const fields = [bslUrlInput?.value || "", rstUrlInput?.value || ""];
-  for (const f of fields) if (/\{DTR\}|\{RTS\}/i.test(f)) return f.trim();
-  return null;
-}
-
 // --- Unified control URL builder/sender for BSL/RST endpoints ---
 function buildCtrlUrl(template: string, setVal?: number): string {
-  const base = getBridgeBase();
+  const base = getBridgeBase("http");
   const devHost = hostInput.value.trim();
   const rawPort = Number(portInput.value) || 0;
   let t = (template || "").trim();
@@ -83,105 +692,24 @@ async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
   //log(`HTTP control response: ${r.text ?? ""}`);
 }
 
-// Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
-//import { computeDtrRts } from "./utils/control";
-let activeConnection: "serial" | "tcp" | null = null;
-import { SerialPort as SerialWrap } from "./transport/serial";
-import { TcpClient } from "./transport/tcp";
-import * as ti_tools from "./tools/ti";
-import { SilabsTools, enterSilabsBootloader } from "./tools/sl";
-import { filterFwByChip, fetchManifest, parseImageFromBuffer, downloadFirmwareFromUrl } from "./netfw";
-import { sleep, toHex, bufToHex } from "./utils";
-import { httpGetWithFallback } from "./utils/http";
-import { crc32 as computeCrc32 } from "./utils/crc";
-
-const consoleWrapEl = document.getElementById("consoleWrap") as HTMLDivElement | null;
-const logEl = document.getElementById("log") as HTMLDivElement;
-const autoScrollEl = document.getElementById("autoScroll") as HTMLInputElement | null;
-const showIoEl = document.getElementById("showIo") as HTMLInputElement | null;
-const chipModelEl = document.getElementById("chipModel") as HTMLInputElement | null;
-const flashSizeEl = document.getElementById("flashSize") as HTMLInputElement | null;
-const ieeeMacEl = document.getElementById("ieeeMac") as HTMLInputElement | null;
-const firmwareVersionEl = document.getElementById("firmwareVersion") as HTMLInputElement | null;
-const netFwSelect = document.getElementById("netFwSelect") as HTMLSelectElement | null;
-const netFwRefreshBtn = document.getElementById("netFwRefresh") as HTMLButtonElement | null;
-const bitrateInput = document.getElementById("bitrateInput") as HTMLInputElement;
-const chooseSerialBtn = document.getElementById("chooseSerial") as HTMLButtonElement;
-const disconnectBtn = document.getElementById("disconnectBtn") as HTMLButtonElement;
-const hostInput = document.getElementById("hostInput") as HTMLInputElement;
-const portInput = document.getElementById("portInput") as HTMLInputElement;
-const mdnsSelect = document.getElementById("mdnsSelect") as HTMLSelectElement | null;
-const mdnsRefreshBtn = document.getElementById("mdnsRefresh") as HTMLButtonElement | null;
-const tcpSettingsBtn = document.getElementById("tcpSettingsBtn") as HTMLButtonElement | null;
-const tcpLinksBtn = document.getElementById("tcpLinksBtn") as HTMLButtonElement | null;
-const tcpSettingsPanel = document.getElementById("tcpSettingsPanel") as HTMLDivElement | null;
-const tcpLinksPanel = document.getElementById("tcpLinksPanel") as HTMLDivElement | null;
-const bridgeHostInput = document.getElementById("bridgeHostInput") as HTMLInputElement | null;
-const bridgePortInput = document.getElementById("bridgePortInput") as HTMLInputElement | null;
-const tcpInfoBtn = document.getElementById("tcpInfoBtn") as HTMLButtonElement | null;
-const bridgeStatusIcon = document.getElementById("bridgeStatusIcon") as HTMLSpanElement | null;
-const bridgeInfoModal = document.getElementById("bridgeInfoModal") as HTMLDivElement | null;
-const bridgeInfoClose = document.getElementById("bridgeInfoClose") as HTMLButtonElement | null;
-const bridgeInfoCloseX = document.getElementById("bridgeInfoCloseX") as HTMLButtonElement | null;
-const bridgeLink = document.getElementById("bridgeLink") as HTMLAnchorElement | null;
-const connectTcpBtn = document.getElementById("connectTcp") as HTMLButtonElement;
-const deviceDetectSpinner = document.getElementById("deviceDetectSpinner") as HTMLSpanElement | null;
-const portInfoEl = document.getElementById("portInfo") as HTMLInputElement | null;
-const localFile = document.getElementById("localFile") as HTMLInputElement;
-const optErase = document.getElementById("optErase") as HTMLInputElement;
-const optWrite = document.getElementById("optWrite") as HTMLInputElement;
-const optVerify = document.getElementById("optVerify") as HTMLInputElement;
-const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
-const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
-const progressEl = document.getElementById("progress") as HTMLDivElement;
-const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElement | null;
-const firmwareSection = document.getElementById("firmwareSection") as HTMLDivElement | null;
-const nvramSection = document.getElementById("nvramSection") as HTMLDivElement | null;
-const actionsSection = document.getElementById("actionsSection") as HTMLDivElement | null;
-const btnNvRead = document.getElementById("btnNvRead") as HTMLButtonElement | null;
-const btnNvErase = document.getElementById("btnNvErase") as HTMLButtonElement | null;
-const btnNvWrite = document.getElementById("btnNvWrite") as HTMLButtonElement | null;
-const autoBslToggle = document.getElementById("autoBslToggle") as HTMLInputElement | null;
-const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
-// mapping selector removed; we’ll try both wiring assumptions automatically
-const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
-const btnPing = document.getElementById("btn-ping") as HTMLButtonElement | null;
-const btnVersion = document.getElementById("btn-version") as HTMLButtonElement | null;
-const btnGetModel = document.getElementById("btn-get-model") as HTMLButtonElement | null;
-// New controls: Pin/Mode toggle and custom URL paths
-const pinModeSelect = document.getElementById("pinModeSelect") as HTMLInputElement | null;
-const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | null;
-const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
-const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
-const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
-const bslUrlSelect = document.getElementById("bslUrlSelect") as HTMLSelectElement | null;
-const rstUrlSelect = document.getElementById("rstUrlSelect") as HTMLSelectElement | null;
-const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElement | null;
-const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
-const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
-const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
-//const invertBsl = document.getElementById("invertBsl") as HTMLInputElement | null;
-//const invertRst = document.getElementById("invertRst") as HTMLInputElement | null;
-const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
-
-let serial: SerialWrap | null = null;
-let tcp: TcpClient | null = null;
-let hexImage: { startAddress: number; data: Uint8Array } | null = null;
-let netFwCache: any | null = null;
-let netFwItems: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> | null = null;
-let sl_tools: SilabsTools | null = null;
-type TiChipFamily = "cc26xx" | "cc2538";
-let detectedTiChipFamily: TiChipFamily | null = null;
-
-function getSelectedFamily(): "ti" | "sl" {
+export function getSelectedFamily(): "ti" | "sl" | "esp" {
   const el = document.querySelector('input[name="chip_family"]:checked') as HTMLInputElement | null;
   const v = (el?.value || "ti").toLowerCase();
-  return v === "sl" ? "sl" : "ti";
+  return v === "sl" ? "sl" : v === "esp" ? "esp" : "ti";
 }
 
 // Bootstrap tooltip init moved to index.js
 
-function updateConnectionUI() {
+export function updateConnectionUI() {
+  const family = getSelectedFamily();
+  if (family === "esp") {
+    optErase.checked = false;
+    optWrite.checked = false;
+    optWrite.disabled = true;
+    optVerify.checked = false;
+    optVerify.disabled = true;
+  }
+
   const anyActive = !!activeConnection;
 
   // Helper: enable/disable entire section by toggling pointer-events and aria-disabled
@@ -214,10 +742,7 @@ function updateConnectionUI() {
   };
 
   // Sections: Serial and TCP (entire columns)
-  const serialSection = document.getElementById("serialSection") as HTMLElement | null;
-  const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
-  const generalSection = document.getElementById("generalSection") as HTMLElement | null;
-  const familySection = document.getElementById("familySection") as HTMLElement | null;
+
   setSectionDisabled(serialSection, anyActive);
   setSectionDisabled(tcpSection, anyActive);
   setSectionDisabled(generalSection, anyActive);
@@ -251,7 +776,10 @@ function updateConnectionUI() {
   // Clear Device Info fields on disconnect
   if (!anyActive) {
     if (chipModelEl) chipModelEl.value = "";
-    if (flashSizeEl) flashSizeEl.value = "";
+    if (flashSizeEl) {
+      flashSizeEl.value = "";
+      flashSizeEl.classList.remove("border-warning", "bg-warning-subtle");
+    }
     if (ieeeMacEl) ieeeMacEl.value = "";
     if (firmwareVersionEl) firmwareVersionEl.value = "";
   }
@@ -272,19 +800,13 @@ function updateConnectionUI() {
     nvramSection.classList.toggle("opacity-50", !anyActive);
     nvramSection.classList.toggle("pe-none", !anyActive);
   }
-
   // Cloud controls reflect connection state
   if (netFwSelect) netFwSelect.disabled = !anyActive;
   if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
 
   if (pinModeSelect?.checked) {
-    // make bslInvert and rstInvert disabled when in remote mode
-    //invertBsl?.setAttribute("disabled", "true");
-    //invertRst?.setAttribute("disabled", "true");
     invertLevel?.setAttribute("disabled", "true");
   } else {
-    //invertBsl?.removeAttribute("disabled");
-    //invertRst?.removeAttribute("disabled");
     invertLevel?.removeAttribute("disabled");
   }
   // No special-case for control URL fields: they follow section state
@@ -298,37 +820,17 @@ function updateConnectionUI() {
 }
 
 // Settings: store bridge host/port in localStorage
-function getBridgeBase(): string {
+function getBridgeBase(base: string): string {
   const host = bridgeHostInput?.value?.trim() || localStorage.getItem("bridgeHost") || "127.0.0.1";
   const port = Number(bridgePortInput?.value || localStorage.getItem("bridgePort") || 8765) || 8765;
-  return `http://${host}:${port}`;
+  return `${base}://${host}:${port}`;
 }
-function getBridgeWsBase(): string {
-  const host = bridgeHostInput?.value?.trim() || localStorage.getItem("bridgeHost") || "127.0.0.1";
-  const port = Number(bridgePortInput?.value || localStorage.getItem("bridgePort") || 8765) || 8765;
-  return `ws://${host}:${port}`;
-}
-function saveBridgeSettings() {
+
+export function saveBridgeSettings() {
   if (bridgeHostInput) localStorage.setItem("bridgeHost", bridgeHostInput.value.trim() || "127.0.0.1");
   if (bridgePortInput) localStorage.setItem("bridgePort", String(Number(bridgePortInput.value || 8765) || 8765));
 }
 
-//let tcpSettingsPanelVisible = false;
-tcpSettingsBtn?.addEventListener("click", () => {
-  //tcpSettingsPanelVisible = !tcpSettingsPanelVisible;
-  //get current visibility
-  let tcpSettingsPanelVisible = tcpSettingsPanel?.classList.contains("d-none");
-  if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible);
-});
-
-tcpLinksBtn?.addEventListener("click", () => {
-  // Show/hide the TCP links panel
-  let tcpLinksPanelVisible = tcpLinksPanel?.classList.contains("d-none");
-  if (tcpLinksPanel) tcpLinksPanel.classList.toggle("d-none", !tcpLinksPanelVisible);
-});
-
-bridgeHostInput?.addEventListener("change", saveBridgeSettings);
-bridgePortInput?.addEventListener("change", saveBridgeSettings);
 // init from localStorage
 if (bridgeHostInput) bridgeHostInput.value = localStorage.getItem("bridgeHost") || bridgeHostInput.value;
 if (bridgePortInput) bridgePortInput.value = localStorage.getItem("bridgePort") || bridgePortInput.value;
@@ -355,7 +857,7 @@ try {
     // Persist to localStorage
     saveBridgeSettings();
   }
-} catch (e) {
+} catch {
   // ignore any unexpected errors
 }
 
@@ -367,85 +869,34 @@ function loadCtrlSettings() {
     if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value; // || "cmdZigBSL";
     if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
     if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
-    //if (invertBsl) invertBsl.checked = localStorage.getItem("invertBsl") === "1";
-    //if (invertRst) invertRst.checked = localStorage.getItem("invertRst") === "1";
     if (invertLevel) invertLevel.checked = localStorage.getItem("invertLevel") === "1";
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
-function saveCtrlSettings() {
+
+export function saveCtrlSettings() {
   try {
     if (pinModeSelect) localStorage.setItem("pinModeSelect", pinModeSelect.checked ? "1" : "0");
     if (bslUrlInput) localStorage.setItem("bslUrlInput", bslUrlInput.value.trim());
     if (rstUrlInput) localStorage.setItem("rstUrlInput", rstUrlInput.value.trim());
     if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
-    //if (invertBsl) localStorage.setItem("invertBsl", invertBsl.checked ? "1" : "0");
-    //if (invertRst) localStorage.setItem("invertRst", invertRst.checked ? "1" : "0");
     if (invertLevel) localStorage.setItem("invertLevel", invertLevel.checked ? "1" : "0");
-  } catch {}
+  } catch {
+    // ignore
+  }
 }
+
 loadCtrlSettings();
-pinModeSelect?.addEventListener("change", () => {
-  saveCtrlSettings();
-  // Update disabled state
-  updateConnectionUI();
-});
-bslUrlInput?.addEventListener("change", saveCtrlSettings);
-rstUrlInput?.addEventListener("change", saveCtrlSettings);
-baudUrlInput?.addEventListener("change", saveCtrlSettings);
-//invertBsl?.addEventListener("change", saveCtrlSettings);
-//invertRst?.addEventListener("change", saveCtrlSettings);
-invertLevel?.addEventListener("change", saveCtrlSettings);
 
 // When bridge settings change, auto-refresh mDNS list (debounced)
 let bridgeRefreshTimer: number | null = null;
-function scheduleBridgeRefresh() {
+export function scheduleBridgeRefresh() {
   if (bridgeRefreshTimer) window.clearTimeout(bridgeRefreshTimer);
-  //setBridgeLoading();
-  // also update the helpful localhost link in the TCP HTTPS message to reflect bridge settings
-
   bridgeRefreshTimer = window.setTimeout(() => {
     // optimistic: show spinner state by setting unknown (keep last icon) then attempt refresh
     refreshMdnsList();
   }, 300);
-}
-bridgeHostInput?.addEventListener("input", scheduleBridgeRefresh);
-bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
-
-// Bridge Info modal UI wiring moved to index.js
-
-function log(msg: string, cls: "app" | "rx" | "tx" = "app") {
-  const at = new Date().toISOString().split("T")[1].replace("Z", "");
-  const line = document.createElement("div");
-  line.className = `log-line log-${cls}`;
-  line.textContent = `[${at}] ${msg}`;
-  logEl.appendChild(line);
-  if (!autoScrollEl || autoScrollEl.checked) {
-    logEl.parentElement!.scrollTop = logEl.parentElement!.scrollHeight;
-  }
-}
-
-// Bridge availability status icon helper
-function setBridgeStatus(ok: boolean) {
-  if (!bridgeStatusIcon) return;
-  bridgeStatusIcon.classList.toggle("text-success", ok);
-  bridgeStatusIcon.classList.toggle("text-danger", !ok);
-  bridgeStatusIcon.classList.remove("text-muted");
-  bridgeStatusIcon.innerHTML = `<i class="bi ${ok ? "bi-check-circle-fill" : "bi-x-circle-fill"}"></i>`;
-  bridgeStatusIcon.setAttribute("title", ok ? "Bridge reachable" : "Bridge error");
-}
-
-function setBridgeLoading() {
-  if (!bridgeStatusIcon) return;
-  bridgeStatusIcon.classList.remove("text-success", "text-danger");
-  bridgeStatusIcon.classList.add("text-muted");
-  bridgeStatusIcon.innerHTML =
-    '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-  bridgeStatusIcon.setAttribute("title", "Checking bridge...");
-}
-
-function deviceDetectBusy(busy: boolean) {
-  if (!deviceDetectSpinner) return;
-  deviceDetectSpinner.classList.toggle("d-none", !busy);
 }
 
 // Progress bar helpers (with auto-reset after completion)
@@ -472,7 +923,7 @@ function nvProgressReset(text = "") {
     clearTimeout(nvResetTimer);
     nvResetTimer = null;
   }
-  nvProgressEl.style.width = "0%";
+  nvProgressEl.style.width = "100%";
   nvProgressEl.setAttribute("aria-valuenow", "0");
   nvProgressEl.textContent = text;
 }
@@ -542,154 +993,24 @@ async function withButtonStatus(btn: HTMLButtonElement, fn: () => Promise<boolea
 
 // Log I/O visibility UI moved to index.js
 
-chooseSerialBtn.addEventListener("click", async () => {
-  if (activeConnection) {
-    log("Error: a connection is already active");
-    return;
-  }
-  try {
-    if (!("serial" in navigator)) throw new Error("Web Serial not supported");
-    const br = parseInt(bitrateInput.value, 10) || 115200;
-    const chosen = await (navigator as any).serial.requestPort();
-    await chosen.open({ baudRate: br });
-    serial?.close();
-    serial = new SerialWrap(br);
-    serial.useExistingPortAndStart(chosen);
-    // Low-level RX/TX logs
-    serial.onData((d) => {
-      log(`RX: ${bufToHex(d)}`, "rx");
-    });
-    serial.onTx((d) => {
-      log(`TX: ${bufToHex(d)}`, "tx");
-    });
-    log("Serial selected and opened");
-    // Mark connection active immediately on open
-    activeConnection = "serial";
-    updateConnectionUI();
-
-    await runConnectSequence();
-  } catch (e: any) {
-    log(`Serial error: ${e?.message || String(e)}`);
-  }
-});
-
-disconnectBtn.addEventListener("click", async () => {
-  if (!activeConnection) return;
-  if (activeConnection === "serial") {
-    try {
-      await serial?.close();
-    } catch {}
-    serial = null;
-    activeConnection = null;
-    currentConnMeta = {};
-    log("Serial disconnected");
-  } else if (activeConnection === "tcp") {
-    try {
-      tcp?.close();
-    } catch {}
-    tcp = null;
-    activeConnection = null;
-    currentConnMeta = {};
-    log("TCP disconnected");
-  }
-  updateConnectionUI();
-});
-
-connectTcpBtn.addEventListener("click", async () => {
-  if (activeConnection) {
-    log("Error: a connection is already active");
-    return;
-  }
-  try {
-    const host = hostInput.value.trim();
-    const port = parseInt(portInput.value, 10);
-    if (!host || !port) throw new Error("Enter host/port");
-    if (tcp !== null) {
-      tcp.close();
-    }
-    const wsBase = getBridgeWsBase();
-    tcp = new TcpClient(wsBase);
-    try {
-      await tcp.connect(host, port);
-    } catch (e: any) {
-      log("TCP connect error: " + (e?.message || String(e)));
-      throw e;
-    }
-    tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
-    tcp.onTx?.((d: Uint8Array) => log(`TX: ${bufToHex(d)}`, "tx"));
-    log(`TCP connected to ${host}:${port}`);
-
-    activeConnection = "tcp";
-    updateConnectionUI();
-    await runConnectSequence();
-  } catch (e: any) {
-    log(`TCP error: ${e?.message || String(e)}`);
-  }
-});
-
 function updateOptionsStateForFile(selected: boolean) {
+  const family = getSelectedFamily();
   if (!selected) {
     optWrite.checked = false;
     optWrite.disabled = true;
-    optVerify.checked = false;
-    optVerify.disabled = true;
-  } else {
-    optWrite.disabled = false;
-    optVerify.disabled = false;
-    optWrite.checked = true;
-    optVerify.checked = true;
-  }
-}
-
-function getSelectedFwNotes() {
-  if (!netFwSelect || !netFwItems) return;
-  const opt = netFwSelect.selectedOptions[0];
-  if (!opt || !opt.value) return;
-  const item = netFwItems.find(function (it) {
-    return it.key === opt.value;
-  });
-  return item && item.notes;
-}
-
-// Enable/disable notes button on select change
-netFwSelect?.addEventListener("change", async () => {
-  if (!netFwSelect || !netFwNotesBtn) return;
-  const notes = getSelectedFwNotes();
-  netFwNotesBtn.disabled = !notes;
-  // Existing logic: load firmware
-  const opt = netFwSelect.selectedOptions[0];
-  const link = opt?.getAttribute("data-link");
-  if (!link) return;
-  try {
-    const img = await downloadFirmwareFromUrl(link);
-    hexImage = img;
-    updateOptionsStateForFile(true);
-    log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
-  } catch (e: any) {
-    log("HEX download error: " + (e?.message || String(e)));
-  }
-});
-
-localFile.addEventListener("change", async () => {
-  const f = localFile.files?.[0];
-  if (!f) return;
-  try {
-    log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
-    // Read explicitly using slice to ensure full file read
-    const buf = await f.slice(0, f.size).arrayBuffer();
-    //log(`ArrayBuffer read: ${buf.byteLength} bytes`);
-    // If lengths differ, fail early so we can debug
-    if (buf.byteLength !== f.size) {
-      log(`Warning: read length (${buf.byteLength}) != file.size (${f.size})`);
+    if (family !== "esp") {
+      optVerify.checked = false;
+      optVerify.disabled = true;
     }
-    const img = parseImageFromBuffer(new Uint8Array(buf));
-    hexImage = img;
-    log(`Image loaded: ${f.name}, ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
-    updateOptionsStateForFile(true);
-  } catch (e: any) {
-    log("File load error: " + (e?.message || String(e)));
+  } else {
+    optWrite.checked = true;
+    optWrite.disabled = false;
+    if (family !== "esp") {
+      optVerify.checked = true;
+      optVerify.disabled = false;
+    }
   }
-});
+}
 
 function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb: (d: Uint8Array) => void) => void } {
   if (activeConnection === "serial" && serial)
@@ -699,52 +1020,8 @@ function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb
   throw new Error("No transport connected");
 }
 
-// ti_toolsSync provided by ti_tools (imported as bslSync for compatibility)
-
-// // Build and send a bridge URL, allowing absolute URL or relative path to bridge base; supports {PORT}
-// async function sendBridgeCmd(pathOrUrl: string): Promise<string> {
-//   const base = getBridgeBase();
-//   const rawPort = Number(portInput.value) || 0;
-//   const host = hostInput.value.trim();
-//   const p0 = (pathOrUrl || "")
-//     .replace(/\{PORT\}/g, String(rawPort))
-//     .replace(/\{HOST\}/g, host)
-//     .replace(/\{BRIDGE\}/g, base.replace(/^https?:\/\//, ""));
-//   const url = /^https?:\/\//i.test(p0) ? p0 : `${base}/${p0.replace(/^\/+/, "")}`;
-//   log(`HTTP: GET ${url}`);
-//   const r = await httpGetWithFallback(url);
-//   if (r.opaque) {
-//     log(`HTTP bridge response: opaque (no-cors)`);
-//     return "";
-//   }
-//   log(`HTTP bridge response: ${r.text ?? ""}`);
-//   return r.text ?? "";
-// }
-
-// // Build and send a device URL, allowing absolute URL or relative path to device host; supports placeholders
-// async function sendDeviceCmd(pathOrUrl: string): Promise<string> {
-//   const devHost = hostInput.value.trim();
-//   const rawPort = Number(portInput.value) || 0;
-//   const bridge = getBridgeBase().replace(/^https?:\/\//, "");
-//   const p0 = (pathOrUrl || "")
-//     .replace(/\{PORT\}/g, String(rawPort))
-//     .replace(/\{HOST\}/g, devHost)
-//     .replace(/\{BRIDGE\}/g, bridge);
-//   const url = /^https?:\/\//i.test(p0) ? p0 : `http://${devHost}/${p0.replace(/^\/+/, "")}`;
-//   log(`HTTP: GET ${url}`);
-//   const r = await httpGetWithFallback(url);
-//   if (r.opaque) {
-//     log(`HTTP device response: opaque (no-cors)`);
-//     return "";
-//   }
-//   log(`HTTP device response: ${r.text ?? ""}`);
-//   return r.text ?? "";
-// }
-
 // Unified: enter BSL for current transport (optimized per concept)
 async function enterBsl(): Promise<void> {
-  //  const auto = !!autoBslToggle?.checked;
-  //  const remotePinMode = !!pinModeSelect?.checked;
   const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath || "").trim();
   if (activeConnection === "serial") {
     log(
@@ -768,6 +1045,9 @@ async function enterBsl(): Promise<void> {
     }
     if (getSelectedFamily() === "ti") {
       await bslUseLines();
+    }
+    if (getSelectedFamily() === "esp") {
+      log("ESP: Use 'Connect' to enter bootloader automatically.");
     }
     return;
   }
@@ -828,6 +1108,13 @@ async function performReset(): Promise<void> {
       await getActiveLink().write(encoder.encode("2\r\n"));
       await sleep(500); // Give time for bootloader to process
       await resetUseLines(); // Then reset the device
+    } else if (getSelectedFamily() === "esp") {
+      if (esploader) {
+        log("ESP: Resetting...");
+        await (esploader as any).after("hard_reset");
+      } else {
+        log("ESP: Not connected");
+      }
     } else {
       await resetUseLines();
     }
@@ -932,7 +1219,9 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
               if (ieeeMacEl) ieeeMacEl.value = macFmt;
             }
           }
-        } catch {}
+        } catch {
+          // ignore
+        }
       } else if (chipIsCC2538) {
         detectedFamily = "cc2538";
         // Read flash size from FLASH_CTRL_DIECFG0
@@ -955,7 +1244,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
         const ieee_addr_end = await (bsl as any).memRead?.(addr_ieee_address_primary + 4);
         if (ieee_addr_start && ieee_addr_end && ieee_addr_start.length >= 4 && ieee_addr_end.length >= 4) {
           let ieee_addr: Uint8Array;
-          if (ieee_addr_start.slice(0, 3).every((b, i) => b === ti_oui[i])) {
+          if (ieee_addr_start.slice(0, 3).every((b: number, i: number) => b === ti_oui[i])) {
             // TI OUI at start, append end
             ieee_addr = new Uint8Array([...ieee_addr_start, ...ieee_addr_end]);
           } else {
@@ -972,7 +1261,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
         // Set chip model
         if (chipModelEl) chipModelEl.value = "CC2538";
       }
-    } else {
+    } else if (family === "sl") {
       detectedFamily = null;
       // Silabs stub path for now
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
@@ -982,6 +1271,8 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       refreshNetworkFirmwareList(info.chipName).catch((e) =>
         log("Network FW list fetch failed: " + (e?.message || String(e)))
       );
+    } else if (family === "esp") {
+      log("ESP: Chip info detected during connection");
     }
   } catch (e: any) {
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
@@ -993,7 +1284,6 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
   return detectedFamily;
 }
 
-// ...existing code...
 async function pingWithBaudRetries(
   link: any,
   baudCandidates: number[] = [9600, 19200, 38400, 57600, 115200, 230400, 460800]
@@ -1015,7 +1305,9 @@ async function pingWithBaudRetries(
       //log("Ping succeeded");
       return ok0;
     }
-  } catch {}
+  } catch {
+    // ignore
+  }
 
   // Only attempt baud cycling for real serial connection
   //if (activeConnection !== "serial" || !serial) return false;
@@ -1060,7 +1352,9 @@ async function pingWithBaudRetries(
         try {
           bitrateInput.value = String(b);
           updateConnectionUI();
-        } catch {}
+        } catch {
+          // ignore
+        }
         log(`Ping succeeded at ${b}bps`);
         return true;
       } else {
@@ -1083,12 +1377,15 @@ async function pingWithBaudRetries(
 
     try {
       bitrateInput.value = String(originalBaud);
-    } catch {}
-  } catch {}
+    } catch {
+      // ignore
+    }
+  } catch {
+    // ignore
+  }
 
   return false;
 }
-// ...existing code...
 
 // Full connect sequence: enter BSL → read chip info → reset → read firmware version
 async function runConnectSequence(): Promise<void> {
@@ -1100,7 +1397,9 @@ async function runConnectSequence(): Promise<void> {
       if (getCtrlMode() === "bridge-sc") {
         await sleep(250);
       }
-    } catch {}
+    } catch {
+      // ignore
+    }
     const family = getSelectedFamily();
     if (family === "ti") {
       await enterBsl().catch((e: any) => log("Enter BSL failed: " + (e?.message || String(e))));
@@ -1131,7 +1430,7 @@ async function runConnectSequence(): Promise<void> {
       } catch {
         log("FW version check skipped");
       }
-    } else {
+    } else if (family === "sl") {
       // Silabs path: enter bootloader, read BL version, then reset back to app
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       try {
@@ -1154,7 +1453,6 @@ async function runConnectSequence(): Promise<void> {
       // Read application firmware version via EZSP
       await sleep(1000); // Give more time for application to start
       try {
-        const link = getActiveLink();
         if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
         const ezspVersion = await sl_tools.getApplicationVersion();
         if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
@@ -1168,73 +1466,28 @@ async function runConnectSequence(): Promise<void> {
   }
 }
 
-function makeOptionLabel(item: { ver: number; file: string; category: string }) {
-  return `[${item.category.charAt(0).toUpperCase()}] ${item.ver} — ${item.file}`;
-}
-
-async function refreshNetworkFirmwareList(chipModel?: string) {
-  if (!netFwSelect) return;
-  const chip = chipModel || chipModelEl?.value || "";
-  netFwSelect.innerHTML = "";
-  const def = document.createElement("option");
-  def.value = "";
-  def.textContent = chip ? `— Firmware for ${chip} —` : "— Detect device first —";
-  netFwSelect.appendChild(def);
-  if (!chip) return;
-
-  try {
-    const man = netFwCache || (netFwCache = await fetchManifest());
-    const filtered = filterFwByChip(man, chip);
-    const items: Array<{ key: string; link: string; ver: number; notes?: string; label: string }> = [];
-    for (const category of Object.keys(filtered)) {
-      for (const it of filtered[category]!) {
-        const key = `${category}|${it.file}`;
-        items.push({
-          key,
-          link: it.link,
-          ver: it.ver,
-          notes: it.notes,
-          label: makeOptionLabel({ ver: it.ver, file: it.file, category }),
-        });
-      }
-    }
-    // sort by ver desc overall
-    items.sort((a, b) => b.ver - a.ver);
-    netFwItems = items;
-    // Make available to index.js
-    (window as any).netFwItems = netFwItems;
-    (window as any).netFwSelect = netFwSelect;
-    for (const it of items) {
-      const o = document.createElement("option");
-      o.value = it.key;
-      o.textContent = it.label;
-      o.setAttribute("data-link", it.link);
-      netFwSelect.appendChild(o);
-    }
-    if (items.length === 0) {
-      const o = document.createElement("option");
-      o.value = "";
-      o.textContent = "— No matching firmware —";
-      netFwSelect.appendChild(o);
-    }
-    log(`Cloud FW: ${items.length} options`);
-  } catch (e: any) {
-    log("Cloud FW manifest error: " + (e?.message || String(e)));
-  }
-}
-
-netFwRefreshBtn?.addEventListener("click", () => {
-  const model = chipModelEl?.value || "";
-  refreshNetworkFirmwareList(model);
-});
-
 // --- Firmware notes modal logic ---
 
 async function flash(detectedTiFamily?: TiChipFamily | null) {
-  if (!hexImage) throw new Error("Load HEX first");
-
   // Show warning
   if (flashWarning) flashWarning.classList.remove("d-none");
+
+  if (getSelectedFamily() === "esp") {
+    if (optErase.checked) {
+      await eraseEsp();
+    }
+    if (optWrite.checked) {
+      await flashEsp();
+    }
+
+    if (flashWarning) {
+      setTimeout(() => flashWarning?.classList.add("d-none"), 1000);
+      performReset().catch((e) => log("Reset failed: " + (e?.message || String(e))));
+    }
+    return;
+  }
+
+  if (!hexImage) throw new Error("Load HEX first");
 
   if (getSelectedFamily() === "ti") {
     // If using Web Serial, bump baud to 500000 for faster flashing
@@ -1266,7 +1519,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Enter BSL failed: " + (e?.message || String(e)));
   }
 
-  // Branch for Silabs vs TI
+  // Branch for Silabs vs TI vs ESP
+
   if (getSelectedFamily() === "sl") {
     if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
 
@@ -1302,7 +1556,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         log("Bank erase done");
         fwProgress(100, `Erase done`);
         await sleep(500);
-      } catch (e: any) {
+      } catch {
         log("Bank erase not supported or failed, erasing sectors...");
         // Sector size heuristic: CC26xx page size 4KB; some variants 8KB. We can try 8KB if CRC verify later fails.
         const pageSize = 4096;
@@ -1312,8 +1566,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
           fwProgress(Math.min(100, Math.round(((a - from) / (to - from)) * 100)), `Erasing... ${toHex(a, 8)}`);
           try {
             await (bsl as any).sectorErase?.(a);
-          } catch (se: any) {
-            throw se;
+          } catch {
+            // ignore sector erase errors
           }
         }
         log("Sector erase done");
@@ -1338,8 +1592,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     const zero = 0x00;
 
     for (let off = 0; off < data.length; off += chunkSize) {
-      let end = Math.min(off + chunkSize, data.length);
-      let chunk = data.subarray(off, end);
+      const end = Math.min(off + chunkSize, data.length);
+      const chunk = data.subarray(off, end);
       // Skip chunks that are fully 0x00 to avoid unnecessary writes
       let skip = true;
       const firstByte = chunk[0];
@@ -1380,8 +1634,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         const zero = 0x00;
         // Apply written chunks
         for (let off = 0; off < data.length; off += chunkSize) {
-          let end = Math.min(off + chunkSize, data.length);
-          let chunk = data.subarray(off, end);
+          const end = Math.min(off + chunkSize, data.length);
+          const chunk = data.subarray(off, end);
           let skip = true;
           const firstByte = chunk[0];
           if (firstByte !== zero) {
@@ -1411,8 +1665,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         const zero = 0x00;
         // Apply written chunks
         for (let off = 0; off < data.length; off += chunkSize) {
-          let end = Math.min(off + chunkSize, data.length);
-          let chunk = data.subarray(off, end);
+          const end = Math.min(off + chunkSize, data.length);
+          const chunk = data.subarray(off, end);
           let skip = true;
           const firstByte = chunk[0];
           if (firstByte !== zero) {
@@ -1454,9 +1708,9 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Serial: failed to switch baud");
   }
 
-  if (flashWarning) {
-    setTimeout(() => flashWarning.classList.add("d-none"), 1000);
-  }
+  setTimeout(() => {
+    if (flashWarning) flashWarning.classList.add("d-none");
+  }, 1000);
 }
 
 async function bslUseLines() {
@@ -1495,7 +1749,9 @@ async function resetUseLines() {
 
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
+  nvProgressSetColor("primary");
   nvProgressReset("Reading...");
+  await sleep(500);
   const link = getActiveLink();
   const payload = await ti_tools.nvramReadAll(link, nvProgress);
   nvProgress(100, "Done");
@@ -1503,87 +1759,32 @@ async function nvramReadAll(): Promise<any> {
 }
 
 async function nvramEraseAll(): Promise<void> {
+  nvProgressSetColor("danger");
   nvProgressReset("Erasing...");
+  await sleep(500);
   const link = getActiveLink();
   await ti_tools.nvramEraseAll(link, nvProgress);
   nvProgress(100, "Erase done");
 }
 
 async function nvramWriteAll(obj: any): Promise<void> {
+  nvProgressSetColor("warning");
   nvProgressReset("Writing...");
+  await sleep(500);
   const link = getActiveLink();
   await ti_tools.nvramWriteAll(link, obj, (s: string) => log(s), nvProgress);
   nvProgress(100, "Write done");
 }
 
-// UI wiring for NVRAM
-btnNvRead?.addEventListener("click", async () => {
-  await withButtonStatus(btnNvRead!, async () => {
-    try {
-      nvProgressSetColor("primary");
-      nvProgressReset("Reading...");
-      const payload = await nvramReadAll();
-      const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      // Build filename: nvram_<model>_<ieee>_<YYYYMMDD-HHMMSS>.json
-      const modelRaw = (chipModelEl?.value || "device").trim();
-      const modelSafe = modelRaw.replace(/\s+/g, "-").replace(/[^A-Za-z0-9._-]/g, "");
-      const ieeeRaw = (ieeeMacEl?.value || "").toUpperCase();
-      const ieeeSafe = ieeeRaw.replace(/[^A-F0-9]/g, ""); // drop ':' and anything non-hex
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(
-        d.getMinutes()
-      )}${pad(d.getSeconds())}`;
-      const nameParts = ["NVRAM", modelSafe || "device", ieeeSafe || "unknown", ts];
-      a.download = nameParts.join("_") + ".json";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      log("NVRAM backup downloaded");
-      nvProgress(100, "Done");
-      return true;
-    } catch (e: any) {
-      log("NVRAM read error: " + (e?.message || String(e)));
-      nvProgressReset("Error");
-      throw e;
-    }
-  });
-});
-
-btnNvErase?.addEventListener("click", async () => {
-  await withButtonStatus(btnNvErase!, async () => {
-    try {
-      nvProgressSetColor("danger");
-      nvProgressReset("Erasing...");
-      await nvramEraseAll();
-      log("NVRAM erase done. Resetting...");
-      try {
-        await performReset();
-      } catch {}
-      nvProgress(100, "Done");
-      return true;
-    } catch (e: any) {
-      log("NVRAM erase error: " + (e?.message || String(e)));
-      nvProgressReset("Error");
-      throw e;
-    }
-  });
-});
-
 // DTR = BSL(FLASH), RTS = RESET; (active low);
 // without NPN - rts=0 reset=0, dtr=0 bsl=0
 // with NPN invert - rts=0 reset=1, dtr=0 bsl=1
-
 const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
   const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
   // just for simplicity
-  let bsl = bslLevelEff;
-  let rst = rstLevelEff;
+  const bsl = bslLevelEff;
+  const rst = rstLevelEff;
   if (activeConnection === "serial") {
     log(`CTRL(serial): RTS(RST)=${rst ? "1" : "0"} DTR(BSL)=${bsl ? "1" : "0"}`);
     const p: any = serial as any;
@@ -1610,7 +1811,7 @@ const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
 
 async function changeBaudOverTcp(baud: number): Promise<void> {
   if (activeConnection !== "tcp" || !tcp) throw new Error("No TCP connection");
-  const tpl = (baudUrlInput?.value || DEFAULT_CONTROL.baudPath).trim();
+  const tpl = (baudUrlInput?.value || DEFAULT_CONTROL.baudPath || "").trim();
   // const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
   const hasSet = /\{SET\}/.test(tpl);
   // const hasRstSet = /\{SET\}/.test(rstTpl);
@@ -1630,8 +1831,10 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   try {
     try {
       tcp.close();
-    } catch {}
-    const wsBase = getBridgeWsBase();
+    } catch {
+      // ignore
+    }
+    const wsBase = getBridgeBase("ws");
     tcp = new TcpClient(wsBase);
     await tcp.connect(host, port).catch;
     tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
@@ -1649,223 +1852,6 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
     throw e;
   }
 }
-
-enterBslBtn?.addEventListener("click", async () => {
-  await withButtonStatus(enterBslBtn!, async () => {
-    await enterBsl();
-  });
-});
-
-resetBtn?.addEventListener("click", async () => {
-  await withButtonStatus(resetBtn!, async () => {
-    await performReset();
-  });
-});
-
-btnPing?.addEventListener("click", async () => {
-  await withButtonStatus(btnPing!, async () => {
-    const family = getSelectedFamily();
-    if (family !== "ti") {
-      log("Ping is not supported for Silabs yet");
-      throw new Error("Unsupported for Silabs");
-    }
-    const link = getActiveLink();
-    log("Pinging application...");
-    const ok = await ti_tools.pingApp(link);
-    if (!ok) throw new Error("Ping failed");
-    //else log("Pong");
-  });
-});
-
-btnVersion?.addEventListener("click", async () => {
-  await withButtonStatus(btnVersion!, async () => {
-    log("Checking firmware version...");
-    const family = getSelectedFamily();
-    if (family === "ti") {
-      const link = getActiveLink();
-
-      const info = await ti_tools.getFwVersion(link);
-      const ok = !!info;
-      if (info && firmwareVersionEl) {
-        firmwareVersionEl.value = String(info.fwRev);
-        log(`FW version: ${info.fwRev}`);
-      }
-      if (!ok) throw new Error("Version not available");
-    } else {
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
-      const ezspVersion = await sl_tools.getApplicationVersion();
-      if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-      if (ezspVersion && firmwareVersionEl) {
-        firmwareVersionEl.value = String(ezspVersion || "");
-        log(`FW version: ${ezspVersion || "unknown"}`);
-      } else {
-        throw new Error("Version not available");
-      }
-    }
-  });
-});
-
-// Get Model action: detect chip and memory without flashing
-btnGetModel?.addEventListener("click", async () => {
-  await withButtonStatus(btnGetModel!, async () => {
-    await readChipInfo();
-  });
-});
-
-btnNvWrite?.addEventListener("click", async () => {
-  await withButtonStatus(btnNvWrite!, async () => {
-    try {
-      nvProgressSetColor("warning");
-      nvProgressReset("Writing...");
-      // Open file picker on demand
-      let text: string | null = null;
-      const hasPicker = typeof (window as any).showOpenFilePicker === "function";
-      if (hasPicker) {
-        try {
-          const handles = await (window as any).showOpenFilePicker({
-            multiple: false,
-            types: [
-              {
-                description: "JSON Files",
-                accept: { "application/json": [".json"] },
-              },
-            ],
-          });
-          const handle = handles && handles[0];
-          if (handle) {
-            const file = await handle.getFile();
-            text = await file.text();
-          }
-        } catch (e: any) {
-          // User canceled: do NOT fallback to avoid reopening dialog
-          if (e && (e.name === "AbortError" || e.code === 20)) {
-            log("NVRAM JSON file not selected");
-            throw e; // propagate to show ❌
-          }
-          // Non-cancel error: fallback below
-        }
-      }
-      if (text == null && !hasPicker) {
-        // Fallback for browsers without showOpenFilePicker
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = "application/json";
-        input.style.position = "fixed";
-        input.style.left = "-10000px";
-        document.body.appendChild(input);
-        const picked = await new Promise<File | null>((resolve) => {
-          let settled = false;
-          const cleanup = () => {
-            input.removeEventListener("change", onChange);
-            window.removeEventListener("focus", onFocus);
-          };
-          const onChange = () => {
-            if (settled) return;
-            settled = true;
-            const f = input.files && input.files[0] ? input.files[0] : null;
-            cleanup();
-            resolve(f);
-          };
-          const onFocus = () => {
-            // When the dialog closes (either by cancel or pick), focus returns to window.
-            // If no change event fired, treat as cancel.
-            setTimeout(() => {
-              if (settled) return;
-              settled = true;
-              cleanup();
-              resolve(null);
-            }, 10000);
-          };
-
-          input.addEventListener("change", onChange, { once: true });
-          window.addEventListener("focus", onFocus, { once: true });
-          input.click();
-        });
-        if (picked) {
-          text = await picked.text();
-        }
-        input.remove();
-      }
-      if (!text) {
-        const err = new Error("NVRAM JSON file not selected");
-        log(err.message);
-        throw err;
-      }
-
-      const j = JSON.parse(text);
-      await nvramWriteAll(j);
-      log("NVRAM write done. Resetting...");
-      try {
-        await performReset();
-      } catch {}
-      nvProgress(100, "Done");
-      return true;
-    } catch (e: any) {
-      log("NVRAM write error: " + (e?.message || String(e)));
-      nvProgressReset("Error");
-      throw e;
-    }
-  });
-});
-
-// Flash start button with status feedback
-btnFlash.addEventListener("click", async () => {
-  await withButtonStatus(btnFlash, async () => {
-    try {
-      await flash(detectedTiChipFamily);
-      log("Flashing finished. Restarting device...");
-      try {
-        await performReset();
-        log("Restart done");
-      } catch (e: any) {
-        log("Restart error: " + (e?.message || String(e)));
-      }
-
-      const family = getSelectedFamily();
-      if (family == "ti") {
-        //log("Pinging device...");
-        try {
-          const link = getActiveLink();
-          const ok = await pingWithBaudRetries(link);
-          if (!ok) log("Ping: timed out or no response");
-        } catch (e: any) {
-          log("Ping error: " + (e?.message || String(e)));
-        }
-      }
-      log("Checking firmware version...");
-      if (family == "sl") {
-        // After flash, re-read device info
-        await sleep(5000);
-
-        const link = getActiveLink();
-        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
-        const ezspVersion = await sl_tools.getApplicationVersion();
-        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-        log(`EZSP app version: ${ezspVersion}`);
-      }
-      if (family == "ti") {
-        try {
-          // use local wrapper to log and update UI
-          const info = await ti_tools.getFwVersion(getActiveLink());
-          if (info && firmwareVersionEl) {
-            firmwareVersionEl.value = String(info.fwRev);
-            log(`FW version: ${info.fwRev}`);
-          }
-        } catch (e: any) {
-          log("Version read error: " + (e?.message || String(e)));
-        }
-      }
-      return true;
-    } catch (e: any) {
-      log("Flash error: " + (e?.message || String(e)));
-      throw e;
-    }
-  });
-});
-
-// Initialize options state on load
-updateOptionsStateForFile(false);
-updateConnectionUI();
 
 // Map selected template from select to the corresponding input URL template
 function applySelectToInput(sel: HTMLSelectElement | null, input: HTMLInputElement | null) {
@@ -1903,44 +1889,8 @@ function applySelectToInput(sel: HTMLSelectElement | null, input: HTMLInputEleme
   } else if (v == "tasmota:rst") {
     input.value = "http://{HOST}/cm?cmnd=Power1%20{SET}";
   }
-
-  // else {
-  //   input.value = `http://{BRIDGE}/gpio?path=${encodeURIComponent(v)}&set={SET}`;
-  // }
-
   saveCtrlSettings();
-  //log(`Applied template ${v} -> ${input.id}`);
 }
-
-// Attach change listeners to the template selects so they populate inputs
-bslUrlSelect?.addEventListener("change", () => applySelectToInput(bslUrlSelect, bslUrlInput));
-rstUrlSelect?.addEventListener("change", () => applySelectToInput(rstUrlSelect, rstUrlInput));
-baudUrlSelect?.addEventListener("change", () => applySelectToInput(baudUrlSelect, baudUrlInput));
-
-// Log actions
-const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonElement | null;
-const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
-btnClearLog?.addEventListener("click", () => {
-  logEl.innerHTML = "";
-});
-btnCopyLog?.addEventListener("click", async () => {
-  const lines = Array.from(logEl.querySelectorAll<HTMLElement>(".log-line"))
-    .filter((el) => {
-      // when showIo is unchecked, omit RX/TX lines (they have classes log-rx / log-tx)
-      if (typeof showIoEl !== "undefined" && showIoEl !== null && !showIoEl.checked) {
-        if (el.classList.contains("log-rx") || el.classList.contains("log-tx")) return false;
-      }
-      return true;
-    })
-    .map((el) => el.innerText)
-    .join("\n");
-  try {
-    await navigator.clipboard.writeText(lines);
-    log("Log copied to clipboard");
-  } catch (e: any) {
-    log("Copy failed: " + (e?.message || String(e)));
-  }
-});
 
 // --- mDNS discovery via local bridge ---
 async function refreshMdnsList() {
@@ -1951,21 +1901,6 @@ async function refreshMdnsList() {
     return;
   }
   setBridgeLoading();
-  // try {
-  //   var host =
-  //     (bridgeHostInput && bridgeHostInput.value && bridgeHostInput.value.trim()) ||
-  //     localStorage.getItem("bridgeHost") ||
-  //     "127.0.0.1";
-  //   var port = Number((bridgePortInput && bridgePortInput.value) || localStorage.getItem("bridgePort") || 3000) || 3000;
-  //   var link = document.getElementById("tcpLocalhostLink") as HTMLAnchorElement | null;
-  //   if (link) {
-  //     link.href = "http://" + host + ":" + port;
-  //     link.textContent = host === "localhost" ? "localhost" : host + ":" + port;
-  //   }
-  // } catch (e) {
-  //   // ignore
-  //   console.log(e);
-  // }
 
   // Refresh control lists
   refreshControlLists();
@@ -1979,7 +1914,7 @@ async function refreshMdnsList() {
       // special token for local serial exposure by the bridge
       "local.serial",
     ].join(",");
-    const base = getBridgeBase();
+    const base = getBridgeBase("http");
     const url = `${base}/mdns?types=${encodeURIComponent(types)}&timeout=3000`;
 
     const resp = await fetch(url);
@@ -2042,37 +1977,11 @@ async function refreshMdnsList() {
   }
 }
 
-mdnsRefreshBtn?.addEventListener("click", () => {
-  if (activeConnection) return;
-  refreshMdnsList();
-});
-mdnsSelect?.addEventListener("change", () => {
-  if (!mdnsSelect) return;
-  if (mdnsSelect.selectedOptions[0].value === "manual") {
-    tcpLinksPanel?.classList.remove("d-none");
-  }
-  const opt = mdnsSelect.selectedOptions[0];
-  const h = opt?.getAttribute("data-host") || "";
-  const p = Number(opt?.getAttribute("data-port") || 0);
-  if (h) hostInput.value = h;
-  if (p) portInput.value = String(p);
-  // Capture metadata for strategy
-  const t = opt?.getAttribute("data-type") || undefined;
-  const pr = opt?.getAttribute("data-protocol") || undefined;
-  currentConnMeta = { type: t, protocol: pr };
-  // Auto-apply presets on selection change
-  applyControlConfig(deriveControlConfig(currentConnMeta), "mdns");
-  updateConnectionUI();
-});
-
-// auto-refresh list on load (non-blocking)
-refreshMdnsList().catch(() => {});
-
 // Populate control template selects (BSL / RST) from bridge /gl endpoint
 async function refreshControlLists() {
   if (!bslUrlSelect || !rstUrlSelect) return;
   try {
-    const base = getBridgeBase();
+    const base = getBridgeBase("http");
     const url = `${base}/gl`;
     let j: any = {};
     try {
@@ -2164,14 +2073,7 @@ async function refreshControlLists() {
         sel.appendChild(lg);
       }
 
-      // add XZG optgroup
-      addXZGOptgroup(sel, defaultSerial || null);
-
-      // add ESPHome optgroup
-      addESPHomeOptgroup(sel, defaultSerial || null);
-
-      // add Tasmota optgroup
-      addTasmotaOptgroup(sel, defaultSerial || null);
+      addControlTemplateOptgroups(sel, defaultSerial || null);
     }
 
     // Fill both selects
@@ -2201,117 +2103,190 @@ function addSerialOptgroup(target: HTMLSelectElement, def: string | null) {
   if (def) {
     try {
       target.value = def;
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 }
+// Define control templates configuration
+const controlTemplates = [
+  {
+    label: "XZG Firmware",
+    options: [
+      { value: "xzg:bsl", text: "BSL mode" },
+      { value: "xzg:rst", text: "RST mode" },
+    ],
+  },
+  {
+    label: "ESP Home",
+    options: [
+      { value: "esphome:bsl", text: "BSL pin" },
+      { value: "esphome:rst", text: "RST pin" },
+    ],
+  },
+  {
+    label: "Tasmota",
+    options: [
+      { value: "tasmota:rst", text: "Relay 1" },
+      { value: "tasmota:bsl", text: "Relay 2" },
+    ],
+  },
+];
 
-function addXZGOptgroup(target: HTMLSelectElement, def: string | null) {
-  const xg = document.createElement("optgroup");
-  xg.label = "XZG Firmware";
-  const oBsl = document.createElement("option");
-  oBsl.value = "xzg:bsl";
-  oBsl.textContent = "BSL mode";
-  xg.appendChild(oBsl);
-  const oRst = document.createElement("option");
-  oRst.value = "xzg:rst";
-  oRst.textContent = "RST mode";
-  xg.appendChild(oRst);
-  target.appendChild(xg);
+function addControlTemplateOptgroups(target: HTMLSelectElement, def: string | null) {
+  controlTemplates.forEach((template) => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = template.label;
+
+    template.options.forEach((opt) => {
+      const option = document.createElement("option");
+      option.value = opt.value;
+      option.textContent = opt.text;
+      optgroup.appendChild(option);
+    });
+
+    target.appendChild(optgroup);
+  });
+
   if (def) {
     try {
       target.value = def;
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
 }
 
-function addESPHomeOptgroup(target: HTMLSelectElement, def: string | null) {
-  const xg = document.createElement("optgroup");
-  xg.label = "ESP Home";
-  const oBsl = document.createElement("option");
-  oBsl.value = "esphome:bsl";
-  oBsl.textContent = "BSL pin";
-  xg.appendChild(oBsl);
-  const oRst = document.createElement("option");
-  oRst.value = "esphome:rst";
-  oRst.textContent = "RST pin";
-  xg.appendChild(oRst);
-  target.appendChild(xg);
-  if (def) {
-    try {
-      target.value = def;
-    } catch {}
+// --- ESP File Management ---
+
+function createEspFileRow() {
+  const row = document.createElement("div");
+  row.className = "row g-2 mb-2 align-items-center esp-file-row";
+  row.innerHTML = `
+    <div class="col-auto">
+      <input type="text" class="form-control font-monospace esp-addr-input" placeholder="0x1000" style="width: 100px;" value="0x0">
+    </div>
+    <div class="col">
+      <input class="form-control esp-file-input" type="file" accept=".bin" />
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-danger btn-lg remove-row" type="button"><i class="bi bi-x-circle"></i></button>
+    </div>
+  `;
+  row.querySelector(".remove-row")?.addEventListener("click", () => {
+    row.remove();
+    if (espFilesContainer) {
+      // Ensure at least one row remains
+      if (espFilesContainer.children.length === 0) {
+        updateOptionsStateForFile(false);
+        addEspFileRow();
+      }
+    }
+  });
+  row.querySelector(".esp-file-input")?.addEventListener("change", () => {
+    updateOptionsStateForFile(true);
+  });
+  return row;
+}
+
+function addEspFileRow() {
+  if (!espFilesContainer) return;
+  espFilesContainer.appendChild(createEspFileRow());
+}
+
+// Add initial row if empty
+if (espFilesContainer && espFilesContainer.children.length === 0) {
+  addEspFileRow();
+}
+
+function readAsBinaryString(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
+        resolve(reader.result as string);
+      } else {
+        reject(new Error("Empty file"));
+      }
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsBinaryString(file);
+  });
+}
+
+async function eraseEsp() {
+  if (!esploader) throw new Error("ESP loader not initialized");
+  //log("Erasing ESP flash (this may take a while)...");
+  fwProgress(50, "Erasing ESP...");
+
+  try {
+    await (esploader as any).eraseFlash();
+    log("ESP Erase complete!");
+    fwProgress(100, "Erase Done");
+    await sleep(500);
+  } catch (e: any) {
+    log("ESP Erase error: " + (e?.message || String(e)));
+    throw e;
   }
 }
 
-function addTasmotaOptgroup(target: HTMLSelectElement, def: string | null) {
-  const tg = document.createElement("optgroup");
-  tg.label = "Tasmota";
-  const oRst = document.createElement("option");
-  oRst.value = "tasmota:rst";
-  oRst.textContent = "Relay 1";
-  tg.appendChild(oRst);
-  const oBsl = document.createElement("option");
-  oBsl.value = "tasmota:bsl";
-  oBsl.textContent = "Relay 2";
-  tg.appendChild(oBsl);
+async function flashEsp() {
+  if (!esploader) throw new Error("ESP loader not initialized");
 
-  target.appendChild(tg);
-  if (def) {
-    try {
-      target.value = def;
-    } catch {}
+  const rows = document.querySelectorAll(".esp-file-row");
+  const fileArray: { data: string; address: number }[] = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const addrInput = row.querySelector(".esp-addr-input") as HTMLInputElement;
+    const fileInput = row.querySelector(".esp-file-input") as HTMLInputElement;
+
+    const file = fileInput.files?.[0];
+    if (!file) continue; // Skip empty rows
+
+    let addrStr = addrInput.value.trim();
+    if (!addrStr) addrStr = "0x0";
+    const addr = parseInt(addrStr, 16);
+    if (isNaN(addr)) throw new Error(`Invalid address: ${addrStr}`);
+
+    log(`Reading ${file.name} for address 0x${addr.toString(16)}...`);
+    const data = await readAsBinaryString(file);
+    fileArray.push({ data, address: addr });
   }
+
+  if (fileArray.length === 0) throw new Error("No files selected for flashing");
+
+  log(`Flashing ${fileArray.length} files...`);
+  fwProgressReset("Flashing ESP...");
+
+  const flashOptions = {
+    fileArray,
+    flashSize: "keep",
+    flashMode: "keep",
+    flashFreq: "keep",
+    eraseAll: false,
+    compress: true,
+    reportProgress: (fileIndex: number, written: number, total: number) => {
+      const pct = Math.round((written / total) * 100);
+      fwProgress(pct, `File ${fileIndex + 1}/${fileArray.length}: ${written}/${total}`);
+    },
+  } as any;
+
+  await esploader.writeFlash(flashOptions);
+  log("ESP Flash complete!");
+  fwProgress(100, "Done");
 }
 
-// UI update for chip family selection
-const chipTiRadio = document.getElementById("chip_ti") as HTMLInputElement;
-const chipSlRadio = document.getElementById("chip_si") as HTMLInputElement;
+// On load
 
-function updateUIForFamily() {
-  const family = getSelectedFamily();
-  const cloudFw = document.getElementById("cloudFirmwareSection");
-  const nvram = document.getElementById("nvramSection");
-  const flashSize = document.getElementById("flashSizeWrap");
-  const ieeeMac = document.getElementById("ieeeMacWrap");
-  const fwVersion = document.getElementById("firmwareVersionWrap");
-  const localFirmwareSection = document.getElementById("localFirmwareSection");
-  const flashOptionsWrap = document.getElementById("flashOptionsWrap");
-  const findBaudWrap = document.getElementById("findBaudWrap");
-  const btnGetModel = document.getElementById("btn-get-model");
-  const btnPing = document.getElementById("btn-ping");
-
-  if (family === "sl") {
-    if (cloudFw) cloudFw.classList.add("d-none");
-    if (nvram) nvram.classList.add("d-none");
-    if (flashSize) flashSize.classList.add("d-none");
-    if (ieeeMac) ieeeMac.classList.add("d-none");
-    if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
-    if (findBaudWrap) findBaudWrap.classList.add("d-none");
-    if (btnGetModel) btnGetModel.classList.add("d-none");
-    if (btnPing) btnPing.classList.add("d-none");
-    if (fwVersion) fwVersion.className = fwVersion.className.replace("col-md-4", "col-md-12");
-    if (localFirmwareSection)
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
-  }
-  if (family === "ti") {
-    if (cloudFw) cloudFw.classList.remove("d-none");
-    if (nvram) nvram.classList.remove("d-none");
-    if (flashSize) flashSize.classList.remove("d-none");
-    if (ieeeMac) ieeeMac.classList.remove("d-none");
-    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
-    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
-    if (btnGetModel) btnGetModel.classList.remove("d-none");
-    if (btnPing) btnPing.classList.remove("d-none");
-    if (fwVersion) fwVersion.className = fwVersion.className.replace("col-md-12", "col-md-4");
-    if (localFirmwareSection)
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
-  }
-}
-
-chipTiRadio.addEventListener("change", updateUIForFamily);
-chipSlRadio.addEventListener("change", updateUIForFamily);
-
-// Initialize UI on load
+// Initial UI update
 updateUIForFamily();
 
-// Escape key handler to close firmware notes and bridge info modals
+// Initialize options state on load
+updateOptionsStateForFile(false);
+
+// Update connection UI on load
+updateConnectionUI();
+
+// auto-refresh list on load (non-blocking)
+refreshMdnsList().catch(() => {});

@@ -354,7 +354,9 @@ export async function sendMtAndWait(
       done = true;
       try {
         if (timer != null) window.clearTimeout(timer);
-      } catch {}
+      } catch {
+        // ignore
+      }
       resolve(res);
     };
 
@@ -462,8 +464,8 @@ export async function readDeviceInfo(link: Link, log?: (msg: string) => void): P
     const ICEPICK_DEVICE_ID = 0x50001318;
     const TESXT_ID = 0x57fb4;
 
-    const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
-    const usr = await (bsl as any).memRead32?.(TESXT_ID);
+    const dev = await bsl.memRead32(ICEPICK_DEVICE_ID);
+    const usr = await bsl.memRead32(TESXT_ID);
     if (dev && usr && dev.length >= 4 && usr.length >= 4) {
       const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
       const pg_rev = (dev[3] & 0xf0) >> 4;
@@ -471,7 +473,7 @@ export async function readDeviceInfo(link: Link, log?: (msg: string) => void): P
       log?.(`Chip model: ${info.chipModel}`);
     }
 
-    const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
+    const flashSz = await bsl.memRead32(FLASH_SIZE);
     if (flashSz && flashSz.length >= 4) {
       const pages = flashSz[0];
       let size = pages * 8192;
@@ -480,8 +482,8 @@ export async function readDeviceInfo(link: Link, log?: (msg: string) => void): P
       log?.(`Flash size estimate: ${size} bytes`);
     }
 
-    const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
-    const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
+    const mac_lo = await bsl.memRead32(IEEE_ADDR_PRIMARY + 0);
+    const mac_hi = await bsl.memRead32(IEEE_ADDR_PRIMARY + 4);
     if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
       const mac = [...mac_lo, ...mac_hi]
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -713,6 +715,7 @@ export async function nvramReadLegacyFull(
           .map((b) => b.toString(16).padStart(2, "0"))
           .join("");
       } catch {
+        // ignore
       } finally {
         processed++;
         progress?.((processed / totalIds) * 35, `Legacy ${processed} / ${totalIds}`);
@@ -765,11 +768,17 @@ export async function nvramReadExtendedAll(
   return out;
 }
 
-export async function nvramReadAll(link: Link, progress?: (pct: number, label?: string) => void): Promise<any> {
+export interface NvramBundle {
+  LEGACY?: Record<string, string>;
+  legacy?: Record<string, string>;
+  [section: string]: Record<string, string> | undefined;
+}
+
+export async function nvramReadAll(link: Link, progress?: (pct: number, label?: string) => void): Promise<NvramBundle> {
   progress?.(0, "Reading...");
   const legacy = await nvramReadLegacyFull(link, progress);
   const extended = await nvramReadExtendedAll(link, progress);
-  const payload: any = { LEGACY: legacy };
+  const payload: NvramBundle = { LEGACY: legacy };
   if (extended) Object.assign(payload, extended);
   progress?.(100, "Done");
   return payload;
@@ -778,12 +787,14 @@ export async function nvramReadAll(link: Link, progress?: (pct: number, label?: 
 export async function nvramEraseAll(link: Link, progress?: (pct: number, label?: string) => void): Promise<void> {
   progress?.(0, "Erasing...");
   const legacy = await nvramReadLegacyFull(link, progress);
-  let totalL = Math.max(1, Object.keys(legacy).length);
+  const totalL = Math.max(1, Object.keys(legacy).length);
   let doneL = 0;
   for (const key of Object.keys(legacy)) {
     try {
       await sysOsalNvDelete(link, osalIdFromHex(key));
-    } catch {}
+    } catch {
+      // ignore
+    }
     doneL++;
     progress?.(Math.min(50, (doneL / totalL) * 50), `Erase legacy ${doneL}/${totalL}`);
   }
@@ -819,24 +830,26 @@ export async function nvramEraseAll(link: Link, progress?: (pct: number, label?:
 
 export async function nvramWriteAll(
   link: Link,
-  obj: any,
+  obj: NvramBundle,
   log?: (s: string) => void,
   progress?: (pct: number, label?: string) => void
 ): Promise<void> {
   progress?.(0, "Writing...");
-  const legacy = (obj.legacy || obj.LEGACY || {}) as Record<string, string>;
-  let total = Math.max(1, Object.keys(legacy).length);
+  const legacy: Record<string, string> = obj.legacy || obj.LEGACY || {};
+  const total = Math.max(1, Object.keys(legacy).length);
   let count = 0;
   for (const key of Object.keys(legacy)) {
     const id = osalIdFromHex(key);
     const hex = legacy[key];
+    if (!hex) continue;
     const bytes = new Uint8Array(hex.match(/.{1,2}/g)?.map((h: string) => parseInt(h, 16)) || []);
     try {
       await sysOsalNvItemInit(link, id, bytes.length);
       await sysOsalNvWrite(link, id, bytes, 0);
       log?.(`NVRAM LEGACY write 0x${id.toString(16)} len=${bytes.length} => OK`);
-    } catch (e: any) {
-      log?.(`NVRAM LEGACY write fail id=0x${id.toString(16)}: ${e?.message || String(e)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log?.(`NVRAM LEGACY write fail id=0x${id.toString(16)}: ${message}`);
     }
     count++;
     progress?.(Math.min(40, (count / total) * 40), `Legacy ${count}/${total}`);
@@ -860,7 +873,8 @@ export async function nvramWriteAll(
       idx++;
       for (const subKey of Object.keys(section)) {
         const subId = osalIdFromHex(subKey);
-        const hex = section[subKey] as string;
+        const hex = section[subKey];
+        if (!hex) continue;
         const bytes = new Uint8Array(hex.match(/.{1,2}/g)?.map((h: string) => parseInt(h, 16)) || []);
         try {
           const created = await sysNvCreate(link, itemId, subId, bytes.length);
@@ -874,11 +888,10 @@ export async function nvramWriteAll(
               ok ? "OK" : "ERR"
             }`
           );
-        } catch (e: any) {
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
           log?.(
-            `NVRAM EX write fail ${name}[${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}]: ${
-              e?.message || String(e)
-            }`
+            `NVRAM EX write fail ${name}[${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}] : ${message}`
           );
         }
         progress?.(

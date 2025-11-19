@@ -217,6 +217,28 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
 /* Actions spacing when wrapped */
 .actions-grid > .btn { margin-bottom: 1rem;}
 
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.radio-group > .d-flex {
+  justify-content: center;
+  min-width: 180px;
+}
+
+@media (max-width: 640px) {
+  .radio-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .radio-group > .d-flex {
+    width: 100%;
+  }
+}
+
 
 /* Mobile tweaks */
 @media (max-width: 576px) {

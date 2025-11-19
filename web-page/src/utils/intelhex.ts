@@ -65,10 +65,3 @@ export function parseIntelHex(fullText: string): { startAddress: number; data: U
 
   return { startAddress: minAddr >>> 0, data: out };
 }
-
-function hexToBytes(hex: string): Uint8Array {
-  if (hex.length % 2) throw new Error("HEX: odd length");
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
-  return out;
-}

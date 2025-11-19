@@ -14,13 +14,14 @@ export async function httpGetWithFallback(
     if (resp.type === "opaque") return { text: null, opaque: true };
     const text = await resp.text();
     return { text, opaque: false };
-  } catch (e: any) {
-    const msg = e?.message || String(e);
+  } catch (e: unknown) {
+    const err = e as Error;
+    const msg = err?.message || String(e);
     if (/Failed to fetch|TypeError|CORS|NetworkError/i.test(msg)) {
       try {
         await fetch(url, { mode: "no-cors", signal: controller.signal });
         return { text: null, opaque: true };
-      } catch (e2) {
+      } catch {
         throw e;
       }
     }

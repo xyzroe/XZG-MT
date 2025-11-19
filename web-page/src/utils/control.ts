@@ -5,19 +5,11 @@ export type ControlConfig = {
   bslPath?: string;
   rstPath?: string;
   baudPath?: string;
-  // invertBsl?: boolean;
-  // invertRst?: boolean;
   invertLevel?: boolean;
 };
 
 export const DEFAULT_CONTROL: ControlConfig = {
   pinMode: true,
-  // bslPath: "",
-  // rstPath: "",
-  // baudPath: "",
-  // invertBsl: false,
-  // invertRst: false,
-  //invertLevel: false,
 };
 
 export const CONTROL_PRESETS: Array<{
@@ -60,8 +52,6 @@ export const CONTROL_PRESETS: Array<{
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
     config: {
       pinMode: false,
-      // bslPath: "",
-      // rstPath: "",
       baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
     },
   },
@@ -71,21 +61,9 @@ export function deriveControlConfig(meta: { type?: string; protocol?: string }):
   for (const p of CONTROL_PRESETS) {
     try {
       if (p.test(meta)) return p.config;
-    } catch {}
+    } catch {
+      // ignore
+    }
   }
   return DEFAULT_CONTROL;
 }
-
-// // Helpers to compute DTR/RTS from desired RST/BSL low levels and optional swap
-// export function computeDtrRts(rstLow: boolean, bslLow: boolean): { dtr: boolean; rts: boolean } {
-//   let dtr: boolean, rts: boolean;
-//   // if (!assumeSwap) {
-//   // RST=DTR, BSL=RTS (preserve existing inversion semantics)
-//   dtr = !rstLow;
-//   rts = !bslLow;
-//   // } else {
-//   //   dtr = !bslLow;
-//   //   rts = !rstLow;
-//   // }
-//   return { dtr, rts };
-// }

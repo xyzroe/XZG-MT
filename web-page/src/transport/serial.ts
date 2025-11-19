@@ -1,5 +1,7 @@
+type NativeSerialPort = globalThis.SerialPort;
+
 export class SerialPort {
-  private port: SerialPort | null = null as any;
+  private port: NativeSerialPort | null = null;
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private writer: WritableStreamDefaultWriter<Uint8Array> | null = null;
   private onDataCbs: Array<(data: Uint8Array) => void> = [];
@@ -11,12 +13,13 @@ export class SerialPort {
   }
 
   static isSupported(): boolean {
-    return typeof navigator !== "undefined" && !!(navigator as any).serial;
+    return typeof navigator !== "undefined" && !!navigator.serial;
   }
 
   private startIO(): void {
+    if (!this.port) return;
     // Start read loop
-    const readable = (this.port as any).readable as ReadableStream<Uint8Array>;
+    const readable = this.port.readable;
     if (readable) {
       this.reader = readable.getReader();
       (async () => {
@@ -30,16 +33,18 @@ export class SerialPort {
               for (const cb of this.onDataCbs) {
                 try {
                   cb(value);
-                } catch {}
+                } catch {
+                  // ignore
+                }
               }
             }
           }
-        } catch (_e) {
+        } catch {
           // reader canceled/closed
         }
       })();
     }
-    const writable = (this.port as any).writable as WritableStream<Uint8Array>;
+    const writable = this.port.writable;
     if (writable) this.writer = writable.getWriter();
   }
 
@@ -47,7 +52,7 @@ export class SerialPort {
     // Must be called from a user gesture (click) to show chooser
     const port = await navigator.serial.requestPort();
     await port.open({ baudRate: this.bitrate });
-    this.port = port as any;
+    this.port = port;
     this.startIO();
   }
 
@@ -56,12 +61,12 @@ export class SerialPort {
     if (!ports || ports.length === 0) throw new Error("No previously granted serial ports");
     const port = ports[0];
     await port.open({ baudRate: this.bitrate });
-    this.port = port as any;
+    this.port = port;
     this.startIO();
   }
 
-  useExistingPortAndStart(port: SerialPort): void {
-    this.port = port as any;
+  useExistingPortAndStart(port: NativeSerialPort): void {
+    this.port = port;
     this.startIO();
   }
 
@@ -77,32 +82,42 @@ export class SerialPort {
   // }
 
   async reopenWithBaudrate(baud: number): Promise<void> {
-    const p: any = this.port as any;
+    const p = this.port;
     if (!p) throw new Error("serial not open");
     // Tear down current IO and re-open at new baudrate
     try {
       if (this.reader) {
         try {
           await this.reader.cancel();
-        } catch {}
+        } catch {
+          // ignore
+        }
         try {
           this.reader.releaseLock?.();
-        } catch {}
+        } catch {
+          // ignore
+        }
         this.reader = null;
       }
       if (this.writer) {
         try {
           await this.writer.close();
-        } catch {}
+        } catch {
+          // ignore
+        }
         try {
           this.writer.releaseLock?.();
-        } catch {}
+        } catch {
+          // ignore
+        }
         this.writer = null;
       }
       try {
-        await p.close?.();
-      } catch {}
-      await p.open?.({ baudRate: baud });
+        await p.close();
+      } catch {
+        // ignore
+      }
+      await p.open({ baudRate: baud });
       this.startIO();
     } catch (err) {
       // leave object in consistent state on error
@@ -112,21 +127,23 @@ export class SerialPort {
     }
   }
 
-  async openByPath(_path?: string): Promise<void> {
-    // Backwards-compat: behave like requestAndOpen; web-serial has no system path
-    await this.requestAndOpen();
-  }
+  // async openByPath(_path?: string): Promise<void> {
+  //   // Backwards-compat: behave like requestAndOpen; web-serial has no system path
+  //   await this.requestAndOpen();
+  // }
 
   async write(data: Uint8Array): Promise<void> {
     if (!this.writer) throw new Error("serial not open");
     try {
       this.onTxCb?.(data);
-    } catch {}
+    } catch {
+      // ignore
+    }
     await this.writer.write(data);
   }
 
-  async setSignals(signals: { dataTerminalReady?: boolean; requestToSend?: boolean; break?: boolean }): Promise<void> {
-    const p: any = this.port as any;
+  async setSignals(signals: SerialSignals): Promise<void> {
+    const p = this.port;
     if (!p || !p.setSignals) return; // not supported on some platforms
     await p.setSignals(signals);
   }
@@ -142,16 +159,22 @@ export class SerialPort {
   async close() {
     try {
       await this.reader?.cancel();
-    } catch {}
+    } catch {
+      // ignore
+    }
     try {
       await this.writer?.close();
-    } catch {}
+    } catch {
+      // ignore
+    }
     try {
-      await (this.port as any)?.close?.();
-    } catch {}
+      await this.port?.close();
+    } catch {
+      // ignore
+    }
     this.reader = null;
     this.writer = null;
-    this.port = null as any;
+    this.port = null;
     this.onDataCbs = [];
     this.onTxCb = null;
   }
