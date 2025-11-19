@@ -200,12 +200,14 @@ If you find this project useful and want to support further development, you can
   Thank you — every little contribution helps keep the project alive and maintained. 🙏
 </div>
 
-## 💡 Inspired by
+## 💡 Thanks to
 
-Made possible thanks to the foundational work of:
+Built on the shoulders of giants:
 
-- **Texas Instruments chips support** — [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by JelmerT
-- **Silicon Labs chips support** — [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by NabuCasa
+- **Texas Instruments** — inspired by [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete and [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
+- **Silicon Labs** — inspired by [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
+- **Espressif Systems** — powered by [esptool-js](https://github.com/espressif/esptool-js) by
+  Espressif Systems
 
 ---
 

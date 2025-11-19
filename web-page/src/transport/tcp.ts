@@ -25,14 +25,16 @@ export class TcpClient {
         this.ws = ws;
         resolve();
       };
-      ws.onerror = (ev) => reject(new Error("WebSocket error"));
+      ws.onerror = () => reject(new Error("WebSocket error"));
       ws.onmessage = (ev) => {
         const data = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : new Uint8Array();
         if (data.length === 0) return;
         for (const cb of this.onDataCbs) {
           try {
             cb(data);
-          } catch {}
+          } catch {
+            // ignore
+          }
         }
       };
       ws.onclose = (ev) => {
@@ -48,7 +50,9 @@ export class TcpClient {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) throw new Error("tcp not connected");
     try {
       this.onTxCb?.(data);
-    } catch {}
+    } catch {
+      // ignore
+    }
     if (data.length === 0) return;
     this.ws.send(data);
   }
@@ -64,7 +68,9 @@ export class TcpClient {
   close() {
     try {
       this.ws?.close();
-    } catch {}
+    } catch {
+      // ignore
+    }
     this.ws = null;
     this.onDataCbs = [];
     this.onTxCb = null;

@@ -4,8 +4,6 @@ import { padToMultiple } from "../utils/crc";
 import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
   IN_MENU = "in_menu",
@@ -38,6 +36,8 @@ export class SilabsTools {
   // More tolerant menu regex: allow optional spaces, CR/LF combos, GBL/EBL wording, and optional space before prompt
   private menuRegex =
     /(?:^|[\r\n])(?:Gecko|\w+\s*Serial)\s+Bootloader v([0-9.]+)[\r\n]+1\. upload (?:gbl|ebl)[\r\n]+2\. run[\r\n]+3\. (?:ebl|gbl) info[\r\n]+(?:\d+\. .*?[\r\n]+)*BL ?>/i;
+
+  // eslint-disable-next-line no-control-regex
   private uploadCompleteRegex = /\r\nSerial upload (complete|aborted)\r\n(.*?)\x00?/s;
   private promptRegex = /(?:^|[\r\n])BL ?> ?/i;
 
@@ -151,41 +151,45 @@ export class SilabsTools {
   }
 
   public async getBootloaderVersion(timeoutMs: number = 2000): Promise<string> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Reset state machine and request EBL info exactly like USF
-        this.state = State.WAITING_FOR_MENU;
-        // Ember bootloader requires a newline before option
-        await this.writeString("\n");
-        await this.writeString("3");
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          // Reset state machine and request EBL info exactly like USF
+          this.state = State.WAITING_FOR_MENU;
+          // Ember bootloader requires a newline before option
+          await this.writeString("\n");
+          await this.writeString("3");
 
-        // Wait for menu to appear (with timeout)
-        const timeout = setTimeout(() => {
-          reject(new Error("Timeout waiting for bootloader menu"));
-        }, Math.max(500, timeoutMs));
+          // Wait for menu to appear (with timeout)
+          const timeout = setTimeout(() => {
+            reject(new Error("Timeout waiting for bootloader menu"));
+          }, Math.max(500, timeoutMs));
 
-        const checkMenu = setInterval(() => {
-          if (this.state === State.IN_MENU && this.version) {
-            clearInterval(checkMenu);
-            clearTimeout(timeout);
-            resolve(this.version);
-          }
-          try {
-            const t = new TextDecoder().decode(this.buffer);
-            const mm = t.match(this.menuRegex);
-            if (mm) {
-              this.version = mm[1];
-              this.buffer = new Uint8Array(0);
-              this.state = State.IN_MENU;
+          const checkMenu = setInterval(() => {
+            if (this.state === State.IN_MENU && this.version) {
               clearInterval(checkMenu);
               clearTimeout(timeout);
               resolve(this.version);
             }
-          } catch {}
-        }, 50);
-      } catch (error) {
-        reject(error);
-      }
+            try {
+              const t = new TextDecoder().decode(this.buffer);
+              const mm = t.match(this.menuRegex);
+              if (mm) {
+                this.version = mm[1];
+                this.buffer = new Uint8Array(0);
+                this.state = State.IN_MENU;
+                clearInterval(checkMenu);
+                clearTimeout(timeout);
+                resolve(this.version);
+              }
+            } catch {
+              // ignore
+            }
+          }, 50);
+        } catch (error) {
+          reject(error);
+        }
+      })();
     });
   }
 
@@ -302,44 +306,46 @@ export class SilabsTools {
   }
 
   public async flash(firmware: Uint8Array, onProgress: (current: number, total: number) => void): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        // Pad firmware to XMODEM block size
-        const paddedFirmware = padToMultiple(firmware, XMODEM_BLOCK_SIZE, 0xff);
-        console.log(`Flashing ${paddedFirmware.length} bytes (original: ${firmware.length})`);
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          // Pad firmware to XMODEM block size
+          const paddedFirmware = padToMultiple(firmware, XMODEM_BLOCK_SIZE, 0xff);
+          console.log(`Flashing ${paddedFirmware.length} bytes (original: ${firmware.length})`);
 
-        // First, query bootloader info
-        await this.getBootloaderVersion();
+          // First, query bootloader info
+          await this.getBootloaderVersion();
 
-        // Select upload option (option 1)
-        this.state = State.WAITING_XMODEM_READY;
-        await this.writeString("1");
+          // Select upload option (option 1)
+          this.state = State.WAITING_XMODEM_READY;
+          await this.writeString("1");
 
-        // Wait for XMODEM ready 'C' character
-        await delay(500);
+          // Wait for XMODEM ready 'C' character
+          await delay(500);
 
-        // Initialize XMODEM state
-        this.xmodemFirmware = paddedFirmware;
-        this.xmodemChunkIndex = 0;
-        this.xmodemTotalChunks = paddedFirmware.length / XMODEM_BLOCK_SIZE;
-        this.xmodemRetries = 0;
-        this.xmodemMaxRetries = 3;
-        this.xmodemProgressCallback = onProgress;
+          // Initialize XMODEM state
+          this.xmodemFirmware = paddedFirmware;
+          this.xmodemChunkIndex = 0;
+          this.xmodemTotalChunks = paddedFirmware.length / XMODEM_BLOCK_SIZE;
+          this.xmodemRetries = 0;
+          this.xmodemMaxRetries = 3;
+          this.xmodemProgressCallback = onProgress;
 
-        // Set up promise callbacks
-        this.xmodemResolve = resolve;
-        this.xmodemReject = reject;
+          // Set up promise callbacks
+          this.xmodemResolve = resolve;
+          this.xmodemReject = reject;
 
-        // Initial progress
-        onProgress(0, paddedFirmware.length);
+          // Initial progress
+          onProgress(0, paddedFirmware.length);
 
-        console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
+          console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
 
-        // Note: xmodemSendChunkOrEOT will be called when state changes to XMODEM_UPLOADING
-        // This happens in dataReceived when we detect the 'C' character
-      } catch (error) {
-        reject(error);
-      }
+          // Note: xmodemSendChunkOrEOT will be called when state changes to XMODEM_UPLOADING
+          // This happens in dataReceived when we detect the 'C' character
+        } catch (error) {
+          reject(error);
+        }
+      })();
     });
   }
 
