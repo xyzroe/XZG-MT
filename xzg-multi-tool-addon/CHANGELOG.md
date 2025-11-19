@@ -1,3 +1,12 @@
+## v0.2.19
+
+## 🚀 Features
+- feat: Initial support of all ESP32 chips (#49) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: code clean up and reorganization (#49) by @xyzroe
+- fix: many lint errors (#49) by @xyzroe
+
 ## v0.2.18
 
 ## 🚀 Features
