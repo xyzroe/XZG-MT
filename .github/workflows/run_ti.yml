@@ -1,0 +1,82 @@
+name: Get TI FW files, update manifest and README
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - fw_files
+    paths:
+      - "ti/**"
+      - "!ti/manifest.json"
+  workflow_dispatch:
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+      with:
+        ref: fw_files
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: Download, prepare files and update manifest
+      run: |
+        python3 .github/scripts/process_ti.py
+    
+    - name: Update README
+      run: |
+        python3 .github/scripts/update_readme.py
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        git add .
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+
+        MSG="TI Update:"
+        
+        ADDED_COUNT=$(git diff --staged --name-status | grep "\.hex$" | grep "^A" | wc -l | xargs)
+        if [ "$ADDED_COUNT" != "0" ]; then
+            MSG="$MSG $ADDED_COUNT new FW files,"
+        fi
+        
+        MODIFIED_COUNT=$(git diff --staged --name-status | grep "\.hex$" | grep "^M" | wc -l | xargs)
+        if [ "$MODIFIED_COUNT" != "0" ]; then
+            MSG="$MSG $MODIFIED_COUNT updated FW files,"
+        fi
+
+        if git diff --staged --name-only | grep -q "ti/manifest.json"; then
+            MSG="$MSG manifest updated,"
+        fi
+
+        if git diff --staged --name-only | grep -q "README.md"; then
+            MSG="$MSG README updated,"
+        fi
+        
+        MSG=$(echo "$MSG" | sed 's/,$//')
+        
+        if [ "$MSG" == "TI Update:" ]; then
+            MSG="Update TI content"
+        fi
+        
+        git commit -m "$MSG"
+        git push
+

@@ -1,0 +1,1404 @@
+{
+  "zigbee_ncp": {
+    "EFR32MG21": {
+      "SM-011 V1.0/ZYZBP008": {
+        "ncp-uart-nsw_6.5.5_115200.ota": {
+          "ver": "6.5.5",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-nsw_6.5.5_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-sw-7.4.5.0_115200.ota": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-sw-7.4.5.0_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-sw_6.10.9_115200.ota": {
+          "ver": "6.10.9",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-sw_6.10.9_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-sw_6.7.10_115200.ota": {
+          "ver": "6.7.10",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-sw_6.7.10_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-sw_7.3.1.0_115200.ota": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-sw_7.3.1.0_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-sw_7.4.3.0_115200.ota": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/ncp-uart-sw_7.4.3.0_115200.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "ncp-uart-hw_6.10.3_115200.gbl": {
+          "ver": "6.10.3",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-hw_6.10.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw_7.3.1.0_460800.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-hw_7.3.1.0_460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ncp-uart-sw_6.10.3_115200.gbl": {
+          "ver": "6.10.3",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-sw_6.10.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-sw_6.10.7.0_115200.gbl": {
+          "ver": "6.10.7.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-sw_6.10.7.0_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-sw_6.7.10_115200.gbl": {
+          "ver": "6.7.10",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-sw_6.7.10_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-sw_7.4.3.0_115200.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-sw_7.4.3.0_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-sw_7.4.5.0_115200.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/ncp-uart-sw_7.4.5.0_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "nvm3_initfile.gbl": {
+          "ver": "0.0.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP/nvm3_initfile.gbl",
+          "baud": "115200",
+          "signed": false
+        }
+      },
+      "Sonoff ZBDongle-E": {
+        "ncp-uart-hw-v7.2.2.0-zbdonglee-115200.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.2.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.2.0-zbdonglee-230400.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.2.0-zbdonglee-none-115200.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.2.0-zbdonglee-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zbdonglee-115200.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.3.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zbdonglee-230400.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zbdonglee-none-115200.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.2.3.0-zbdonglee-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zbdonglee-115200.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.0.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zbdonglee-230400.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.0.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zbdonglee-none-115200.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.0.0-zbdonglee-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zbdonglee-115200.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.1.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zbdonglee-230400.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.1.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zbdonglee-none-115200.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.1.0-zbdonglee-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zbdonglee-115200.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.2.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zbdonglee-230400.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zbdonglee-none-115200.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.2.0-zbdonglee-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zbdonglee-115200.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.3.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zbdonglee-230400.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.3.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.0.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.0.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.1.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.1.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.2.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.3.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.4.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.4.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zbdonglee-115200.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.5.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zbdonglee-230400.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.5.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.1 - NO flow control": {
+        "ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-none-115200.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.2.0-zb-gw04-1v1-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-none-115200.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.2.3.0-zb-gw04-1v1-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-none-115200.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.0.0-zb-gw04-1v1-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-none-115200.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.1.0-zb-gw04-1v1-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-none-115200.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.2.0-zb-gw04-1v1-none-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.3.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.3.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.0.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.0.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.1.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.1.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.2.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.3.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.4.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.4.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.5.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ncp-uart-hw-v7.4.5.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.2 - Hardware flow control": {
+        "ncp-uart-hw-v7.2.2.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.2.2.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.2.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.2.3.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.2.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.2.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.0.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.0.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.0.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.1.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.1.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.1.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.2.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.3.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.3.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.3.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.0.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.0.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.0.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.1.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.1.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.1.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.2.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.3.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.4.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.4.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.4.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.5.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ncp-uart-hw-v7.4.5.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "7.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ncp-uart-hw-v7.4.5.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      }
+    }
+  },
+  "zb_router": {
+    "EFR32MG21": {
+      "SM-011 V1.0/ZYZBP008": {
+        "efr32mg21_zigbee_router_6.7.10.ota": {
+          "ver": "6.7.10",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/ZigbeeBridge_SM-011-signed/Router-Singed/efr32mg21_zigbee_router_6.7.10.ota",
+          "baud": "115200",
+          "signed": true
+        },
+        "efr32mg21_zigbee_router_6.7.10.gbl": {
+          "ver": "6.7.10",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/RouterForDongle/efr32mg21_zigbee_router_6.7.10.gbl",
+          "baud": "115200",
+          "signed": false
+        }
+      }
+    }
+  },
+  "multipan": {
+    "EFR32MG21": {
+      "SM-011 V1.0/ZYZBP008": {
+        "rcp-uart_nsw_115200_v4.2.0.gbl": {
+          "ver": "4.2.0",
+          "link": "https://raw.githubusercontent.com/xsp1989/zigbeeFirmware/master/firmware/Zigbee3.0_Dongle-NoSigned/RCPMultiPAN/rcp-uart_nsw_115200_v4.2.0.gbl",
+          "baud": "115200",
+          "signed": false
+        }
+      },
+      "Sonoff ZBDongle-E": {
+        "rcp-uart-802154-v4.2.2-zbdonglee-115200.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.2-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.2-zbdonglee-230400.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.2-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.2-zbdonglee-460800.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.2-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zbdonglee-115200.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.3-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zbdonglee-230400.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.3-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zbdonglee-460800.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.2.3-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zbdonglee-115200.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zbdonglee-230400.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zbdonglee-460800.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zbdonglee-115200.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.1-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zbdonglee-230400.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.1-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zbdonglee-460800.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.1-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zbdonglee-115200.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.2-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zbdonglee-230400.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.2-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zbdonglee-460800.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.2-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.3-zbdonglee-230400.gbl": {
+          "ver": "4.3.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.3-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.3-zbdonglee-460800.gbl": {
+          "ver": "4.3.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.3.3-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.0-zbdonglee-230400.gbl": {
+          "ver": "4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.0-zbdonglee-460800.gbl": {
+          "ver": "4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.1-zbdonglee-230400.gbl": {
+          "ver": "4.4.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.1-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.1-zbdonglee-460800.gbl": {
+          "ver": "4.4.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.1-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.2-zbdonglee-230400.gbl": {
+          "ver": "4.4.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.2-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.2-zbdonglee-460800.gbl": {
+          "ver": "4.4.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.2-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.3-zbdonglee-230400.gbl": {
+          "ver": "4.4.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.3-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.3-zbdonglee-460800.gbl": {
+          "ver": "4.4.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.3-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.4-zbdonglee-230400.gbl": {
+          "ver": "4.4.4",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.4-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.4-zbdonglee-460800.gbl": {
+          "ver": "4.4.4",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.4-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.5-zbdonglee-230400.gbl": {
+          "ver": "4.4.5",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.5-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.5-zbdonglee-460800.gbl": {
+          "ver": "4.4.5",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.5-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.1 - NO flow control": {
+        "rcp-uart-802154-v4.2.2-zb-gw04-1v1-115200.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.2.2-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.2-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.2.2-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.2-zb-gw04-1v1-460800.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.2.2-zb-gw04-1v1-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zb-gw04-1v1-115200.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.2.3-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.2.3-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zb-gw04-1v1-115200.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.1-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.1-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zb-gw04-1v1-115200.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.2-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.2-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.3-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.3.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.3.3-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.1-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.1-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.2-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.2-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.3-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.3-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.4-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.4",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.4-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.5-zb-gw04-1v1-230400.gbl": {
+          "ver": "4.4.5",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/rcp-uart-802154-v4.4.5-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.2 - Hardware flow control": {
+        "rcp-uart-802154-v4.2.2-zb-gw04-1v2-115200.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.2.2-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.2-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.2.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.2.2-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zb-gw04-1v2-115200.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.2.3-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.2.3-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.2.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.2.3-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zb-gw04-1v2-115200.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.1-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.1-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.3.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.1-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zb-gw04-1v2-115200.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.2-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.2-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.3.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.2-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.3.3-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.3.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.3.3-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.1-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.1",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.1-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.2-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.2",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.2-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.3-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.3",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.3-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.4-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.4",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.4-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "rcp-uart-802154-v4.4.5-zb-gw04-1v2-230400.gbl": {
+          "ver": "4.4.5",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/rcp-uart-802154-v4.4.5-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      }
+    }
+  },
+  "openthread_rcp": {
+    "EFR32MG21": {
+      "Sonoff ZBDongle-E": {
+        "ot-rcp-v2.2.2.0-zbdonglee-115200.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.2.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.2.0-zbdonglee-230400.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.2.2.0-zbdonglee-460800.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.2.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zbdonglee-115200.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.3.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zbdonglee-230400.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zbdonglee-460800.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.2.3.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zbdonglee-115200.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.0.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zbdonglee-230400.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.0.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zbdonglee-460800.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.0.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zbdonglee-115200.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.1.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zbdonglee-230400.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.1.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zbdonglee-460800.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.1.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zbdonglee-115200.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.2.0-zbdonglee-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zbdonglee-230400.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zbdonglee-460800.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.2.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.3.3.0-zbdonglee-230400.gbl": {
+          "ver": "2.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.3.0-zbdonglee-460800.gbl": {
+          "ver": "2.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.3.3.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.0.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.0.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.0.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.0.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.1.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.1.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.1.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.1.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.2.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.2.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.2.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.2.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.3.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.3.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.3.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.3.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.4.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.4.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.4.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.4.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.4.5.0-zbdonglee-230400.gbl": {
+          "ver": "2.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.5.0-zbdonglee-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.5.0-zbdonglee-460800.gbl": {
+          "ver": "2.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.5.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.1 - NO flow control": {
+        "ot-rcp-v2.2.2.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.2.2.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.2.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.2.2.0-zb-gw04-1v1-460800.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.2.2.0-zb-gw04-1v1-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.2.3.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.2.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.0.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.0.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.1.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.1.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zb-gw04-1v1-115200.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.2.0-zb-gw04-1v1-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.3.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.0.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.0.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.1.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.1.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.2.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.2.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.3.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.3.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.4.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.4.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.5.0-zb-gw04-1v1-230400.gbl": {
+          "ver": "2.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v1/ot-rcp-v2.4.5.0-zb-gw04-1v1-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      },
+      "ZB-GW04 v1.2 - Hardware flow control": {
+        "ot-rcp-v2.2.2.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.2.2.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.2.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.2.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.2.3.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.2.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.2.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.2.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.0.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.0.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.3.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.0.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.1.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.1.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.3.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.1.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zb-gw04-1v2-115200.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.2.0-zb-gw04-1v2-115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "ot-rcp-v2.3.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.3.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.3.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.3.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.3.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.0.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.0.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.0.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.1.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.1.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.1.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.2.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.2.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.2.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.3.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.3.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.3.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.4.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.4.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.4.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        },
+        "ot-rcp-v2.4.5.0-zb-gw04-1v2-230400.gbl": {
+          "ver": "2.4.5.0",
+          "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zb-gw04-1v2/ot-rcp-v2.4.5.0-zb-gw04-1v2-230400.gbl",
+          "baud": "230400",
+          "signed": false
+        }
+      }
+    }
+  }
+}

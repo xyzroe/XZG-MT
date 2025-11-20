@@ -1,0 +1,286 @@
+[
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_coordinator_20230507/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_launchpad_coordinator_20230507.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_coordinator_20230507/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_other_coordinator_20230507.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_coordinator_20230507/coordinator/Z-Stack_3.x.0/bin/CC1352P7_coordinator_20230507.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_coordinator_20221226/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_launchpad_coordinator_20221226.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_coordinator_20221226/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_other_coordinator_20221226.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_Home_3.x.0_coordinator_20220219/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_launchpad_coordinator_20220219.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_Home_3.x.0_coordinator_20220219/coordinator/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_other_coordinator_20220219.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_router_20221102/router/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_launchpad_router_20221102.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/raw/Z-Stack_3.x.0_router_20221102/router/Z-Stack_3.x.0/bin/CC1352P2_CC2652P_other_router_20221102.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/files/15001944/20240315_20240316.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2652p_cc1352p_RF-STAR/raw/main/firmware/coordinator/znp_CC1352P_RFS_20220302.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/egony/cc2652p_cc1352p_RF-STAR/raw/main/firmware/router/router_CC2652P_RFS_20210812.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2652p_E72-2G4M20S1E/raw/master/firmware/coordinator/znp_CC1352P_E72_20220301.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/egony/cc2652p_E72-2G4M20S1E/raw/master/firmware/router/router_CC2652P_E72_20210812.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/mercenaruss/zigstar_gateways/raw/main/files/Firmware/CC1352P7_Router.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240316/CC1352P7_coordinator_20240316_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240316/CC2652R7_coordinator_20240316_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240315/CC1352P2_CC2652P_launchpad_coordinator_20240315_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240315/CC1352P2_CC2652P_other_coordinator_20240315_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240315/CC2652RB_coordinator_20240315_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20240315/CC2652R_coordinator_20240315_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/files/15468217/CC1352P2_CC2652P_launchpad_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/files/15468219/CC1352P2_CC2652P_other_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20230507/CC1352P7_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20230507/CC2652R7_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20230507/CC2652RB_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20230507/CC2652R_coordinator_20230507_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20221226/CC1352P2_CC2652P_launchpad_coordinator_20221226_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20221226/CC1352P2_CC2652P_other_coordinator_20221226_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20221226/CC2652RB_coordinator_20221226_patched_460800.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Andrik45719/Z-Stack-firmware/releases/download/20221226/CC2652R_coordinator_20221226_patched_460800.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/tube0013/tube_gateways/raw/main/openthread_boarder_router_fw/rcp_LP_CC2652PSIP_tirtos7_ticlang_SDK_7_10_01_24.hex.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/tube0013/tube_gateways/raw/main/openthread_boarder_router_fw/old/rcp_LP_CC2652PSIP_tirtos_ticlang.hex.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC1352P2_CC2652P_launchpad_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC1352P2_CC2652P_other_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC1352P7_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC2652R7_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC2652RB_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20240710/CC2652R_coordinator_20240710.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/agriadsi/MOD-Z-Stack-Firmware/raw/XZG_20240909/coordinator/CC1352P7_coordinator_20240710_20dbm_20240909.hex"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/agriadsi/MOD-Z-Stack-Firmware/raw/XZG_20240909/router/CC1352P7_router_20221102_20dbm_20240909.hex"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC1352P2_CC2652P_launchpad_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC1352P2_CC2652P_other_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC1352P7_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC2652R7_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC2652RB_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_coordinator_20250321/CC2652R_coordinator_20250321.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/arendst/Tasmota/raw/refs/heads/development/tools/fw_SonoffZigbeeBridgePro_cc2652/SonoffZBPro_coord_20240710.hex"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/arendst/Tasmota/raw/refs/heads/development/tools/fw_SonoffZigbeeBridgePro_cc2652/SonoffZBPro_coord_20230507.hex"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/arendst/Tasmota/raw/refs/heads/development/tools/fw_SonoffZigbeeBridgePro_cc2652/SonoffZBPro_coord_20220219.hex"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/arendst/Tasmota/raw/refs/heads/development/tools/fw_SonoffZigbeeBridgePro_router_only_cc2652/SonoffZBPro_router_20220125.hex"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC1352P2_CC2652P_launchpad_router_20250403.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC1352P2_CC2652P_other_router_20250403.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC1352P7_router_20250403.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC2652RB_router_20250403.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC2652R_router_20250403.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/Koenkk/Z-Stack-firmware/releases/download/Z-Stack_3.x.0_router_20250403/CC2652R7_router_20250403.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC1352P2_CC2652P_launchpad_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC1352P2_CC2652P_other_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC1352P7_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC2652R7_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC2652RB_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "thread",
+    "link": "https://github.com/Koenkk/OpenThread-TexasInstruments-firmware/releases/download/2025.3.1/CC2652R_ot_rcp_2025_3_1.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/coordinator/cc2538_cc2592/JH_2538_2592_ZNP_UART_20201010.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/coordinator/cc2538_cc2592/JH_2538_2592_ZNP_UART_20211222.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/coordinator/cc2538_cc2592/JH_2538_2592_ZNP_USB_20201010.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/coordinator/cc2538_cc2592/JH_2538_2592_ZNP_USB_20211222.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/router/cc2538_cc2592/jh_2538_router_20200520.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/router/cc2538_cc2592/jh_2538_router_20200522.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/router/cc2538_cc2592/jh_2538_router_20210115.zip"
+  },
+  {
+    "type": "router",
+    "link": "https://github.com/jethome-ru/zigbee-firmware/raw/refs/heads/master/ti/router/cc2538_cc2592/jh_2538_router_20210310.zip"
+  }
+]

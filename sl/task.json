@@ -1,0 +1,75 @@
+{
+  "EFR32MG21": {
+    "SM-011 V1.0/ZYZBP008": [
+      {
+        "zigbee_ncp": {
+          "folder": "https://github.com/xsp1989/zigbeeFirmware/tree/master/firmware/ZigbeeBridge_SM-011-signed",
+          "signed": true
+        },
+        "zb_router": {
+          "folder": "https://github.com/xsp1989/zigbeeFirmware/tree/master/firmware/ZigbeeBridge_SM-011-signed/Router-Singed",
+          "signed": true
+        }
+      },
+      {
+        "zigbee_ncp": {
+          "folder": "https://github.com/xsp1989/zigbeeFirmware/tree/master/firmware/Zigbee3.0_Dongle-NoSigned/EZSP",
+          "signed": false
+        },
+        "zb_router": {
+          "folder": "https://github.com/xsp1989/zigbeeFirmware/tree/master/firmware/Zigbee3.0_Dongle-NoSigned/RouterForDongle",
+          "signed": false
+        },
+        "multipan": {
+          "folder": "https://github.com/xsp1989/zigbeeFirmware/tree/master/firmware/Zigbee3.0_Dongle-NoSigned/RCPMultiPAN",
+          "signed": false
+        }
+      }
+    ],
+    "Sonoff ZBDongle-E": [
+      {
+        "folder": "https://github.com/darkxst/silabs-firmware-builder/tree/main/firmware_builds/zbdonglee",
+        "signed": false,
+        "zigbee_ncp": {
+          "mask": "ncp-uart"
+        },
+        "multipan": {
+          "mask": "rcp-uart-802154"
+        },
+        "openthread_rcp": {
+          "mask": "ot-rcp"
+        }
+      }
+    ],
+    "ZB-GW04 v1.1 - NO flow control": [
+      {
+        "folder": "https://github.com/darkxst/silabs-firmware-builder/tree/main/firmware_builds/zb-gw04-1v1",
+        "signed": false,
+        "zigbee_ncp": {
+          "mask": "ncp-uart"
+        },
+        "multipan": {
+          "mask": "rcp-uart-802154"
+        },
+        "openthread_rcp": {
+          "mask": "ot-rcp"
+        }
+      }
+    ],
+    "ZB-GW04 v1.2 - Hardware flow control": [
+      {
+        "folder": "https://github.com/darkxst/silabs-firmware-builder/tree/main/firmware_builds/zb-gw04-1v2",
+        "signed": false,
+        "zigbee_ncp": {
+          "mask": "ncp-uart"
+        },
+        "multipan": {
+          "mask": "rcp-uart-802154"
+        },
+        "openthread_rcp": {
+          "mask": "ot-rcp"
+        }
+      }
+    ]
+  }
+}
