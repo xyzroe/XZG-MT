@@ -1260,6 +1260,10 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
         }
         // Set chip model
         if (chipModelEl) chipModelEl.value = "CC2538";
+
+        refreshNetworkFirmwareList("CC2538").catch((e) =>
+          log("Network FW list fetch failed: " + (e?.message || String(e)))
+        );
       }
     } else if (family === "sl") {
       detectedFamily = null;
