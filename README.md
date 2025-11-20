@@ -16,15 +16,15 @@
 
 ## 📖 About
 
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652 and SL EFR32 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
+XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
 ## ⭐ Features
 
-- 🔌 Work with local USB TI CC1352 / CC2652 and SL EFR32 via Web Serial or with remote via WS-TCP bridge
+- 🔌 Work with local USB TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices via Web Serial or with remote via WS-TCP bridge
 - 📂 Flash firmware from custom local file or select from provided
 - 🦾 Automatic chip model, flash size, IEEE and firmware version detection
 - 📝 Cloud firmware's list with description
-- 💾 Backup, restore, and erase NVRAM
+- 💾 Backup, restore, and erase NVRAM (TI only)
 
 ## 🚀 Quick start
 
@@ -44,7 +44,7 @@ You have some options:
 #### 🏠 Home Assistant Add-On
 
 <div align="center"> 
-<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT" target="_blank"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="GitHub Actions Workflow Status"></img></a>
+<a alt="Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled." href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT" target="_blank"><img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Home-Assistant add repository sticker"></img></a>
 </div>
  
 Just click on the button above or add this repository to your Home Assistant add-on store manually and then install the add-on to expose remote TCP / host serial devices to the web UI.

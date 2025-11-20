@@ -1,43 +1,6 @@
 # Web Page - Developer Documentation
 
-This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing TI CC1352 / CC2652 and SL EFR32 devices.
-
-## Project Structure
-
-```
-web-page/
-├── src/                    # Source files
-│   ├── flasher.ts         # Main flasher logic
-│   ├── cctools.ts         # CC tools implementation
-│   ├── netfw.ts           # Network firmware handling
-│   ├── index.html         # Main HTML template
-│   ├── index.js           # Additional JavaScript
-│   ├── style.css          # Styles
-│   ├── transport/         # Transport implementations
-│   │   ├── serial.ts      # Web Serial API transport
-│   │   └── tcp.ts         # TCP/WebSocket transport
-│   ├── types/             # TypeScript type definitions
-│   │   ├── index.ts       # Main types
-│   │   └── web-serial.d.ts # Web Serial API types
-│   └── utils/             # Utility functions
-│       ├── control.ts     # Control utilities
-│       ├── http.ts        # HTTP utilities
-│       ├── index.ts       # General utilities
-│       └── intelhex.ts    # Intel HEX parser
-├── dist/                  # Built files (generated)
-├── favicon/               # Favicon source and settings
-│   ├── favicon-data.json  # Generated favicon data
-│   ├── favicon-settings.json # Favicon generation settings
-│   ├── icon.png          # Source icon
-│   ├── logo.png          # Logo image
-│   └── logo.svg          # Logo vector
-├── scripts/               # Build scripts
-│   └── inject-commit.js   # Commit hash injection
-├── bs-config.js          # Browser-sync configuration
-├── package.json          # Node.js dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-└── README.md             # This file
-```
+This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices.
 
 ## Requirements
 
@@ -129,8 +92,12 @@ npm run lint
 
 ### Main Components
 
-- **flasher.ts** - Main application entry point and UI logic
-- **cctools.ts** - TI CC device communication protocol
+- **flasher.ts** - Main application entry point and logic
+- **ui.ts** - UI elements and event handling
+- **netfw.ts** - Network firmware fetching and parsing
+- **tools/** - Device specific protocols
+  - **ti.ts** - TI CC device communication protocol
+  - **sl.ts** - Silabs device communication protocol
 - **transport/** - Abstracted transport layer for serial/TCP communication
 - **utils/** - Shared utility functions
 
