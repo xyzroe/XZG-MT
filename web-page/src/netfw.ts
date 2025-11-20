@@ -22,7 +22,7 @@ interface ZwManifest {
 }
 
 export async function fetchManifest(): Promise<ZwManifest> {
-  const url = "https://raw.githubusercontent.com/xyzroe/XZG/zb_fws/ti/manifest.json";
+  const url = "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/manifest.json";
   const resp = await fetch(url, { cache: "no-cache" });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const j = (await resp.json()) as ZwManifest;
@@ -37,6 +37,7 @@ export function filterFwByChip(man: ZwManifest, chip: string) {
     CC2652P7: "CC2652P7",
     CC1352P7: "CC2652P7",
     CC2652RB: "CC2652RB",
+    CC2538: "CC2538",
   };
   const deviceName = chipMap[chip] || chip;
   const result: Record<string, ZwFirmwareInfo[]> = {};
