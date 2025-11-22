@@ -12,9 +12,11 @@
 ### Docker
 
 <div align="center">
-<img src="https://img.shields.io/badge/aarch64-yes-green.svg" alt="Supports aarch64 Architecture"></img>
 <img src="https://img.shields.io/badge/amd64-yes-green.svg" alt="Supports amd64 Architecture"></img>
+<img src="https://img.shields.io/badge/arm64-yes-green.svg" alt="Supports arm64 Architecture"></img>
 <img src="https://img.shields.io/badge/armv7-yes-green.svg" alt="Supports armv7 Architecture"></img>
+<img src="https://img.shields.io/badge/armv6-yes-green.svg" alt="Supports armv6 Architecture"></img>
+<img src="https://img.shields.io/badge/386-yes-green.svg" alt="Supports 386 Architecture"></img>
 <br>
 <img alt="tags-badge" id="tags" src="https://ghcr-badge.egpl.dev/xyzroe/xzg-mt/tags?color=%2344cc11&amp;ignore=latest&amp;n=1&amp;label=tag&amp;trim=">
 <img alt="size-badge" id="size" src="https://ghcr-badge.egpl.dev/xyzroe/xzg-mt/size?color=%2344cc11&amp;tag=latest&amp;label=size&amp;trim=">
