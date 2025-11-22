@@ -22,7 +22,7 @@ build:
 build-local:
 	@echo "Building for current platform..."
 	@mkdir -p $(BUILD_DIR)
-	@go build -ldflags "-s -w -X main.VERSION=$(VERSION)" -o $(BUILD_DIR)/XZG-MT-local $(MAIN_FILE)
+	@go build -ldflags "-s -w -X main.VERSION=$(VERSION)" -o $(BUILD_DIR)/XZG-MT-local .
 	@echo "✓ Built $(BUILD_DIR)/XZG-MT-local"
 
 # Run locally

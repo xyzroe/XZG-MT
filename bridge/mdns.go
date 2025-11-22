@@ -66,7 +66,6 @@ func isLocalSerialToken(s string) bool {
 }
 
 func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
-	fmt.Printf("[mdns] scanning with timeout %d\n", timeoutMs)
 
 	var results []ServiceInfo
 	foundDevices := make(map[string]ServiceInfo)
@@ -84,6 +83,18 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	// Create a WaitGroup to synchronize goroutines
 	var wg sync.WaitGroup
 
+	//Print one message before starting scan with all requested types
+	if len(typeList) > 0 {
+		var typeNames []string
+		for _, t := range typeList {
+			typeNames = append(typeNames, fmt.Sprintf("%s.%s", t.Type, t.Protocol))
+		}
+		fmt.Printf("[mdns] scanning for: %s with timeout %d ms\n", strings.Join(typeNames, ", "), timeoutMs)
+	} else {
+		fmt.Printf("[mdns] no valid services requested for scan\n")
+		return results
+	}
+
 	// Start a search for each service type
 	for _, serviceType := range typeList {
 		// Skip non-network services
@@ -96,7 +107,6 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 			defer wg.Done()
 
 			serviceName := fmt.Sprintf("_%s._%s", st.Type, st.Protocol)
-			fmt.Printf("[mdns] looking for %s\n", serviceName)
 
 			// Create a new resolver for each service
 			resolver, err := zeroconf.NewResolver(nil)
@@ -197,7 +207,9 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 		// All goroutines finished
 	case <-time.After(time.Duration(timeoutMs) * time.Millisecond):
 		// Global timeout
-		fmt.Printf("[mdns] scan timeout reached\n")
+		if debugMode {
+			fmt.Printf("[mdns] scan timeout reached\n")
+		}
 	}
 
 	// Collect results

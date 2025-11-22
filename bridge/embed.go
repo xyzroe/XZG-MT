@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"io/fs"
 	"path"
 	"strings"
 )
@@ -13,9 +12,7 @@ var webFiles embed.FS
 // getEmbeddedFile returns the content of an embedded file if it exists
 func getEmbeddedFile(relPath string) (string, bool) {
 	// Remove leading slash
-	if strings.HasPrefix(relPath, "/") {
-		relPath = relPath[1:]
-	}
+	relPath = strings.TrimPrefix(relPath, "/")
 
 	// Default to index.html
 	if relPath == "" {
@@ -36,25 +33,4 @@ func getEmbeddedFile(relPath string) (string, bool) {
 	}
 
 	return string(content), true
-}
-
-// listEmbeddedFiles returns a list of all embedded files
-func listEmbeddedFiles() []string {
-	var files []string
-
-	fs.WalkDir(webFiles, "web", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !d.IsDir() {
-			// Remove "web/" prefix
-			relPath := strings.TrimPrefix(path, "web/")
-			files = append(files, relPath)
-		}
-
-		return nil
-	})
-
-	return files
 }

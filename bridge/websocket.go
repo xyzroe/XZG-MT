@@ -178,7 +178,7 @@ func (c *wsNetConn) SetWriteDeadline(t time.Time) error {
 
 func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort int) {
 	target := net.JoinHostPort(targetHost, strconv.Itoa(targetPort))
-	fmt.Printf("[websocket] establishing TCP connection to %s\n", target)
+	if debugMode {fmt.Printf("[websocket] establishing TCP connection to %s\n", target)}
 
 	// Create TCP connection to target
 	tcpConn, err := net.Dial("tcp", target)
@@ -282,8 +282,8 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 	// wait for first error/close
     err = <-errCh
     if err != nil && err != io.EOF {
-        fmt.Printf("[websocket] proxy error: %v\n", err)
-    }
+         if debugMode {fmt.Printf("[websocket] proxy error: %v\n", err)}
+     }
     // wake up/blocking ops: set immediate deadlines so blocked reads/writes unblock
     _ = tcpConn.SetDeadline(time.Now())
     _ = ws.SetWriteDeadline(time.Now())
