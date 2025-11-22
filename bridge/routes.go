@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
 	"io/ioutil"
@@ -281,6 +282,11 @@ func handleSerialControl(c echo.Context) error {
 			})
 		}
 		currentState.BaudRate = baud
+		
+		// Reopen immediately to ensure it's ready
+		if _, err := ensureSerialPort(path, baud); err != nil {
+			fmt.Printf("[routes] failed to reopen port %s at %d: %v\n", path, baud, err)
+		}
 	}
 
 	// Update state
@@ -299,16 +305,13 @@ func handleSerialControl(c echo.Context) error {
 
 	// Apply DTR/RTS if they were changed
 	if dtrStr != "" || rtsStr != "" {
-		serial := getSerialPort(path)
-		if serial == nil {
-			// Open port if not already open
-			serial = openSerialPort(path, currentState.BaudRate)
-			if serial != nil {
-				setSerialPort(path, serial)
-			}
-		}
-
-		if serial != nil {
+		// Use ensureSerialPort to safely get or open the port
+		serial, err := ensureSerialPort(path, currentState.BaudRate)
+		if err != nil {
+			// Log error but continue? Or return error?
+			// For now, just log and fail the DTR/RTS part
+			fmt.Printf("[routes] failed to ensure port for %s: %v\n", path, err)
+		} else if serial != nil {
 			// Set both DTR and RTS simultaneously for better timing
 			setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
 		}
