@@ -1,8 +1,9 @@
 import { Link } from "./ti";
-import { sleep as delay } from "../utils/index";
+import { sleep } from "../utils/index";
 import { padToMultiple } from "../utils/crc";
 import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
+import { setLines } from "../flasher";
 
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
@@ -41,13 +42,23 @@ export class SilabsTools {
   private uploadCompleteRegex = /\r\nSerial upload (complete|aborted)\r\n(.*?)\x00?/s;
   private promptRegex = /(?:^|[\r\n])BL ?> ?/i;
 
+  private readonly boundDataHandler = (data: Uint8Array) => this.dataReceived(data);
+
   constructor(link: Link) {
     this.link = link;
 
     // Set up data reception handler
-    this.link.onData((data: Uint8Array) => {
-      this.dataReceived(data);
-    });
+    // this.link.onData((data: Uint8Array) => {
+    //   this.dataReceived(data);
+    // });
+    this.ensureListener();
+  }
+
+  private ensureListener() {
+    if (this.link.offData) {
+      this.link.offData(this.boundDataHandler);
+    }
+    this.link.onData(this.boundDataHandler);
   }
 
   private dataReceived(data: Uint8Array): void {
@@ -81,10 +92,19 @@ export class SilabsTools {
           this.buffer = new Uint8Array(0);
           this.state = State.IN_MENU;
         } else if (this.promptRegex.test(text)) {
+          // If we see "Bootloader" or "Gecko", it might be an incomplete menu. Do not clear buffer.
+          if (/(?:Gecko|Bootloader)/i.test(text)) {
+            break;
+          }
+
           // Prompt seen but no version header yet; still in menu
           console.log("Detected Gecko Bootloader prompt (no header)");
           this.buffer = new Uint8Array(0);
-          this.state = State.IN_MENU;
+          if (this.version) {
+            this.state = State.IN_MENU;
+          } else {
+            console.log("Version not detected yet, staying in WAITING_FOR_MENU");
+          }
         } else {
           break; // Need more data
         }
@@ -133,29 +153,38 @@ export class SilabsTools {
   }
 
   public async getChipInfo() {
+    await enterSilabsBootloader();
+    // Give BL a brief moment, then query menu/version
+    await sleep(200);
     // Query bootloader version first
     const blVersion = await this.getBootloaderVersion();
 
     return {
       manufacturer: "Silabs",
-      chipName: "EFR32", // Generic, could be parsed from app
+      chipName: "EFR32MG21", // Generic, could be parsed from app
       revision: "Unknown",
-      firmwareVersion: blVersion,
+      bootloaderVersion: blVersion,
     };
   }
 
-  public async enterBootloader() {
-    console.log("Bootloader entry for Silabs should be done via DTR/RTS reset sequence");
-    // This is typically done via hardware reset before connecting
-    // The actual implementation is in flasher.ts with setLines()
-  }
+  // public async enterBootloader() {
+  //   console.log("Bootloader entry for Silabs should be done via DTR/RTS reset sequence");
+  //   // This is typically done via hardware reset before connecting
+  //   // The actual implementation is in flasher.ts with setLines()
+  // }
 
   public async getBootloaderVersion(timeoutMs: number = 2000): Promise<string> {
+    this.ensureListener();
+
     return new Promise((resolve, reject) => {
       (async () => {
         try {
           // Reset state machine and request EBL info exactly like USF
           this.state = State.WAITING_FOR_MENU;
+          this.version = null;
+          // Clear buffer to ensure we don't parse old garbage data from previous sessions
+          this.buffer = new Uint8Array(0);
+
           // Ember bootloader requires a newline before option
           await this.writeString("\n");
           await this.writeString("3");
@@ -170,9 +199,12 @@ export class SilabsTools {
               clearInterval(checkMenu);
               clearTimeout(timeout);
               resolve(this.version);
+              console.log(`Bootloader version detected: v${this.version}`);
+              return;
             }
             try {
               const t = new TextDecoder().decode(this.buffer);
+              console.log(`Checking for menu:\n${t}`);
               const mm = t.match(this.menuRegex);
               if (mm) {
                 this.version = mm[1];
@@ -316,13 +348,6 @@ export class SilabsTools {
           // First, query bootloader info
           await this.getBootloaderVersion();
 
-          // Select upload option (option 1)
-          this.state = State.WAITING_XMODEM_READY;
-          await this.writeString("1");
-
-          // Wait for XMODEM ready 'C' character
-          await delay(500);
-
           // Initialize XMODEM state
           this.xmodemFirmware = paddedFirmware;
           this.xmodemChunkIndex = 0;
@@ -339,6 +364,12 @@ export class SilabsTools {
           onProgress(0, paddedFirmware.length);
 
           console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
+          // Select upload option (option 1)
+          this.state = State.WAITING_XMODEM_READY;
+          await this.writeString("1");
+
+          // Wait for XMODEM ready 'C' character
+          await sleep(500);
 
           // Note: xmodemSendChunkOrEOT will be called when state changes to XMODEM_UPLOADING
           // This happens in dataReceived when we detect the 'C' character
@@ -350,6 +381,9 @@ export class SilabsTools {
   }
 
   public async getApplicationVersion(): Promise<string> {
+    // Re-register handler to ensure we are listening
+    this.ensureListener();
+
     this.ezspClient = new EzspAshClient(this.link);
     try {
       const info = await this.ezspClient.readVersion();
@@ -361,16 +395,78 @@ export class SilabsTools {
   }
 }
 
-export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
+//export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
 
-export async function enterSilabsBootloader(setLines: SetLinesHandler, log?: (msg: string) => void): Promise<void> {
+export async function enterSilabsBootloader(log?: (msg: string) => void): Promise<void> {
   log?.("Silabs entry bootloader: RTS/DTR exact pattern");
-  await setLines(true, false);
-  await delay(100);
-  await setLines(false, true);
-  await delay(500);
+
+  // await setLines(false, true);
+  // await sleep(1000);
+
+  //work with direct logic
+  // await setLines(true, false);
+  // await sleep(100);
+
+  // await setLines(true, true);
+  // await sleep(50);
+
+  // // my gate work
+  // await setLines(false, false);
+  // await sleep(200);
+  // await setLines(false, true);
+  // await sleep(200);
+  // await setLines(true, true);
+  // await sleep(200);
+  // await setLines(false, true);
+  // await sleep(200);
+  // await setLines(false, false);
+  // await sleep(200);
+
   await setLines(true, true);
-  await delay(300);
+  await sleep(50);
+  await setLines(true, false);
+  await sleep(100);
+  await setLines(false, true);
+  await sleep(100);
+  // await setLines(true, false);
+  // await sleep(500);
+  // await setLines(true, true);
+  // await setLines(false, false);
+  // await sleep(1000);
+  // await setLines(false, true);
+  // await sleep(1000);
+  // await setLines(true, true);
+  // await sleep(1000);
+}
+
+export async function resetSilabs(log?: (msg: string) => void): Promise<void> {
+  log?.("Silabs reset: RTS/DTR exact pattern");
+
+  // log("Sending '2' to bootloader to run application");
+  // const encoder = new TextEncoder();
+  // await getActiveLink().write(encoder.encode("2\r\n"));
+  // await sleep(500); // Give time for bootloader to process
+  //await resetUseLines(); // Then reset the device
+
+  // work with inverted logic
+  // await setLines(true, true);
+  // await sleep(500);
+  // await setLines(false, true);
+  // await sleep(500);
+  // await setLines(true, true);
+  // await sleep(1000);
+
+  // await setLines(true, true);
+  // await sleep(100);
+  // await setLines(false, true);
+  // await sleep(500);
+  // await setLines(true, true);
+  // await setLines(false, false);
+  // await sleep(300);
+  await setLines(true, false);
+  await sleep(300);
+  await setLines(false, false);
+  await sleep(300);
 }
 
 const ASH_FLAG = 0x7e;
@@ -461,10 +557,10 @@ class EzspAshClient {
     const frameId = 0x00;
     const payload = new Uint8Array([desiredProtocolVersion]);
     const response = await this.sendEzspCommand(frameId, payload, 4000);
+    console.log("Response bytes:", response);
     if (response.length < 4) {
       throw new Error("Invalid EZSP version response");
     }
-    console.log("Response bytes:", response);
     const protocolVersion = response[0];
     const stackType = response[1];
     const stackVersion = response[2] | (response[3] << 8);
