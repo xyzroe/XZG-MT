@@ -1,3 +1,26 @@
+## v0.2.20
+
+## 🚀 Features
+- feat: automatic select BSL and RST GPIOs if existing (#54) by @xyzroe
+- feat: categories inside cloud FW list (#54) by @xyzroe
+- feat: individual accepted local file extensions for each family (#54) by @xyzroe
+- feat: cloud firmware list for Silicon Labs chips (#54) by @xyzroe
+- feat: update firmware manifest URL and add CC2538 support for cloud firmware list (#51) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: reworked mechanism of applying URLs based on templates (#54) by @xyzroe
+- fix: clear devices list if no connection to the bridge (#54) by @xyzroe
+- fix: cloud firmware list sorting. newest > oldest. (#54) by @xyzroe
+- fix: improved SL flashing process. (#54) by @xyzroe
+- fix: some code clean up (#54) by @xyzroe
+- small fixes in bridge, code cleanup (#53) by @xyzroe
+- fix: closing serial port after socket disconnect (#52) by @xyzroe
+
+## 📘 Documentation
+- docs: update README to include ESP32 support and improve project structure (#50) by @xyzroe
+
+
+
 ## v0.2.19
 
 ## 🚀 Features
