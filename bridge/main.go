@@ -18,15 +18,15 @@ import (
 var VERSION = "0.0.0"
 
 const (
-	DEFAULT_WS_PORT              = 8765
+	DEFAULT_WS_PORT = 8765
 	//DEFAULT_SERIAL_SCAN_INTERVAL = 10000
 )
 
 var (
-	wsPort             int
-	serialScanInterval int
-	advertiseHost      string
-	debugMode          bool
+	wsPort int
+	//serialScanInterval int
+	advertiseHost string
+	debugMode     bool
 )
 
 func main() {

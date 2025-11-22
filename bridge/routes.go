@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/labstack/echo/v4"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/gorilla/websocket"
+	"github.com/labstack/echo/v4"
 )
 
 func setupRoutes(e *echo.Echo) {
@@ -194,9 +195,8 @@ func handleGpioList(c echo.Context) error {
 		Label string `json:"label"`
 		Value string `json:"value"`
 	}
-
 	var gpioOut []SimpleEntry
-	entries, _ := ioutil.ReadDir("/sys/class/gpio")
+	entries, _ := os.ReadDir("/sys/class/gpio")
 	for _, entry := range entries {
 		name := entry.Name()
 		// skip gpiochip* and export/unexport entries
@@ -205,20 +205,19 @@ func handleGpioList(c echo.Context) error {
 		}
 		valPath := filepath.Join("/sys/class/gpio", name, "value")
 		val := ""
-		if b, err := ioutil.ReadFile(valPath); err == nil {
+		if b, err := os.ReadFile(valPath); err == nil {
 			val = strings.TrimSpace(string(b))
 		}
 		label := name
 		gpioOut = append(gpioOut, SimpleEntry{Path: valPath, Label: label, Value: val})
 	}
-
 	var ledsOut []SimpleEntry
-	leds, _ := ioutil.ReadDir("/sys/class/leds/")
+	leds, _ := os.ReadDir("/sys/class/leds/")
 	for _, led := range leds {
 		name := led.Name()
 		bPath := filepath.Join("/sys/class/leds", name, "brightness")
 		val := ""
-		if b, err := ioutil.ReadFile(bPath); err == nil {
+		if b, err := os.ReadFile(bPath); err == nil {
 			val = strings.TrimSpace(string(b))
 		}
 		ledsOut = append(ledsOut, SimpleEntry{Path: bPath, Label: name, Value: val})
@@ -282,7 +281,7 @@ func handleSerialControl(c echo.Context) error {
 			})
 		}
 		currentState.BaudRate = baud
-		
+
 		// Reopen immediately to ensure it's ready
 		if _, err := ensureSerialPort(path, baud); err != nil {
 			fmt.Printf("[routes] failed to reopen port %s at %d: %v\n", path, baud, err)
@@ -331,9 +330,7 @@ func handleStaticFiles(c echo.Context) error {
 	path := c.Request().URL.Path
 
 	// Remove leading slash
-	if strings.HasPrefix(path, "/") {
-		path = path[1:]
-	}
+	path = strings.TrimPrefix(path, "/")
 
 	// Default to index.html
 	if path == "" {
