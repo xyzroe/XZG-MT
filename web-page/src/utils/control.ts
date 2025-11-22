@@ -1,15 +1,11 @@
 // Control configuration and helpers extracted from flasher.ts
 
 export type ControlConfig = {
-  pinMode: boolean;
-  bslPath?: string;
-  rstPath?: string;
-  baudPath?: string;
+  pinMode?: boolean;
+  bslValue?: string;
+  rstValue?: string;
+  baudValue?: string;
   invertLevel?: boolean;
-};
-
-export const DEFAULT_CONTROL: ControlConfig = {
-  pinMode: true,
 };
 
 export const CONTROL_PRESETS: Array<{
@@ -18,13 +14,12 @@ export const CONTROL_PRESETS: Array<{
   config: ControlConfig;
 }> = [
   {
-    name: "ZigStar/UZG HTTP",
+    name: "ZigStar/XZG HTTP",
     test: (m) => /^(zigstar_gw|zig_star_gw|uzg-01|xzg)$/i.test(m.type || ""),
     config: {
       pinMode: true,
-      bslPath: "http://{HOST}/cmdZigBSL",
-      rstPath: "http://{HOST}/cmdZigRST",
-      baudPath: "",
+      bslValue: "url:cmdZigBSL",
+      rstValue: "url:cmdZigRST",
     },
   },
   {
@@ -32,9 +27,8 @@ export const CONTROL_PRESETS: Array<{
     test: (m) => /^(tubeszb|tubes_zb)$/i.test(m.type || ""),
     config: {
       pinMode: false,
-      bslPath: "http://{HOST}/switch/zBSL/{SET}",
-      rstPath: "http://{HOST}/switch/zRST_gpio/{SET}",
-      baudPath: "",
+      bslValue: "url:switch/zBSL",
+      rstValue: "url:switch/zRST_gpio",
     },
   },
   {
@@ -42,9 +36,9 @@ export const CONTROL_PRESETS: Array<{
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "usb",
     config: {
       pinMode: false,
-      bslPath: "http://{BRIDGE}/sc?port={PORT}&dtr={SET}",
-      rstPath: "http://{BRIDGE}/sc?port={PORT}&rts={SET}",
-      baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
+      bslValue: "sp:dtr",
+      rstValue: "sp:rts",
+      baudValue: "bridge",
     },
   },
   {
@@ -52,7 +46,7 @@ export const CONTROL_PRESETS: Array<{
     test: (m) => (m.type || "").toLowerCase() === "local" && (m.protocol || "").toLowerCase() === "serial",
     config: {
       pinMode: false,
-      baudPath: "http://{BRIDGE}/sc?port={PORT}&baud={SET}",
+      baudValue: "bridge",
     },
   },
 ];
@@ -65,5 +59,5 @@ export function deriveControlConfig(meta: { type?: string; protocol?: string }):
       // ignore
     }
   }
-  return DEFAULT_CONTROL;
+  return {};
 }

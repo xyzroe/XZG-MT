@@ -6,10 +6,10 @@ import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
 
 import * as ti_tools from "./tools/ti";
-import { SilabsTools, enterSilabsBootloader } from "./tools/sl";
+import { SilabsTools, enterSilabsBootloader, resetSilabs } from "./tools/sl";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
-import { DEFAULT_CONTROL, deriveControlConfig, ControlConfig } from "./utils/control";
+import { deriveControlConfig, ControlConfig } from "./utils/control";
 import { httpGetWithFallback } from "./utils/http";
 import { crc32 as computeCrc32 } from "./utils/crc";
 
@@ -42,6 +42,7 @@ import {
   btnPing,
   btnVersion,
   firmwareVersionEl,
+  bootloaderVersionEl,
   btnGetModel,
   btnNvWrite,
   btnFlash,
@@ -64,20 +65,13 @@ import {
   autoBslToggle,
   implyGateToggle,
   findBaudToggle,
-  serialSection,
-  tcpSection,
-  generalSection,
-  familySection,
-  portInfoEl,
-  actionsSection,
-  firmwareSection,
-  nvramSection,
   espFilesContainer,
   updateUIForFamily,
   log,
   setBridgeStatus,
   setBridgeLoading,
   deviceDetectBusy,
+  updateConnectionUI,
 } from "./ui";
 
 // Global state variables and UI elements
@@ -85,7 +79,7 @@ import {
 type CtrlMode = "zig-http" | "bridge-sc" | "serial-direct";
 let currentConnMeta: { type?: string; protocol?: string } = {};
 
-let activeConnection: "serial" | "tcp" | null = null;
+export let activeConnection: "serial" | "tcp" | null = null;
 let esploader: ESPLoader | null = null;
 
 let serial: SerialWrap | null = null;
@@ -178,6 +172,11 @@ chooseSerialBtn.addEventListener("click", async () => {
 
 disconnectBtn.addEventListener("click", async () => {
   if (!activeConnection) return;
+
+  // Reset protocol tools
+  sl_tools = null;
+  detectedTiChipFamily = null;
+
   if (activeConnection === "serial") {
     try {
       if (esploader) {
@@ -624,27 +623,36 @@ mdnsSelect?.addEventListener("change", () => {
 btnAddEspFile?.addEventListener("click", addEspFileRow);
 
 function applyControlConfig(cfg: ControlConfig) {
-  if (pinModeSelect) pinModeSelect.checked = cfg.pinMode ?? DEFAULT_CONTROL.pinMode;
-  if (bslUrlInput)
-    if (cfg.bslPath !== undefined) bslUrlInput.value = cfg.bslPath;
-    else if (DEFAULT_CONTROL.bslPath !== undefined) bslUrlInput.value = DEFAULT_CONTROL.bslPath;
+  if (pinModeSelect && cfg.pinMode !== undefined) pinModeSelect.checked = cfg.pinMode;
 
-  if (rstUrlInput)
-    if (cfg.rstPath !== undefined) rstUrlInput.value = cfg.rstPath;
-    else if (DEFAULT_CONTROL.rstPath !== undefined) rstUrlInput.value = DEFAULT_CONTROL.rstPath;
+  if (invertLevel && cfg.invertLevel !== undefined) invertLevel.checked = cfg.invertLevel;
 
-  if (baudUrlInput)
-    if (cfg.baudPath !== undefined) baudUrlInput.value = cfg.baudPath;
-    else if (DEFAULT_CONTROL.baudPath !== undefined) baudUrlInput.value = DEFAULT_CONTROL.baudPath;
+  if (bslUrlSelect) {
+    if (cfg.bslValue !== undefined) bslUrlSelect.value = cfg.bslValue;
+    else {
+      // if in bslUrlSelect options there is an option with name matching zb:boot, select it
+      const zbBootOption = Array.from(bslUrlSelect.options).find((opt) => opt.text === "zb:boot");
+      if (zbBootOption) bslUrlSelect.value = zbBootOption.value;
+    }
+    applySelectToInput(bslUrlSelect, bslUrlInput);
+  }
 
-  if (invertLevel)
-    if (cfg.invertLevel !== undefined) invertLevel.checked = cfg.invertLevel;
-    else if (DEFAULT_CONTROL.invertLevel !== undefined) invertLevel.checked = DEFAULT_CONTROL.invertLevel;
+  if (rstUrlSelect) {
+    if (cfg.rstValue !== undefined) rstUrlSelect.value = cfg.rstValue;
+    else {
+      // if in rstUrlSelect options there is an option matching zb:reset, select it
+      const zbResetOption = Array.from(rstUrlSelect.options).find((opt) => opt.text === "zb:reset");
+      if (zbResetOption) rstUrlSelect.value = zbResetOption.value;
+    }
+    applySelectToInput(rstUrlSelect, rstUrlInput);
+  }
 
-  if (baudUrlSelect) baudUrlSelect.value = cfg.baudPath ? "bridge" : "none";
+  if (baudUrlSelect) {
+    if (cfg.baudValue !== undefined) baudUrlSelect.value = cfg.baudValue;
+    else baudUrlSelect.value = "none";
+    applySelectToInput(baudUrlSelect, baudUrlInput);
+  }
   saveCtrlSettings();
-  // Update UI visibility/state
-  //updateConnectionUI();
 }
 
 function getCtrlMode(): CtrlMode {
@@ -700,125 +708,6 @@ export function getSelectedFamily(): "ti" | "sl" | "esp" {
 
 // Bootstrap tooltip init moved to index.js
 
-export function updateConnectionUI() {
-  const family = getSelectedFamily();
-  if (family === "esp") {
-    optErase.checked = false;
-    optWrite.checked = false;
-    optWrite.disabled = true;
-    optVerify.checked = false;
-    optVerify.disabled = true;
-  }
-
-  const anyActive = !!activeConnection;
-
-  // Helper: enable/disable entire section by toggling pointer-events and aria-disabled
-  const setSectionDisabled = (el: HTMLElement | null, disabled: boolean) => {
-    if (!el) return;
-    el.classList.toggle("opacity-50", disabled);
-    el.classList.toggle("pe-none", disabled);
-    el.setAttribute("aria-disabled", String(disabled));
-    // Additionally, disable all controls within to prevent focus via keyboard
-    const ctrls = el.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]'
-    );
-    ctrls.forEach((c) => {
-      if (c === disconnectBtn) return; // never disable Disconnect here
-      // Only set disabled on form controls that support it
-      if (
-        c instanceof HTMLButtonElement ||
-        c instanceof HTMLInputElement ||
-        c instanceof HTMLSelectElement ||
-        c instanceof HTMLTextAreaElement ||
-        c instanceof HTMLFieldSetElement
-      ) {
-        (
-          c as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLFieldSetElement
-        ).disabled = disabled;
-      }
-      if (disabled) c.setAttribute("tabindex", "-1");
-      else if (c.hasAttribute("tabindex")) c.removeAttribute("tabindex");
-    });
-  };
-
-  // Sections: Serial and TCP (entire columns)
-
-  setSectionDisabled(serialSection, anyActive);
-  setSectionDisabled(tcpSection, anyActive);
-  setSectionDisabled(generalSection, anyActive);
-  setSectionDisabled(familySection, anyActive);
-
-  // Keep TCP settings panel hidden when a connection is active
-  //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
-
-  // Unified Disconnect button visible only when connected, red style when shown
-  const showDisc = anyActive;
-  disconnectBtn.classList.toggle("d-none", !showDisc);
-  disconnectBtn.classList.toggle("btn-danger", showDisc);
-  disconnectBtn.classList.toggle("btn-outline-secondary", !showDisc);
-  disconnectBtn.disabled = !showDisc; // Disconnect remains clickable when connected
-
-  // Update port info field
-  if (portInfoEl) {
-    if (!anyActive) {
-      portInfoEl.value = "";
-    } else if (activeConnection === "tcp") {
-      const host = hostInput.value.trim();
-      const port = parseInt(portInput.value, 10);
-      portInfoEl.value = host && port ? `tcp://${host}:${port}` : "tcp://";
-    } else {
-      // Web Serial has no stable system path; show logical info
-      const br = parseInt(bitrateInput.value, 10) || 115200;
-      portInfoEl.value = `serial @ ${br}bps`;
-    }
-  }
-
-  // Clear Device Info fields on disconnect
-  if (!anyActive) {
-    if (chipModelEl) chipModelEl.value = "";
-    if (flashSizeEl) {
-      flashSizeEl.value = "";
-      flashSizeEl.classList.remove("border-warning", "bg-warning-subtle");
-    }
-    if (ieeeMacEl) ieeeMacEl.value = "";
-    if (firmwareVersionEl) firmwareVersionEl.value = "";
-  }
-
-  // Gate entire Actions section like Firmware/NVRAM
-  if (actionsSection) {
-    actionsSection.classList.toggle("opacity-50", !anyActive);
-    actionsSection.classList.toggle("pe-none", !anyActive);
-    actionsSection.setAttribute("aria-disabled", String(!anyActive));
-  }
-
-  // Firmware and NVRAM sections enabled only when a connection is active
-  if (firmwareSection) {
-    firmwareSection.classList.toggle("opacity-50", !anyActive);
-    firmwareSection.classList.toggle("pe-none", !anyActive);
-  }
-  if (nvramSection) {
-    nvramSection.classList.toggle("opacity-50", !anyActive);
-    nvramSection.classList.toggle("pe-none", !anyActive);
-  }
-  // Cloud controls reflect connection state
-  if (netFwSelect) netFwSelect.disabled = !anyActive;
-  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
-
-  if (pinModeSelect?.checked) {
-    invertLevel?.setAttribute("disabled", "true");
-  } else {
-    invertLevel?.removeAttribute("disabled");
-  }
-  // No special-case for control URL fields: they follow section state
-
-  // const ctrlUrlSelectRow = document.getElementById("ctrlUrlSelectRow") as HTMLElement | null;
-  // if (pinModeSelect?.checked) {
-  //   ctrlUrlSelectRow?.classList.add("d-none");
-  // } else {
-  //   ctrlUrlSelectRow?.classList.remove("d-none");
-  // }
-}
-
 // Settings: store bridge host/port in localStorage
 function getBridgeBase(base: string): string {
   const host = bridgeHostInput?.value?.trim() || localStorage.getItem("bridgeHost") || "127.0.0.1";
@@ -870,6 +759,14 @@ function loadCtrlSettings() {
     if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
     if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
     if (invertLevel) invertLevel.checked = localStorage.getItem("invertLevel") === "1";
+    const savedFamily = localStorage.getItem("chip_family");
+    if (savedFamily) {
+      const radio = document.querySelector(`input[name="chip_family"][value="${savedFamily}"]`) as HTMLInputElement;
+      if (radio) {
+        radio.checked = true;
+        updateUIForFamily();
+      }
+    }
   } catch {
     // ignore
   }
@@ -882,6 +779,7 @@ export function saveCtrlSettings() {
     if (rstUrlInput) localStorage.setItem("rstUrlInput", rstUrlInput.value.trim());
     if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
     if (invertLevel) localStorage.setItem("invertLevel", invertLevel.checked ? "1" : "0");
+    localStorage.setItem("chip_family", getSelectedFamily());
   } catch {
     // ignore
   }
@@ -1012,17 +910,29 @@ function updateOptionsStateForFile(selected: boolean) {
   }
 }
 
-function getActiveLink(): { write: (d: Uint8Array) => Promise<void>; onData: (cb: (d: Uint8Array) => void) => void } {
+function getActiveLink(): {
+  write: (d: Uint8Array) => Promise<void>;
+  onData: (cb: (d: Uint8Array) => void) => void;
+  offData: (cb: (d: Uint8Array) => void) => void;
+} {
   if (activeConnection === "serial" && serial)
-    return { write: (d) => serial!.write(d), onData: (cb) => serial!.onData(cb) };
+    return {
+      write: (d) => serial!.write(d),
+      onData: (cb) => serial!.onData(cb),
+      offData: (cb) => serial!.offData(cb),
+    };
   if (activeConnection === "tcp" && tcp)
-    return { write: (d: Uint8Array) => tcp!.write(d), onData: (cb: (d: Uint8Array) => void) => tcp!.onData(cb) } as any;
+    return {
+      write: (d: Uint8Array) => tcp!.write(d),
+      onData: (cb: (d: Uint8Array) => void) => tcp!.onData(cb),
+      offData: (cb: (d: Uint8Array) => void) => tcp!.offData(cb),
+    } as any;
   throw new Error("No transport connected");
 }
 
 // Unified: enter BSL for current transport (optimized per concept)
 async function enterBsl(): Promise<void> {
-  const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath || "").trim();
+  const bslTpl = (bslUrlInput?.value || "").trim();
   if (activeConnection === "serial") {
     log(
       `Entering BSL: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
@@ -1039,52 +949,40 @@ async function enterBsl(): Promise<void> {
       log("Auto BSL disabled for serial; skipping line sequence");
       return;
     }
-    // Use Silabs auto entry when SI family is selected
-    if (getSelectedFamily() === "sl") {
-      await enterSilabsBootloader(setLines, log);
-    }
-    if (getSelectedFamily() === "ti") {
-      await bslUseLines();
-    }
-    if (getSelectedFamily() === "esp") {
-      log("ESP: Use 'Connect' to enter bootloader automatically.");
-    }
-    return;
   }
 
   if (activeConnection === "tcp") {
-    if (!pinModeSelect?.checked) {
-      // Use line sequences via remote bridge pins (two attempts)
-      // try {
-
-      if (getSelectedFamily() === "sl") {
-        await enterSilabsBootloader(setLines, log);
-      }
-      if (getSelectedFamily() === "ti") {
-        await bslUseLines();
-      }
-      // } catch (e) {
-      //   await bslUseLines(true);
-      // }
-      //delay 500 ms
-      //await sleep(500);
+    if (pinModeSelect?.checked) {
+      log("Using remote pin mode to enter BSL");
+      const hasSet = /\{SET\}/.test(bslTpl);
+      await sendCtrlUrl(bslTpl, hasSet ? 1 : undefined);
       return;
     }
-    // Remote pin mode ON: send single request(s) to BSL URL; if {SET} present, we may need specific level
-    // For entering BSL we only need to trigger BSL endpoint once; if {SET} exists, set to 1
-    const hasSet = /\{SET\}/.test(bslTpl);
-    await sendCtrlUrl(bslTpl, hasSet ? 1 : undefined);
-    return;
+  }
+  const family = getSelectedFamily();
+  //log(`Using line sequences for family: ${family}`);
+  // Use line sequences via direct serial or remote bridge pins
+  if (family === "sl") {
+    await enterSilabsBootloader(log);
+  }
+  if (family === "ti") {
+    await ti_tools.bslUseLines(implyGateToggle?.checked ?? false, log);
   }
 
-  throw new Error("No active connection");
+  if (family === "esp") {
+    log("ESP: Use 'Connect' to enter bootloader automatically.");
+  }
+  // Remote pin mode ON: send single request(s) to BSL URL; if {SET} present, we may need specific level
+  // For entering BSL we only need to trigger BSL endpoint once; if {SET} exists, set to 1
+
+  return;
 }
 
 // Unified: reset to application for current transport (optimized per concept)
 async function performReset(): Promise<void> {
   //const auto = !!autoBslToggle?.checked; // same toggle governs whether to use sequences
   //const remotePinMode = !!pinModeSelect?.checked;
-  const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath || "").trim();
+  const rstTpl = (rstUrlInput?.value || "").trim();
   if (activeConnection === "serial") {
     log(
       `Resetting: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
@@ -1101,45 +999,36 @@ async function performReset(): Promise<void> {
       log("Auto reset disabled for serial; skipping line sequence");
       return;
     }
-    // For Silabs, if in bootloader, send "2" to run application, then reset lines
-    if (getSelectedFamily() === "sl") {
-      log("Sending '2' to bootloader to run application");
-      const encoder = new TextEncoder();
-      await getActiveLink().write(encoder.encode("2\r\n"));
-      await sleep(500); // Give time for bootloader to process
-      await resetUseLines(); // Then reset the device
-    } else if (getSelectedFamily() === "esp") {
-      if (esploader) {
-        log("ESP: Resetting...");
-        await (esploader as any).after("hard_reset");
-      } else {
-        log("ESP: Not connected");
-      }
-    } else {
-      await resetUseLines();
-    }
-    return;
   }
 
   if (activeConnection === "tcp") {
-    if (!pinModeSelect?.checked) {
-      // Use line sequences via remote bridge pins
-      //try {
-      await resetUseLines();
-      // } catch (e) {
-      //   await resetUseLines(true);
-      // }
-      //delay 500 ms
-      //await sleep(500);
+    if (pinModeSelect?.checked) {
+      // Remote pin mode ON: send single request(s) to RST URL; if {SET} present, choose appropriate level
+      const hasSet = /\{SET\}/.test(rstTpl);
+      await sendCtrlUrl(rstTpl, hasSet ? 1 : undefined);
+
       return;
     }
-    // Remote pin mode ON: send single request(s) to RST URL; if {SET} present, choose appropriate level
-    const hasSet = /\{SET\}/.test(rstTpl);
-    await sendCtrlUrl(rstTpl, hasSet ? 1 : undefined);
-    return;
+  }
+  const family = getSelectedFamily();
+  //log(`Using line sequences for family: ${family}`);
+  // Use line sequences via direct serial or remote bridge pins
+  if (family === "ti") {
+    await ti_tools.resetUseLines(log);
+  }
+  if (family === "sl") {
+    await resetSilabs(log);
+  }
+  if (family === "esp") {
+    if (esploader) {
+      log("ESP: Resetting...");
+      await (esploader as any).after("hard_reset");
+    } else {
+      log("ESP: Not connected");
+    }
   }
 
-  throw new Error("No active connection");
+  return;
 }
 
 // Read chip information in BSL mode (no mode changes)
@@ -1271,7 +1160,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       const info = await sl_tools.getChipInfo();
       if (chipModelEl) chipModelEl.value = info.chipName;
-      if (firmwareVersionEl) firmwareVersionEl.value = info.firmwareVersion || "";
+      if (bootloaderVersionEl) bootloaderVersionEl.value = info.bootloaderVersion || "";
       refreshNetworkFirmwareList(info.chipName).catch((e) =>
         log("Network FW list fetch failed: " + (e?.message || String(e)))
       );
@@ -1406,7 +1295,7 @@ async function runConnectSequence(): Promise<void> {
     }
     const family = getSelectedFamily();
     if (family === "ti") {
-      await enterBsl().catch((e: any) => log("Enter BSL failed: " + (e?.message || String(e))));
+      await enterBsl();
       await readChipInfo(false);
       await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
       await sleep(1000);
@@ -1438,14 +1327,15 @@ async function runConnectSequence(): Promise<void> {
       // Silabs path: enter bootloader, read BL version, then reset back to app
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       try {
-        // Enter Gecko Bootloader
-        await enterBsl();
-        // Give BL a brief moment, then query menu/version
-        await sleep(200);
-        const blv = await sl_tools.getBootloaderVersion();
-        log(`Silabs bootloader: v${blv}`);
-        if (firmwareVersionEl) firmwareVersionEl.value = `BL v${blv}`;
-        if (chipModelEl && !chipModelEl.value) chipModelEl.value = "EFR32";
+        // // Enter Gecko Bootloader
+        // await enterBsl();
+        // // Give BL a brief moment, then query menu/version
+        // await sleep(200);
+        // const blv = await sl_tools.getBootloaderVersion();
+        // log(`Silabs bootloader: v${blv}`);
+        // if (bootloaderVersionEl) bootloaderVersionEl.value = `${blv}`;
+        // if (chipModelEl && !chipModelEl.value) chipModelEl.value = "EFR32";
+        await readChipInfo(false);
       } catch (e: any) {
         log("Silabs bootloader check failed: " + (e?.message || String(e)));
       }
@@ -1518,7 +1408,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   // Ensure BSL mode before flashing/verifying depending on transport
   try {
     await enterBsl();
-    await sleep(300);
+    await sleep(500);
   } catch (e: any) {
     log("Enter BSL failed: " + (e?.message || String(e)));
   }
@@ -1539,6 +1429,11 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 
       log("Silabs flash complete!");
       fwProgress(100, "Done");
+      //wait 10 seconds, showing progress
+      for (let i = 0; i <= 10; i++) {
+        fwProgress(10 * (10 - i), `Resetting in ${10 - i}...`);
+        await sleep(1000);
+      }
     } catch (error: any) {
       log("Silabs flash error: " + (error?.message || String(error)));
       throw error;
@@ -1717,39 +1612,39 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   }, 1000);
 }
 
-async function bslUseLines() {
-  if (implyGateToggle?.checked != true) {
-    await setLines(true, true);
-    await sleep(250);
-    await setLines(true, false);
-    await sleep(250);
-    await setLines(false, false);
-    await sleep(250);
-    await setLines(true, false);
-    await sleep(500);
-    await setLines(true, true);
-    await sleep(500);
-  } else {
-    await setLines(true, true);
-    await sleep(250);
-    await setLines(true, false);
-    await sleep(250);
-    await setLines(false, true);
-    await sleep(450);
-    await setLines(false, false);
-    await sleep(250);
-  }
-}
+// async function bslUseLines() {
+//   if (implyGateToggle?.checked != true) {
+//     await setLines(true, true);
+//     await sleep(250);
+//     await setLines(true, false);
+//     await sleep(250);
+//     await setLines(false, false);
+//     await sleep(250);
+//     await setLines(true, false);
+//     await sleep(500);
+//     await setLines(true, true);
+//     await sleep(500);
+//   } else {
+//     await setLines(true, true);
+//     await sleep(250);
+//     await setLines(true, false);
+//     await sleep(250);
+//     await setLines(false, true);
+//     await sleep(450);
+//     await setLines(false, false);
+//     await sleep(250);
+//   }
+// }
 
-// Reset the device out of BSL and back into application
-async function resetUseLines() {
-  await setLines(true, true);
-  await sleep(500);
-  await setLines(false, true);
-  await sleep(500);
-  await setLines(true, true);
-  await sleep(1000);
-}
+// // Reset the device out of BSL and back into application
+// async function resetUseLines() {
+//   await setLines(true, true);
+//   await sleep(500);
+//   await setLines(false, true);
+//   await sleep(500);
+//   await setLines(true, true);
+//   await sleep(1000);
+// }
 
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
@@ -1780,10 +1675,12 @@ async function nvramWriteAll(obj: any): Promise<void> {
   nvProgress(100, "Write done");
 }
 
+//export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
+
 // DTR = BSL(FLASH), RTS = RESET; (active low);
 // without NPN - rts=0 reset=0, dtr=0 bsl=0
 // with NPN invert - rts=0 reset=1, dtr=0 bsl=1
-const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
+export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
   const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
   // just for simplicity
@@ -1801,8 +1698,8 @@ const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   }
   if (activeConnection === "tcp") {
     // TCP: send two single requests, one per pin, using absolute URLs from inputs
-    const bslTpl = (bslUrlInput?.value || DEFAULT_CONTROL.bslPath || "").trim();
-    const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath || "").trim();
+    const bslTpl = (bslUrlInput?.value || "").trim();
+    const rstTpl = (rstUrlInput?.value || "").trim();
 
     const bslHasSet = /\{SET\}/.test(bslTpl);
     const rstHasSet = /\{SET\}/.test(rstTpl);
@@ -1815,7 +1712,7 @@ const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
 
 async function changeBaudOverTcp(baud: number): Promise<void> {
   if (activeConnection !== "tcp" || !tcp) throw new Error("No TCP connection");
-  const tpl = (baudUrlInput?.value || DEFAULT_CONTROL.baudPath || "").trim();
+  const tpl = (baudUrlInput?.value || "").trim();
   // const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
   const hasSet = /\{SET\}/.test(tpl);
   // const hasRstSet = /\{SET\}/.test(rstTpl);
@@ -1880,18 +1777,10 @@ function applySelectToInput(sel: HTMLSelectElement | null, input: HTMLInputEleme
     input.value = "http://{BRIDGE}/sc?port={PORT}&baud={SET}";
   } else if (v === "none") {
     input.value = "";
-  } else if (v == "xzg:bsl") {
-    input.value = "http://{HOST}/cmdZigBSL";
-  } else if (v == "xzg:rst") {
-    input.value = "http://{HOST}/cmdZigRST";
-  } else if (v == "esphome:bsl") {
-    input.value = "http://{HOST}/switch/zBSL/{SET}";
-  } else if (v == "esphome:rst") {
-    input.value = "http://{HOST}/switch/zRST_gpio/{SET}";
-  } else if (v == "tasmota:bsl") {
-    input.value = "http://{HOST}/cm?cmnd=Power2%20{SET}";
-  } else if (v == "tasmota:rst") {
-    input.value = "http://{HOST}/cm?cmnd=Power1%20{SET}";
+  } else if (v.startsWith("url:")) {
+    const idx = v.indexOf(":");
+    const path = idx >= 0 ? v.substring(idx + 1) : v;
+    input.value = `http://{HOST}/${path}`;
   }
   saveCtrlSettings();
 }
@@ -1978,6 +1867,12 @@ async function refreshMdnsList() {
     log("mDNS refresh error: " + (e?.message || String(e)));
     // error: mark bridge as problem (red x)
     setBridgeStatus(false);
+    // clean up options
+    mdnsSelect.innerHTML = "";
+    const def = document.createElement("option");
+    def.value = "";
+    def.textContent = "— No connection —";
+    mdnsSelect.appendChild(def);
   }
 }
 
@@ -2044,7 +1939,7 @@ async function refreshControlLists() {
           const label = it.label || it.name || it.path || String(it);
           const path = it.path || it.name || label;
           o.value = `gpio:${path}`;
-          o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");
+          o.textContent = `${label}`;
           gg.appendChild(o);
         }
         sel.appendChild(gg);
@@ -2065,7 +1960,7 @@ async function refreshControlLists() {
           const label = it.label || it.name || it.path || String(it);
           const path = it.path || label;
           o.value = `led:${path}`;
-          o.textContent = `${label}` + (it.path ? ` (${it.path})` : "");
+          o.textContent = `${label}`;
           lg.appendChild(o);
         }
         sel.appendChild(lg);
@@ -2117,22 +2012,22 @@ const controlTemplates = [
   {
     label: "XZG Firmware",
     options: [
-      { value: "xzg:bsl", text: "BSL mode" },
-      { value: "xzg:rst", text: "RST mode" },
+      { value: "url:cmdZigBSL", text: "BSL mode" },
+      { value: "url:cmdZigRST", text: "RST mode" },
     ],
   },
   {
     label: "ESP Home",
     options: [
-      { value: "esphome:bsl", text: "BSL pin" },
-      { value: "esphome:rst", text: "RST pin" },
+      { value: "url:switch/zBSL/{SET}", text: "BSL pin" },
+      { value: "url:switch/zRST_gpio/{SET}", text: "RST pin" },
     ],
   },
   {
     label: "Tasmota",
     options: [
-      { value: "tasmota:rst", text: "Relay 1" },
-      { value: "tasmota:bsl", text: "Relay 2" },
+      { value: "url:cm?cmnd=Power1%20{SET}", text: "Relay 1" },
+      { value: "url:cm?cmnd=Power2%20{SET}", text: "Relay 2" },
     ],
   },
 ];

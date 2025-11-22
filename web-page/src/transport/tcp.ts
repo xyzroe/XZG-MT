@@ -61,6 +61,13 @@ export class TcpClient {
     this.onDataCbs.push(cb);
   }
 
+  offData(cb: (data: Uint8Array) => void) {
+    const idx = this.onDataCbs.indexOf(cb);
+    if (idx >= 0) {
+      this.onDataCbs.splice(idx, 1);
+    }
+  }
+
   onTx(cb: (data: Uint8Array) => void) {
     this.onTxCb = cb;
   }

@@ -1,8 +1,10 @@
 import { sleep, toHex } from "../utils/index";
+import { setLines } from "../flasher";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
   onData: (cb: (d: Uint8Array) => void) => void;
+  offData?: (cb: (d: Uint8Array) => void) => void;
 };
 
 // ---------------- CCTOOLS (formerly BSL) ----------------
@@ -902,4 +904,38 @@ export async function nvramWriteAll(
     }
   }
   progress?.(100, "Write done");
+}
+
+export async function bslUseLines(implyGate: boolean, log?: (msg: string) => void): Promise<void> {
+  log?.(`Using BSL lines (implyGate=${implyGate})`);
+  if (implyGate != true) {
+    await setLines(true, true);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(250);
+    await setLines(false, false);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(500);
+    await setLines(true, true);
+    await sleep(500);
+  } else {
+    await setLines(true, true);
+    await sleep(250);
+    await setLines(true, false);
+    await sleep(250);
+    await setLines(false, true);
+    await sleep(450);
+    await setLines(false, false);
+    await sleep(250);
+  }
+}
+
+export async function resetUseLines(log?: (msg: string) => void): Promise<void> {
+  await setLines(true, true);
+  await sleep(500);
+  await setLines(false, true);
+  await sleep(500);
+  await setLines(true, true);
+  await sleep(1000);
 }

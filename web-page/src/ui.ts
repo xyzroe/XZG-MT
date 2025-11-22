@@ -7,6 +7,7 @@ export const chipModelEl = document.getElementById("chipModel") as HTMLInputElem
 export const flashSizeEl = document.getElementById("flashSize") as HTMLInputElement | null;
 export const ieeeMacEl = document.getElementById("ieeeMac") as HTMLInputElement | null;
 export const firmwareVersionEl = document.getElementById("firmwareVersion") as HTMLInputElement | null;
+export const bootloaderVersionEl = document.getElementById("bootloaderVersion") as HTMLInputElement | null;
 export const netFwSelect = document.getElementById("netFwSelect") as HTMLSelectElement | null;
 export const netFwRefreshBtn = document.getElementById("netFwRefresh") as HTMLButtonElement | null;
 export const bitrateInput = document.getElementById("bitrateInput") as HTMLInputElement;
@@ -82,6 +83,7 @@ export const btnAddEspFile = document.getElementById("btnAddEspFile") as HTMLBut
 export const flashSizeWrap = document.getElementById("flashSizeWrap") as HTMLElement | null;
 export const ieeeMacWrap = document.getElementById("ieeeMacWrap") as HTMLElement | null;
 export const firmwareVersionWrap = document.getElementById("firmwareVersionWrap") as HTMLElement | null;
+export const bootloaderVersionWrap = document.getElementById("bootloaderVersionWrap") as HTMLElement | null;
 export const flashOptionsWrap = document.getElementById("flashOptionsWrap") as HTMLElement | null;
 export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
 
@@ -89,6 +91,7 @@ export const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonE
 export const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
 
 export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
+const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
 
 // Firmware Notes Logic
 const netFwNotesBtnEl = document.getElementById("netFwNotesBtn");
@@ -109,8 +112,8 @@ import {
   saveCtrlSettings,
   saveBridgeSettings,
   scheduleBridgeRefresh,
-  updateConnectionUI,
   getSelectedFamily,
+  activeConnection,
 } from "./flasher";
 
 import { getSelectedFwNotes } from "./netfw";
@@ -128,7 +131,10 @@ bridgeHostInput?.addEventListener("input", scheduleBridgeRefresh);
 bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
 
 familyRadios.forEach((r) => {
-  r.addEventListener("change", updateUIForFamily);
+  r.addEventListener("change", () => {
+    updateUIForFamily();
+    saveCtrlSettings();
+  });
 });
 
 tcpSettingsBtn?.addEventListener("click", () => {
@@ -187,8 +193,11 @@ export function updateUIForFamily() {
     }
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
     if (firmwareVersionWrap) {
-      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-12", "col-md-4");
+      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-6", "col-md-4");
       firmwareVersionWrap.classList.remove("d-none");
+    }
+    if (bootloaderVersionWrap) {
+      bootloaderVersionWrap.classList.add("d-none");
     }
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.remove("d-none");
@@ -197,16 +206,19 @@ export function updateUIForFamily() {
     if (btnGetModel) btnGetModel.classList.remove("d-none");
     if (btnVersion) btnVersion.classList.remove("d-none");
     if (btnPing) btnPing.classList.remove("d-none");
+    if (localFileHelp) {
+      localFileHelp.textContent = "Use a local file (*.hex or *.bin).";
+    }
+    if (localFile) {
+      localFile.accept = ".hex,.bin";
+    }
   }
   if (family === "sl") {
     // Sections
     if (tcpSection) tcpSection.classList.remove("d-none");
     if (serialSection) serialSection.className = serialSection.className.replace("col-md-12", "col-md-6");
-    if (localFirmwareSection) {
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
-      localFirmwareSection.classList.remove("d-none");
-    }
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
+    if (localFirmwareSection) localFirmwareSection.classList.remove("d-none");
+    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
@@ -214,16 +226,24 @@ export function updateUIForFamily() {
     if (ieeeMacWrap) ieeeMacWrap.classList.add("d-none");
     if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
     if (firmwareVersionWrap) {
-      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-4", "col-md-12");
+      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-4", "col-md-6");
       firmwareVersionWrap.classList.remove("d-none");
     }
+    if (bootloaderVersionWrap) bootloaderVersionWrap.classList.remove("d-none");
+
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
     if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    if (btnGetModel) btnGetModel.classList.add("d-none");
+    // if (btnGetModel) btnGetModel.classList.add("d-none");
     if (btnVersion) btnVersion.classList.remove("d-none");
     if (btnPing) btnPing.classList.add("d-none");
+    if (localFileHelp) {
+      localFileHelp.textContent = "Use a local file (*.ota or *.gbl).";
+    }
+    if (localFile) {
+      localFile.accept = ".ota,.gbl";
+    }
   }
   if (family === "esp") {
     // Sections
@@ -244,6 +264,8 @@ export function updateUIForFamily() {
     }
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
     if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
+    if (bootloaderVersionWrap) bootloaderVersionWrap.classList.add("d-none");
+
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
@@ -500,4 +522,132 @@ export function setBridgeLoading() {
 export function deviceDetectBusy(busy: boolean) {
   if (!deviceDetectSpinner) return;
   deviceDetectSpinner.classList.toggle("d-none", !busy);
+}
+
+export function updateConnectionUI() {
+  const family = getSelectedFamily();
+  if (family === "esp") {
+    optErase.checked = false;
+    optWrite.checked = false;
+    optWrite.disabled = true;
+    optVerify.checked = false;
+    optVerify.disabled = true;
+  }
+
+  const anyActive = !!activeConnection;
+
+  // Helper: enable/disable entire section by toggling pointer-events and aria-disabled
+  const setSectionDisabled = (el: HTMLElement | null, disabled: boolean) => {
+    if (!el) return;
+    el.classList.toggle("opacity-50", disabled);
+    el.classList.toggle("pe-none", disabled);
+    el.setAttribute("aria-disabled", String(disabled));
+    // Additionally, disable all controls within to prevent focus via keyboard
+    const ctrls = el.querySelectorAll<HTMLElement>(
+      'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]'
+    );
+    ctrls.forEach((c) => {
+      if (c === disconnectBtn) return; // never disable Disconnect here
+      // Only set disabled on form controls that support it
+      if (
+        c instanceof HTMLButtonElement ||
+        c instanceof HTMLInputElement ||
+        c instanceof HTMLSelectElement ||
+        c instanceof HTMLTextAreaElement ||
+        c instanceof HTMLFieldSetElement
+      ) {
+        (
+          c as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLFieldSetElement
+        ).disabled = disabled;
+      }
+      if (disabled) c.setAttribute("tabindex", "-1");
+      else if (c.hasAttribute("tabindex")) c.removeAttribute("tabindex");
+    });
+  };
+
+  // Sections: Serial and TCP (entire columns)
+
+  setSectionDisabled(serialSection, anyActive);
+  setSectionDisabled(tcpSection, anyActive);
+  setSectionDisabled(generalSection, anyActive);
+  setSectionDisabled(familySection, anyActive);
+
+  // Keep TCP settings panel hidden when a connection is active
+  //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
+
+  // Unified Disconnect button visible only when connected, red style when shown
+  const showDisc = anyActive;
+  disconnectBtn.classList.toggle("d-none", !showDisc);
+  disconnectBtn.classList.toggle("btn-danger", showDisc);
+  disconnectBtn.classList.toggle("btn-outline-secondary", !showDisc);
+  disconnectBtn.disabled = !showDisc; // Disconnect remains clickable when connected
+
+  // Update port info field
+  if (portInfoEl) {
+    if (!anyActive) {
+      portInfoEl.value = "";
+    } else if (activeConnection === "tcp") {
+      const host = hostInput.value.trim();
+      const port = parseInt(portInput.value, 10);
+      portInfoEl.value = host && port ? `tcp://${host}:${port}` : "tcp://";
+    } else {
+      // Web Serial has no stable system path; show logical info
+      const br = parseInt(bitrateInput.value, 10) || 115200;
+      portInfoEl.value = `serial @ ${br}bps`;
+    }
+  }
+
+  // Clear Device Info fields on disconnect
+  if (!anyActive) {
+    if (chipModelEl) chipModelEl.value = "";
+    if (flashSizeEl) {
+      flashSizeEl.value = "";
+      flashSizeEl.classList.remove("border-warning", "bg-warning-subtle");
+    }
+    if (ieeeMacEl) ieeeMacEl.value = "";
+    if (firmwareVersionEl) firmwareVersionEl.value = "";
+    if (bootloaderVersionEl) bootloaderVersionEl.value = "";
+  }
+
+  // Gate entire Actions section like Firmware/NVRAM
+  if (actionsSection) {
+    actionsSection.classList.toggle("opacity-50", !anyActive);
+    actionsSection.classList.toggle("pe-none", !anyActive);
+    actionsSection.setAttribute("aria-disabled", String(!anyActive));
+  }
+
+  // Firmware and NVRAM sections enabled only when a connection is active
+  if (firmwareSection) {
+    firmwareSection.classList.toggle("opacity-50", !anyActive);
+    firmwareSection.classList.toggle("pe-none", !anyActive);
+  }
+  if (nvramSection) {
+    nvramSection.classList.toggle("opacity-50", !anyActive);
+    nvramSection.classList.toggle("pe-none", !anyActive);
+  }
+  // Cloud controls reflect connection state
+  if (netFwSelect) netFwSelect.disabled = !anyActive;
+  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
+
+  if (pinModeSelect?.checked) {
+    implyGateToggle?.setAttribute("disabled", "true");
+    invertLevel?.setAttribute("disabled", "true");
+
+    if (implyGateToggle) implyGateToggle.checked = false;
+    if (invertLevel) invertLevel.checked = false;
+  } else {
+    if (!anyActive) {
+      implyGateToggle?.removeAttribute("disabled");
+      invertLevel?.removeAttribute("disabled");
+    }
+  }
+
+  if (baudUrlSelect && baudUrlSelect.value == "none") {
+    findBaudToggle?.setAttribute("disabled", "true");
+    if (findBaudToggle) findBaudToggle.checked = false;
+  } else {
+    if (!anyActive) {
+      findBaudToggle?.removeAttribute("disabled");
+    }
+  }
 }

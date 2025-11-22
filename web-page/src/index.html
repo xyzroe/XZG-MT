@@ -424,6 +424,10 @@
                     <label class="form-label">IEEE</label>
                     <input id="ieeeMac" class="form-control" type="text" readonly />
                 </div>
+                <div class="col-md-6 d-none" id="bootloaderVersionWrap">
+                    <label class="form-label">Bootloader</label>
+                    <input id="bootloaderVersion" class="form-control" type="text" readonly />
+                </div>
                 <div class="col-md-4" id="firmwareVersionWrap">
                     <label class="form-label">Firmware</label>
                     <input id="firmwareVersion" class="form-control" type="text" readonly />
@@ -448,8 +452,8 @@
                 </div>
                 <div class="col-md-6" id="localFirmwareSection">
                     <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
-                    <input id="localFile" class="form-control" type="file" accept=".hex,.bin,.ota" />
-                    <div class="small text-muted mt-1">Use a local file (*.hex, *.bin or *.ota).</div>
+                    <input id="localFile" class="form-control" type="file" accept=".hex,.bin,.ota,.gbl" />
+                    <div id="localFileHelp" class="small text-muted mt-1"></div>
                     <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
                 </div>
                 <div class="col-md-6" id="cloudFirmwareSection">
