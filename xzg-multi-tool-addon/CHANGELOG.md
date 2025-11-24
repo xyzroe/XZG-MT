@@ -1,3 +1,8 @@
+## v0.2.21
+
+## 🚀 Features
+- feat: implement support for the CC2530 family (#55) by @xyzroe
+
 ## v0.2.20
 
 ## 🚀 Features
