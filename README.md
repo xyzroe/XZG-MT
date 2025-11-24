@@ -16,11 +16,12 @@
 
 ## 📖 About
 
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices. The web frontend provides a polished UI and local flashing via Web Serial. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
+XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652, SL EFR32, ESP32 and TI CC25XX devices. The web frontend provides a polished UI and local flashing via Web Serial/USB. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
 
 ## ⭐ Features
 
-- 🔌 Work with local USB TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices via Web Serial or with remote via WS-TCP bridge
+- 🔌 Work with TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices locally via Web Serial or remote via WS-TCP bridge
+- 🛠️ Work with TI 25XX locally using CC Debugger vie Web USB
 - 📂 Flash firmware from custom local file or select from provided
 - 🦾 Automatic chip model, flash size, IEEE and firmware version detection
 - 📝 Cloud firmware's list with description
@@ -204,10 +205,11 @@ If you find this project useful and want to support further development, you can
 
 Built on the shoulders of giants:
 
-- **Texas Instruments** — inspired by [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete and [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
+- **Texas Instruments CCXX52 and CC2538** — inspired by [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete and [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
 - **Silicon Labs** — inspired by [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
 - **Espressif Systems** — powered by [esptool-js](https://github.com/espressif/esptool-js) by
   Espressif Systems
+- **Texas Instruments CC25XX** — inspired by [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
 
 ---
 
