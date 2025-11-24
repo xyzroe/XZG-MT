@@ -90,6 +90,24 @@ export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLEleme
 export const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonElement | null;
 export const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
 
+// CC Debugger elements
+export const connectDebuggerBtn = document.getElementById("connectDebugger") as HTMLButtonElement | null;
+export const debuggerSection = document.getElementById("debuggerSection") as HTMLElement | null;
+export const resetDebugBtn = document.getElementById("resetDebugBtn") as HTMLButtonElement | null;
+export const btnReadFlash = document.getElementById("btnReadFlash") as HTMLButtonElement;
+export const debugModelEl = document.getElementById("debugModel") as HTMLInputElement | null;
+export const debugManufEl = document.getElementById("debugManuf") as HTMLInputElement | null;
+export const debugSerialEl = document.getElementById("debugSerial") as HTMLInputElement | null;
+export const debugFwVersionEl = document.getElementById("debugFwVersion") as HTMLInputElement | null;
+export const targetIdEl = document.getElementById("targetId") as HTMLInputElement | null;
+export const targetIeeeEl = document.getElementById("targetIeee") as HTMLInputElement | null;
+export const debuggerDetectSpinner = document.getElementById("debuggerDetectSpinner") as HTMLSpanElement | null;
+export const debuggerOptionWrap = document.getElementById("debuggerOptionWrap") as HTMLDivElement | null;
+export const verifyMethodWrap = document.getElementById("verifyMethod") as HTMLSelectElement | null;
+export const writeMethodWrap = document.getElementById("writeMethod") as HTMLSelectElement | null;
+export const verifyMethodSelect = verifyMethodWrap?.value as VerifyMethod;
+export const writeMethodSelect = writeMethodWrap?.value as WriteMethod;
+
 export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
 const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
 
@@ -101,8 +119,11 @@ const fwNotesCloseEl = document.getElementById("fwNotesClose");
 const fwNotesCloseXEl = document.getElementById("fwNotesCloseX");
 
 const serialControlsWrap = document.getElementById("serialControlsWrap");
-const serialControls = serialControlsWrap && serialControlsWrap.querySelector(".serial-controls");
 const serialHttpMsg = document.getElementById("serialHttpMsg");
+
+const debuggerControls = document.getElementById("debugger-controls") as HTMLElement | null;
+const usbHttpMsg = document.getElementById("usbHttpMsg");
+
 const tcpControlsWrap = document.getElementById("tcpControlsWrap");
 const tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
 
@@ -115,6 +136,8 @@ import {
   getSelectedFamily,
   activeConnection,
 } from "./flasher";
+
+import { VerifyMethod, WriteMethod } from "./tools/cc-debugger";
 
 import { getSelectedFwNotes } from "./netfw";
 
@@ -173,8 +196,12 @@ export function updateUIForFamily() {
 
   if (family === "ti") {
     // Sections
+    if (generalSection) generalSection.classList.remove("d-none");
+    if (connectionSection) connectionSection.classList.remove("d-none");
     if (tcpSection) tcpSection.classList.remove("d-none");
     if (serialSection) serialSection.className = serialSection.className.replace("col-md-12", "col-md-6");
+    if (deviceSection) deviceSection.classList.remove("d-none");
+    if (debuggerSection) debuggerSection.classList.add("d-none");
     if (localFirmwareSection) {
       localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
       localFirmwareSection.classList.remove("d-none");
@@ -192,6 +219,7 @@ export function updateUIForFamily() {
       ieeeMacWrap.classList.remove("d-none");
     }
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
+    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
     if (firmwareVersionWrap) {
       firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-6", "col-md-4");
       firmwareVersionWrap.classList.remove("d-none");
@@ -199,25 +227,35 @@ export function updateUIForFamily() {
     if (bootloaderVersionWrap) {
       bootloaderVersionWrap.classList.add("d-none");
     }
-    // Toggles
-    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
-    // Buttons
-    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    if (btnGetModel) btnGetModel.classList.remove("d-none");
-    if (btnVersion) btnVersion.classList.remove("d-none");
-    if (btnPing) btnPing.classList.remove("d-none");
     if (localFileHelp) {
       localFileHelp.textContent = "Use a local file (*.hex or *.bin).";
     }
     if (localFile) {
       localFile.accept = ".hex,.bin";
     }
+    // Toggles
+    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
+    // Buttons
+    if (btnReadFlash) btnReadFlash.classList.add("d-none");
+    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
+
+    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
+    if (btnGetModel) btnGetModel.classList.remove("d-none");
+    if (btnVersion) btnVersion.classList.remove("d-none");
+    if (btnPing) btnPing.classList.remove("d-none");
   }
   if (family === "sl") {
     // Sections
+    if (generalSection) generalSection.classList.remove("d-none");
+    if (connectionSection) connectionSection.classList.remove("d-none");
     if (tcpSection) tcpSection.classList.remove("d-none");
     if (serialSection) serialSection.className = serialSection.className.replace("col-md-12", "col-md-6");
-    if (localFirmwareSection) localFirmwareSection.classList.remove("d-none");
+    if (deviceSection) deviceSection.classList.remove("d-none");
+    if (debuggerSection) debuggerSection.classList.add("d-none");
+    if (localFirmwareSection) {
+      localFirmwareSection.classList.remove("d-none");
+      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
+    }
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
@@ -225,30 +263,38 @@ export function updateUIForFamily() {
     if (flashSizeWrap) flashSizeWrap.classList.add("d-none");
     if (ieeeMacWrap) ieeeMacWrap.classList.add("d-none");
     if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
+    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
     if (firmwareVersionWrap) {
       firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-4", "col-md-6");
       firmwareVersionWrap.classList.remove("d-none");
     }
     if (bootloaderVersionWrap) bootloaderVersionWrap.classList.remove("d-none");
-
-    // Toggles
-    if (findBaudWrap) findBaudWrap.classList.add("d-none");
-    // Buttons
-    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    // if (btnGetModel) btnGetModel.classList.add("d-none");
-    if (btnVersion) btnVersion.classList.remove("d-none");
-    if (btnPing) btnPing.classList.add("d-none");
     if (localFileHelp) {
       localFileHelp.textContent = "Use a local file (*.ota or *.gbl).";
     }
     if (localFile) {
       localFile.accept = ".ota,.gbl";
     }
+    // Toggles
+    if (findBaudWrap) findBaudWrap.classList.add("d-none");
+    // Buttons
+    if (btnReadFlash) btnReadFlash.classList.add("d-none");
+    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
+
+    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
+    // if (btnGetModel) btnGetModel.classList.add("d-none");
+    if (btnVersion) btnVersion.classList.remove("d-none");
+    if (btnPing) btnPing.classList.add("d-none");
   }
   if (family === "esp") {
     // Sections
+    if (generalSection) generalSection.classList.remove("d-none");
+    if (connectionSection) connectionSection.classList.remove("d-none");
+
     if (tcpSection) tcpSection.classList.add("d-none");
     if (serialSection) serialSection.className = serialSection.className.replace("col-md-6", "col-md-12");
+    if (deviceSection) deviceSection.classList.remove("d-none");
+    if (debuggerSection) debuggerSection.classList.add("d-none");
     if (localFirmwareSection) localFirmwareSection.classList.add("d-none");
     if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.remove("d-none");
@@ -263,14 +309,49 @@ export function updateUIForFamily() {
       ieeeMacWrap.classList.remove("d-none");
     }
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
+    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
     if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
     if (bootloaderVersionWrap) bootloaderVersionWrap.classList.add("d-none");
 
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
+    if (btnReadFlash) btnReadFlash.classList.add("d-none");
+    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
+
     if (enterBslBtn) enterBslBtn.classList.add("d-none");
     if (btnGetModel) btnGetModel.classList.add("d-none");
+    if (btnVersion) btnVersion.classList.add("d-none");
+    if (btnPing) btnPing.classList.add("d-none");
+  }
+  if (family === "ti_old") {
+    // Sections
+    if (generalSection) generalSection.classList.add("d-none");
+    if (connectionSection) connectionSection.classList.add("d-none");
+    if (deviceSection) deviceSection.classList.add("d-none");
+    if (debuggerSection) debuggerSection.classList.remove("d-none");
+    if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
+    if (localFirmwareSection) {
+      localFirmwareSection.classList.remove("d-none");
+      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
+    }
+    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
+    if (nvramSection) nvramSection.classList.add("d-none");
+    // Fields
+    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
+    if (debuggerOptionWrap) debuggerOptionWrap.classList.remove("d-none");
+    if (localFileHelp) {
+      localFileHelp.textContent = "Use a local file (*.hex or *.bin).";
+    }
+    if (localFile) {
+      localFile.accept = ".hex,.bin";
+    }
+    //Buttons
+    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
+    if (resetDebugBtn) resetDebugBtn.classList.remove("d-none");
+    if (btnGetModel) btnGetModel.classList.remove("d-none");
+
+    if (enterBslBtn) enterBslBtn.classList.add("d-none");
     if (btnVersion) btnVersion.classList.add("d-none");
     if (btnPing) btnPing.classList.add("d-none");
   }
@@ -299,10 +380,14 @@ document.addEventListener("DOMContentLoaded", function () {
       ".d-flex, #tcpSettingsPanel, .row.g-2.align-items-center.mb-4, .row.g-2.align-items-center.mb-4, .col-12.mb-4, #ctrlUrlRow, .row.mt-auto"
     );
 
+  const serialControls = serialControlsWrap && serialControlsWrap.querySelector(".serial-controls");
+  // const debuggerControls = debuggerControlsWrap && debuggerControlsWrap.querySelector(".debugger-controls");
+
   console.log("Protocol check: isHttps=" + isHttps + ", isLocalhost=" + isLocalhost);
   if (isLocalhost) {
     console.log("Localhost detected - showing all controls");
     if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
+    if (usbHttpMsg) usbHttpMsg.classList.add("d-none");
     if (tcpHttpsMsg) tcpHttpsMsg.classList.add("d-none");
   } else if (isHttps) {
     console.log("HTTPS but not localhost - assuming HTTPS");
@@ -314,10 +399,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (tcpHttpsMsg) tcpHttpsMsg.classList.remove("d-none");
     if (serialControls) serialControls.classList.remove("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.add("d-none");
+
+    if (debuggerControls) debuggerControls.classList.remove("d-none");
+    if (usbHttpMsg) usbHttpMsg.classList.add("d-none");
   } else {
     console.log("Non-HTTPS and non-localhost - assuming HTTP");
     if (serialControls) serialControls.classList.add("d-none");
     if (serialHttpMsg) serialHttpMsg.classList.remove("d-none");
+    if (usbHttpMsg) usbHttpMsg.classList.remove("d-none");
+    if (debuggerControls) debuggerControls.classList.add("d-none");
     if (tcpControls) {
       tcpControls.forEach((el: Element) => el.classList.remove("d-none"));
     }

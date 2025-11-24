@@ -64,19 +64,25 @@
                                     <input type="radio" id="chip_ti" name="chip_family" value="ti" checked>
                                     <label for="chip_ti" class="mx-2"><img src="imgs/ti.png" alt="Texas Instruments"
                                             class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        Texas Instruments</label>
+                                        TI CCXX52</label>
                                 </div>
                                 <div class="d-flex align-items-center my-1">
                                     <input type="radio" id="chip_si" name="chip_family" value="sl">
                                     <label for="chip_si" class="mx-2"><img src="imgs/si.png" alt="Silicon Labs"
                                             class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        Silicon Labs</label>
+                                        SL</label>
                                 </div>
                                 <div class="d-flex align-items-center my-1">
                                     <input type="radio" id="chip_esp" name="chip_family" value="esp">
                                     <label for="chip_esp" class="mx-2"><img src="imgs/esp.png" alt="Espressif"
                                             class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        Espressif</label>
+                                        ESP</label>
+                                </div>
+                                <div class="d-flex align-items-center my-1">
+                                    <input type="radio" id="chip_ti_old" name="chip_family" value="ti_old">
+                                    <label for="chip_ti_old" class="mx-2"><img src="imgs/ti.png" alt="Texas Instruments"
+                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
+                                        TI CC25XX</label>
                                 </div>
                             </div>
                         </div>
@@ -399,8 +405,67 @@
 
         </div>
 
+        <div class="section" id="debuggerSection">
+            <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
+                <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>Debugger <span id="debuggerDetectSpinner"
+                        class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status"
+                        aria-hidden="true"></span></h3>
+            </div>
+            <div id="debugger-controls">
+                <div class="row mt-auto my-3">
+                    <div class="col d-flex justify-content-center">
+                        <button id="connectDebugger" class="btn btn-primary">
+                            <i class="bi bi-usb-plug-fill me-1"></i>Connect
+                        </button>
+                    </div>
+                </div>
+                <div class="row g-2 form-readonly mb-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Model</label>
+                        <input id="debugModel" class="form-control" type="text" readonly />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Manufacturer</label>
+                        <input id="debugManuf" class="form-control" type="text" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Serial</label>
+                        <input id="debugSerial" class="form-control" type="text" readonly />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">FW version</label>
+                        <input id="debugFwVersion" class="form-control" type="text" readonly />
+                    </div>
+                </div>
+                <h2 class="h6 mt-3"><i class="bi bi-router me-1"></i>Device Info
+                </h2>
+                <div class="row g-2 form-readonly">
+                    <div class="col-md-5">
+                        <label class="form-label">Model</label>
+                        <input id="targetId" class="form-control" type="text" readonly />
+                    </div>
+                    <div class="col-md-7">
+                        <label class="form-label">IEEE</label>
+                        <input id="targetIeee" class="form-control" type="text" readonly />
+                    </div>
+                </div>
+            </div>
+            <!-- Message for mobile mode -->
+            <div id="usbMobileMsg" class="serial-note alert alert-secondary d-none my-2" role="status">
+                Web USB is not available on mobile devices, please use desktop 🚀
+            </div>
+            <!-- Message for HTTP mode -->
+            <div id="usbHttpMsg" class="alert alert-secondary text-center d-none" role="status">
+                <span style="font-size:1.2em;">⚡️ Web USB unavailable!</span><br>
+                To use CC Debugger:<br>
+                🌐 Open <a href="https://mt.xyzroe.cc">https://mt.xyzroe.cc</a><br>
+                🖥️ Or access via <a href="http://localhost:8765">localhost</a> (if
+                possible)
+            </div>
+        </div>
+
         <div class="section" id="deviceSection">
-            <h2 class="h6">Device Info <span id="deviceDetectSpinner"
+            <h2 class="h6"><i class="bi bi-router me-1"></i>Device Info <span id="deviceDetectSpinner"
                     class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status"
                     aria-hidden="true"></span>
             </h2>
@@ -492,7 +557,31 @@
                     </div>
                 </div>
             </div>
-            <div class="row mt-3">
+            <div class="row mt-3" id="debuggerOptionWrap">
+                <div class="col d-flex justify-content-center">
+
+                    <div class="col-3 d-flex justify-content-center">
+                        <div class="col-auto">
+                            <label class="col-form-label px-2" for="writeMethod">Write</label>
+                        </div>
+                        <select id="writeMethod" class="form-select" style="width: 100%;">
+                            <option value="fast">Fast (DMA-based)</option>
+                            <option value="slow">Slow (safer)</option>
+                        </select>
+                    </div>
+                    <div class="col-3 d-flex justify-content-center">
+                        <div class="col-auto">
+                            <label class="col-form-label px-2" for="verifyMethod">Verify</label>
+                        </div>
+                        <select id="verifyMethod" class="form-select" style="width: 100%;">
+                            <option value="crc">Fast (by CRC, DMA-based)</option>
+                            <option value="read">Slow (read byte-by-byte)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
                 <div class="col d-flex justify-content-center">
                     <button id="btnFlash" class="btn btn-success btn-lg">
                         <i class="bi bi-lightning-charge me-1"></i>Start
@@ -560,6 +649,9 @@
                 <button id="enterBslBtn" class="btn btn-outline-warning">
                     <i class="bi bi-wrench me-1"></i>Enter BSL
                 </button>
+                <button id="resetDebugBtn" class="btn btn-outline-warning">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Reset in debug
+                </button>
                 <button id="resetBtn" class="btn btn-outline-success">
                     <i class="bi bi-arrow-clockwise me-1"></i>Reset
                 </button>
@@ -571,6 +663,9 @@
                 </button>
                 <button id="btn-ping" class="btn btn-outline-dark">
                     <i class="bi bi-wifi me-1"></i>Ping
+                </button>
+                <button id="btnReadFlash" class="btn btn-outline-dark">
+                    <i class="bi bi-sd-card-fill me-1"></i>Dump flash
                 </button>
             </div>
         </div>

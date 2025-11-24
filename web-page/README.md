@@ -98,6 +98,7 @@ npm run lint
 - **tools/** - Device specific protocols
   - **ti.ts** - TI CC device communication protocol
   - **sl.ts** - Silabs device communication protocol
+  - **cc-debugger.ts** - CC Debugger communication protocol
 - **transport/** - Abstracted transport layer for serial/TCP communication
 - **utils/** - Shared utility functions
 

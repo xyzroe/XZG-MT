@@ -7,6 +7,7 @@ import { TcpClient } from "./transport/tcp";
 
 import * as ti_tools from "./tools/ti";
 import { SilabsTools, enterSilabsBootloader, resetSilabs } from "./tools/sl";
+import { CCDebugger, generateHex } from "./tools/cc-debugger";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { deriveControlConfig, ControlConfig } from "./utils/control";
@@ -53,6 +54,18 @@ import {
   logEl,
   showIoEl,
   btnCopyLog,
+  connectDebuggerBtn,
+  debugModelEl,
+  debugManufEl,
+  debugSerialEl,
+  debugFwVersionEl,
+  targetIdEl,
+  targetIeeeEl,
+  debuggerDetectSpinner,
+  resetDebugBtn,
+  btnReadFlash,
+  verifyMethodWrap,
+  writeMethodWrap,
   mdnsRefreshBtn,
   mdnsSelect,
   btnAddEspFile,
@@ -78,6 +91,9 @@ import {
 // --- Control strategy mapping ---
 type CtrlMode = "zig-http" | "bridge-sc" | "serial-direct";
 let currentConnMeta: { type?: string; protocol?: string } = {};
+
+// CCDebugger instance for TI old family
+let ccDebugger: CCDebugger | null = null;
 
 export let activeConnection: "serial" | "tcp" | null = null;
 let esploader: ESPLoader | null = null;
@@ -355,7 +371,15 @@ enterBslBtn?.addEventListener("click", async () => {
 
 resetBtn?.addEventListener("click", async () => {
   await withButtonStatus(resetBtn!, async () => {
-    await performReset();
+    if (getSelectedFamily() !== "ti_old") {
+      await performReset();
+    } else {
+      try {
+        await ccDebugger?.reset(false);
+      } catch (e: any) {
+        log("Reset error: " + (e?.message || String(e)));
+      }
+    }
   });
 });
 
@@ -413,7 +437,11 @@ btnVersion?.addEventListener("click", async () => {
 // Get Model action: detect chip and memory without flashing
 btnGetModel?.addEventListener("click", async () => {
   await withButtonStatus(btnGetModel!, async () => {
-    await readChipInfo();
+    if (getSelectedFamily() !== "ti_old") {
+      await readChipInfo();
+    } else {
+      await ccDebugger?.refreshInfo();
+    }
   });
 });
 
@@ -516,57 +544,68 @@ btnNvWrite?.addEventListener("click", async () => {
 // Flash start button with status feedback
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
-    try {
-      await flash(detectedTiChipFamily);
-      log("Flashing finished. Restarting device...");
+    // TI old family (CC253x) - use CC Debugger
+    if (getSelectedFamily() === "ti_old") {
+      flashWarning?.classList.remove("d-none");
+
+      await ccDebugger?.flashAction();
+
+      setTimeout(() => flashWarning?.classList.add("d-none"), 500);
+
+      return;
+    } else {
       try {
-        await performReset();
-        log("Restart done");
-      } catch (e: any) {
-        log("Restart error: " + (e?.message || String(e)));
-      }
-      const family = getSelectedFamily();
-      if (family == "esp") {
-        // don't ping and version check for ESP
-        return true;
-      }
-
-      if (family == "ti") {
-        //log("Pinging device...");
+        await flash(detectedTiChipFamily);
+        log("Flashing finished. Restarting device...");
         try {
-          const ok = await pingWithBaudRetries(getActiveLink());
-          if (!ok) log("Ping: timed out or no response");
+          await performReset();
+          log("Restart done");
         } catch (e: any) {
-          log("Ping error: " + (e?.message || String(e)));
+          log("Restart error: " + (e?.message || String(e)));
         }
-      }
+        const family = getSelectedFamily();
+        if (family == "esp") {
+          // don't ping and version check for ESP
+          return true;
+        }
 
-      log("Checking firmware version...");
-      if (family == "sl") {
-        // After flash, re-read device info
-        await sleep(5000);
-
-        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
-        const ezspVersion = await sl_tools.getApplicationVersion();
-        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-        log(`EZSP app version: ${ezspVersion}`);
-      }
-      if (family == "ti") {
-        try {
-          // use local wrapper to log and update UI
-          const info = await ti_tools.getFwVersion(getActiveLink());
-          if (info && firmwareVersionEl) {
-            firmwareVersionEl.value = String(info.fwRev);
-            log(`FW version: ${info.fwRev}`);
+        if (family == "ti") {
+          //log("Pinging device...");
+          try {
+            const ok = await pingWithBaudRetries(getActiveLink());
+            if (!ok) log("Ping: timed out or no response");
+          } catch (e: any) {
+            log("Ping error: " + (e?.message || String(e)));
           }
-        } catch (e: any) {
-          log("Version read error: " + (e?.message || String(e)));
         }
+
+        log("Checking firmware version...");
+        if (family == "sl") {
+          // After flash, re-read device info
+          await sleep(5000);
+
+          if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+          const ezspVersion = await sl_tools.getApplicationVersion();
+          if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
+          log(`EZSP app version: ${ezspVersion}`);
+        }
+        if (family == "ti") {
+          try {
+            // use local wrapper to log and update UI
+            const info = await ti_tools.getFwVersion(getActiveLink());
+            if (info && firmwareVersionEl) {
+              firmwareVersionEl.value = String(info.fwRev);
+              log(`FW version: ${info.fwRev}`);
+            }
+          } catch (e: any) {
+            log("Version read error: " + (e?.message || String(e)));
+          }
+        }
+        return true;
+      } catch (e: any) {
+        log("Flash error: " + (e?.message || String(e)));
+        throw e;
       }
-      return true;
-    } catch (e: any) {
-      log("Flash error: " + (e?.message || String(e)));
-      throw e;
     }
   });
 });
@@ -595,6 +634,91 @@ btnCopyLog?.addEventListener("click", async () => {
   } catch (e: any) {
     log("Copy failed: " + (e?.message || String(e)));
   }
+});
+
+// CC Debugger event handlers
+connectDebuggerBtn?.addEventListener("click", async () => {
+  if (ccDebugger && ccDebugger["device"]) {
+    // Disconnect
+    try {
+      await ccDebugger.disconnect();
+      ccDebugger = null;
+      if (connectDebuggerBtn) {
+        connectDebuggerBtn.classList.replace("btn-danger", "btn-primary");
+        connectDebuggerBtn.innerHTML = '<i class="bi bi-usb-plug-fill me-1"></i>Connect';
+      }
+      if (debugModelEl) debugModelEl.value = "";
+      if (debugManufEl) debugManufEl.value = "";
+      if (debugSerialEl) debugSerialEl.value = "";
+      if (debugFwVersionEl) debugFwVersionEl.value = "";
+      if (targetIdEl) targetIdEl.value = "";
+      if (targetIeeeEl) targetIeeeEl.value = "";
+      log("CC Debugger disconnected");
+      activeConnection = null;
+      updateConnectionUI();
+    } catch (e: any) {
+      log("Disconnect error: " + (e?.message || String(e)));
+    }
+  } else {
+    // Connect
+    debuggerDetectSpinner?.classList.remove("d-none");
+    try {
+      ccDebugger = new CCDebugger();
+      ccDebugger.setLogger((msg: string) => log(msg));
+      ccDebugger.setProgressCallback((percent: number, msg: string) => {
+        fwProgress(percent, msg);
+      });
+
+      await ccDebugger.connect();
+      const info = await ccDebugger.getDeviceInfo();
+
+      if (debugModelEl) debugModelEl.value = ccDebugger.device?.productName || "";
+      if (debugManufEl) debugManufEl.value = ccDebugger.device?.manufacturerName || "";
+      if (debugSerialEl) debugSerialEl.value = ccDebugger.device?.serialNumber || "";
+      if (debugFwVersionEl)
+        debugFwVersionEl.value = `v${(info.fwVersion >> 8).toString(16)}.${(info.fwVersion & 0xff)
+          .toString(16)
+          .toUpperCase()}`;
+
+      // Read target info
+      if (targetIdEl) targetIdEl.value = `CC${info.chipId.toString(16).toUpperCase()}`;
+
+      const ieee = await ccDebugger.readIEEEAddress();
+      if (targetIeeeEl) targetIeeeEl.value = ieee;
+
+      if (connectDebuggerBtn) {
+        connectDebuggerBtn.classList.replace("btn-primary", "btn-danger");
+        connectDebuggerBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect';
+      }
+      log("CC Debugger connected successfully");
+      activeConnection = "serial";
+      updateConnectionUI();
+    } catch (e: any) {
+      log("Connection error: " + (e?.message || String(e)));
+      ccDebugger = null;
+    } finally {
+      debuggerDetectSpinner?.classList.add("d-none");
+    }
+  }
+});
+
+// Read Flash button handler
+btnReadFlash?.addEventListener("click", async () => {
+  await withButtonStatus(btnReadFlash!, async () => {
+    await ccDebugger?.dumpFlash();
+    return;
+  });
+});
+
+// Reset button handler
+resetDebugBtn?.addEventListener("click", async () => {
+  await withButtonStatus(resetDebugBtn!, async () => {
+    try {
+      await ccDebugger?.reset(true);
+    } catch (e: any) {
+      log("Reset error: " + (e?.message || String(e)));
+    }
+  });
 });
 
 mdnsRefreshBtn?.addEventListener("click", () => {
@@ -700,10 +824,10 @@ async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
   //log(`HTTP control response: ${r.text ?? ""}`);
 }
 
-export function getSelectedFamily(): "ti" | "sl" | "esp" {
+export function getSelectedFamily(): "ti" | "sl" | "esp" | "ti_old" {
   const el = document.querySelector('input[name="chip_family"]:checked') as HTMLInputElement | null;
   const v = (el?.value || "ti").toLowerCase();
-  return v === "sl" ? "sl" : v === "esp" ? "esp" : "ti";
+  return v === "sl" ? "sl" : v === "esp" ? "esp" : v === "ti_old" ? "ti_old" : "ti";
 }
 
 // Bootstrap tooltip init moved to index.js
@@ -900,6 +1024,8 @@ function updateOptionsStateForFile(selected: boolean) {
       optVerify.checked = false;
       optVerify.disabled = true;
     }
+    if (verifyMethodWrap) verifyMethodWrap.disabled = true;
+    if (writeMethodWrap) writeMethodWrap.disabled = true;
   } else {
     optWrite.checked = true;
     optWrite.disabled = false;
@@ -907,6 +1033,8 @@ function updateOptionsStateForFile(selected: boolean) {
       optVerify.checked = true;
       optVerify.disabled = false;
     }
+    if (verifyMethodWrap) verifyMethodWrap.disabled = false;
+    if (writeMethodWrap) writeMethodWrap.disabled = false;
   }
 }
 
@@ -1375,7 +1503,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     }
 
     if (flashWarning) {
-      setTimeout(() => flashWarning?.classList.add("d-none"), 1000);
+      setTimeout(() => flashWarning?.classList.add("d-none"), 500);
       performReset().catch((e) => log("Reset failed: " + (e?.message || String(e))));
     }
     return;
@@ -1607,9 +1735,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Serial: failed to switch baud");
   }
 
-  setTimeout(() => {
-    if (flashWarning) flashWarning.classList.add("d-none");
-  }, 1000);
+  setTimeout(() => flashWarning?.classList.add("d-none"), 500);
 }
 
 // async function bslUseLines() {
