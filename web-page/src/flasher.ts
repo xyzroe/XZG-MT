@@ -2139,7 +2139,7 @@ const controlTemplates = [
     label: "XZG Firmware",
     options: [
       { value: "url:cmdZigBSL", text: "BSL mode" },
-      { value: "url:cmdZigRST", text: "RST mode" },
+      { value: "url:cmdZigRST", text: "RST make" },
     ],
   },
   {
@@ -2154,6 +2154,13 @@ const controlTemplates = [
     options: [
       { value: "url:cm?cmnd=Power1%20{SET}", text: "Relay 1" },
       { value: "url:cm?cmnd=Power2%20{SET}", text: "Relay 2" },
+    ],
+  },
+  {
+    label: "SLS",
+    options: [
+      { value: "url:zigbee/startbsl", text: "BSL mode" },
+      { value: "url:zigbee/softreset", text: "RST make" },
     ],
   },
 ];

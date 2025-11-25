@@ -252,8 +252,11 @@ export class CCDebugger {
   private endpointOut: USBEndpoint | null = null;
 
   // CC Debugger Vendor ID and Product ID
-  private static readonly VID = 0x0451;
-  private static readonly PID = 0x16a2;
+  private static readonly VID_CC = 0x0451;
+  private static readonly PID_CC = 0x16a2;
+
+  private static readonly VID_RF = 0x11a0;
+  private static readonly PID_RF = 0xeb20;
 
   // Control Requests (from cc-tool)
   private static readonly REQ_GET_STATE = 0xc0;
@@ -380,7 +383,10 @@ export class CCDebugger {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.device = await (navigator as any).usb.requestDevice({
-        filters: [{ vendorId: CCDebugger.VID, productId: CCDebugger.PID }],
+        filters: [
+          { vendorId: CCDebugger.VID_CC, productId: CCDebugger.PID_CC },
+          { vendorId: CCDebugger.VID_RF, productId: CCDebugger.PID_RF },
+        ],
       });
 
       if (!this.device) throw new Error("Device not selected");
