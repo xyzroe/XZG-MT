@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       board:
-        description: 'Board type / модель платы'
+        description: 'Board type'
         type: choice
         default: arduino_uno
         options:
-          - arduino_uno        # Arduino Uno R3
-          - arduino_nano       # Arduino Nano (ATmega328P, new bootloader)
-          - arduino_mega       # Arduino Mega 2560
-          - arduino_micro      # Arduino Micro
-          - d1_mini            # Wemos D1 mini (ESP8266)
-          - nodemcu            # NodeMCU 1.0 (ESP-12E)
-          - esp32_dev          # ESP32 Dev Module
-          - esp32c3_dev        # ESP32-C3 Dev Module
-          - esp32s3_dev        # ESP32-S3 Dev Module
+          - arduino_uno
+          - arduino_nano
+          - arduino_mega
+          - arduino_micro
+          - d1_mini
+          - nodemcu
+          - esp32_dev
+          - esp32c3_dev
+          - esp32s3_dev
       dc_pin:
         description: 'DC pin number'
         required: true
