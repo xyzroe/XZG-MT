@@ -1,0 +1,88 @@
+{
+  "firmwares": [
+    {
+      "filename": "CCLoader_d1_mini_dd-D1_dc-D2_reset-D3_led-D4.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_d1_mini_dd-D1_dc-D2_reset-D3_led-D4.bin",
+      "board": "d1_mini",
+      "chip": "ESP8266",
+      "pins": {
+        "dd": "D1",
+        "dc": "D2",
+        "reset": "D3",
+        "led": "D4"
+      }
+    },
+    {
+      "filename": "CCLoader_nodemcu_dd-D5_dc-D6_reset-D7_led-LED_BUILTIN.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_nodemcu_dd-D5_dc-D6_reset-D7_led-LED_BUILTIN.bin",
+      "board": "nodemcu",
+      "chip": "ESP8266",
+      "pins": {
+        "dd": "D5",
+        "dc": "D6",
+        "reset": "D7",
+        "led": "LED_BUILTIN"
+      }
+    },
+    {
+      "filename": "CCLoader_esp32_dev_dd-16_dc-17_reset-21_led-2.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_esp32_dev_dd-16_dc-17_reset-21_led-2.bin",
+      "board": "esp32_dev",
+      "chip": "ESP32",
+      "pins": {
+        "dd": "16",
+        "dc": "17",
+        "reset": "21",
+        "led": "2"
+      }
+    },
+    {
+      "filename": "CCLoader_esp32_dev_dd-26_dc-14_reset-13_led-2.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_esp32_dev_dd-26_dc-14_reset-13_led-2.bin",
+      "board": "esp32_dev",
+      "chip": "ESP32",
+      "pins": {
+        "dd": "26",
+        "dc": "14",
+        "reset": "13",
+        "led": "2"
+      }
+    },
+    {
+      "filename": "CCLoader_esp32c6_dev_dd-23_dc-22_reset-19_led-0.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_esp32c6_dev_dd-23_dc-22_reset-19_led-0.bin",
+      "board": "esp32c6_dev",
+      "chip": "ESP32-C6",
+      "pins": {
+        "dd": "23",
+        "dc": "22",
+        "reset": "19",
+        "led": "0"
+      }
+    },
+    {
+      "filename": "CCLoader_esp32s3_dev_dd-15_dc-16_reset-17_led-18.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_esp32s3_dev_dd-15_dc-16_reset-17_led-18.bin",
+      "board": "esp32s3_dev",
+      "chip": "ESP32-S3",
+      "pins": {
+        "dd": "15",
+        "dc": "16",
+        "reset": "17",
+        "led": "18"
+      }
+    },
+    {
+      "filename": "CCLoader_esp32c3_dev_dd-4_dc-3_reset-2_led-1.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_esp32c3_dev_dd-4_dc-3_reset-2_led-1.bin",
+      "board": "esp32c3_dev",
+      "chip": "ESP32-C3",
+      "pins": {
+        "dd": "4",
+        "dc": "3",
+        "reset": "2",
+        "led": "1"
+      }
+    }
+  ]
+}
