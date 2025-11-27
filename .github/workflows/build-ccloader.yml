@@ -1,0 +1,455 @@
+name: Build CCLoader firmware
+
+on:
+  push:
+    branches:
+      - cc_loader
+    paths:
+      - 'task.json'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: cc_loader
+
+      - name: Install Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Add board manager URLs
+        run: |
+          arduino-cli config init --overwrite
+          arduino-cli config add board_manager.additional_urls https://arduino.esp8266.com/stable/package_esp8266com_index.json
+          arduino-cli config add board_manager.additional_urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+
+      - name: Install all required cores
+        run: |
+          # Читаем task.json и определяем какие cores нужны
+          BOARDS=$(cat task.json | jq -r '.builds[].board' | sort -u)
+          
+          CORES_TO_INSTALL=""
+          for board in $BOARDS; do
+            case "$board" in
+              arduino_uno|arduino_nano|arduino_mega|arduino_micro)
+                if [[ ! "$CORES_TO_INSTALL" =~ "arduino:avr" ]]; then
+                  CORES_TO_INSTALL="$CORES_TO_INSTALL arduino:avr"
+                fi
+                ;;
+              d1_mini|nodemcu)
+                if [[ ! "$CORES_TO_INSTALL" =~ "esp8266:esp8266" ]]; then
+                  CORES_TO_INSTALL="$CORES_TO_INSTALL esp8266:esp8266"
+                fi
+                ;;
+              esp32_dev|esp32c3_dev|esp32s3_dev)
+                if [[ ! "$CORES_TO_INSTALL" =~ "esp32:esp32" ]]; then
+                  CORES_TO_INSTALL="$CORES_TO_INSTALL esp32:esp32"
+                fi
+                ;;
+            esac
+          done
+          
+          arduino-cli core update-index
+          
+          for core in $CORES_TO_INSTALL; do
+            echo "Installing $core..."
+            arduino-cli core install "$core"
+          done
+
+      - name: Install esptool
+        run: pip install esptool
+
+      - name: Build all configurations
+        run: |
+          case "${{ matrix.build_config.board }}" in
+            arduino_uno)
+              echo "FQBN=arduino:avr:uno" >> $GITHUB_ENV
+              echo "CORE=arduino:avr" >> $GITHUB_ENV
+              echo "BOARD_NAME=arduino_uno" >> $GITHUB_ENV
+              echo "CHIP=ATmega328P" >> $GITHUB_ENV
+              ;;
+            arduino_nano)
+              echo "FQBN=arduino:avr:nano" >> $GITHUB_ENV
+              echo "CORE=arduino:avr" >> $GITHUB_ENV
+              echo "BOARD_NAME=arduino_nano" >> $GITHUB_ENV
+              echo "CHIP=ATmega328P" >> $GITHUB_ENV
+              ;;
+            arduino_mega)
+              echo "FQBN=arduino:avr:mega" >> $GITHUB_ENV
+              echo "CORE=arduino:avr" >> $GITHUB_ENV
+              echo "BOARD_NAME=arduino_mega2560" >> $GITHUB_ENV
+              echo "CHIP=ATmega2560" >> $GITHUB_ENV
+              ;;
+            arduino_micro)
+              echo "FQBN=arduino:avr:micro" >> $GITHUB_ENV
+              echo "CORE=arduino:avr" >> $GITHUB_ENV
+              echo "BOARD_NAME=arduino_micro" >> $GITHUB_ENV
+              echo "CHIP=ATmega32U4" >> $GITHUB_ENV
+              ;;
+            d1_mini)
+              echo "FQBN=esp8266:esp8266:d1_mini" >> $GITHUB_ENV
+              echo "CORE=esp8266:esp8266" >> $GITHUB_ENV
+              echo "BOARD_NAME=d1_mini" >> $GITHUB_ENV
+              echo "CHIP=ESP8266" >> $GITHUB_ENV
+              ;;
+            nodemcu)
+              echo "FQBN=esp8266:esp8266:nodemcuv2" >> $GITHUB_ENV
+              echo "CORE=esp8266:esp8266" >> $GITHUB_ENV
+              echo "BOARD_NAME=nodemcu" >> $GITHUB_ENV
+              echo "CHIP=ESP8266" >> $GITHUB_ENV
+              ;;
+            esp32_dev)
+              echo "FQBN=esp32:esp32:esp32" >> $GITHUB_ENV
+              echo "CORE=esp32:esp32" >> $GITHUB_ENV
+              echo "BOARD_NAME=esp32_dev" >> $GITHUB_ENV
+              echo "CHIP=ESP32" >> $GITHUB_ENV
+              ;;
+            esp32c3_dev)
+              echo "FQBN=esp32:esp32:esp32c3" >> $GITHUB_ENV
+              echo "CORE=esp32:esp32" >> $GITHUB_ENV
+              echo "BOARD_NAME=esp32c3_dev" >> $GITHUB_ENV
+              echo "CHIP=ESP32-C3" >> $GITHUB_ENV
+              ;;
+            esp32s3_dev)
+              echo "FQBN=esp32:esp32:esp32s3" >> $GITHUB_ENV
+              echo "CORE=esp32:esp32" >> $GITHUB_ENV
+              echo "BOARD_NAME=esp32s3_dev" >> $GITHUB_ENV
+              echo "CHIP=ESP32-S3" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Unsupported board: ${{ matrix.build_config.board }}"
+              exit 1
+              ;;
+          esac
+
+      - name: Install board core
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install "$CORE"
+
+      - name: Patch pins in CCLoader.ino
+        working-directory: Arduino/CCLoader
+        run: |
+          # Заменяем значения пинов на те, что переданы в конфигурации
+          sed -i 's/int DD = [0-9]\+/int DD = ${{ matrix.build_config.dd_pin }}/' CCLoader.ino
+          sed -i 's/int DC = [0-9]\+/int DC = ${{ matrix.build_config.dc_pin }}/' CCLoader.ino
+          sed -i 's/int RESET = [0-9]\+/int RESET = ${{ matrix.build_config.reset_pin }}/' CCLoader.ino
+          sed -i 's/int LED = .*/int LED = ${{ matrix.build_config.led_pin }};/' CCLoader.ino
+
+      - name: Compile sketch
+        run: |
+          arduino-cli compile \
+            --fqbn "$FQBN" \
+            --export-binaries \
+            --output-dir build \
+            Arduino/CCLoader
+
+      - name: Convert HEX to BIN for AVR (if needed)
+        run: |
+          HEX_FILE=$(find build -name '*.hex' -print -quit || true)
+          if [ -n "$HEX_FILE" ]; then
+            echo "Found HEX: $HEX_FILE"
+            AVR_OBJCOPY=$(find ~/.arduino15 -name avr-objcopy -print -quit || true)
+            if [ -z "$AVR_OBJCOPY" ]; then
+              echo "avr-objcopy not found"
+              exit 1
+            fi
+            BIN_FILE="${HEX_FILE%.hex}.bin"
+            "$AVR_OBJCOPY" -I ihex -O binary "$HEX_FILE" "$BIN_FILE"
+            echo "Generated BIN: $BIN_FILE"
+          else
+            echo "No HEX found, likely non-AVR board, using existing .bin from build"
+          fi
+
+      - name: Install esptool
+        run: pip install esptool
+
+      - name: Build all configurations
+        run: |
+          mkdir -p bins
+          
+          # Читаем все конфигурации из task.json
+          CONFIGS=$(cat task.json | jq -c '.builds[]')
+          
+          while IFS= read -r config; do
+            BOARD=$(echo "$config" | jq -r '.board')
+            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
+            DD_PIN=$(echo "$config" | jq -r '.dd_pin')
+            RESET_PIN=$(echo "$config" | jq -r '.reset_pin')
+            LED_PIN=$(echo "$config" | jq -r '.led_pin')
+            
+            echo "========================================="
+            echo "Building configuration:"
+            echo "Board: $BOARD"
+            echo "Pins: DC=$DC_PIN, DD=$DD_PIN, RESET=$RESET_PIN, LED=$LED_PIN"
+            echo "========================================="
+            
+            # Определяем FQBN, имя платы и чип
+            case "$BOARD" in
+              arduino_uno)
+                FQBN="arduino:avr:uno"
+                BOARD_NAME="arduino_uno"
+                CHIP="ATmega328P"
+                ;;
+              arduino_nano)
+                FQBN="arduino:avr:nano"
+                BOARD_NAME="arduino_nano"
+                CHIP="ATmega328P"
+                ;;
+              arduino_mega)
+                FQBN="arduino:avr:mega"
+                BOARD_NAME="arduino_mega2560"
+                CHIP="ATmega2560"
+                ;;
+              arduino_micro)
+                FQBN="arduino:avr:micro"
+                BOARD_NAME="arduino_micro"
+                CHIP="ATmega32U4"
+                ;;
+              d1_mini)
+                FQBN="esp8266:esp8266:d1_mini"
+                BOARD_NAME="d1_mini"
+                CHIP="ESP8266"
+                ;;
+              nodemcu)
+                FQBN="esp8266:esp8266:nodemcuv2"
+                BOARD_NAME="nodemcu"
+                CHIP="ESP8266"
+                ;;
+              esp32_dev)
+                FQBN="esp32:esp32:esp32"
+                BOARD_NAME="esp32_dev"
+                CHIP="ESP32"
+                ;;
+              esp32c3_dev)
+                FQBN="esp32:esp32:esp32c3"
+                BOARD_NAME="esp32c3_dev"
+                CHIP="ESP32-C3"
+                ;;
+              esp32s3_dev)
+                FQBN="esp32:esp32:esp32s3"
+                BOARD_NAME="esp32s3_dev"
+                CHIP="ESP32-S3"
+                ;;
+              *)
+                echo "Unsupported board: $BOARD"
+                continue
+                ;;
+            esac
+            
+            # Создаем временную копию скетча
+            TEMP_SKETCH="Arduino/CCLoader_temp_$$"
+            cp -r Arduino/CCLoader "$TEMP_SKETCH"
+            
+            # Патчим пины
+            sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH/CCLoader.ino"
+            sed -i "s/int DC = [0-9]\+/int DC = $DC_PIN/" "$TEMP_SKETCH/CCLoader.ino"
+            sed -i "s/int RESET = [0-9]\+/int RESET = $RESET_PIN/" "$TEMP_SKETCH/CCLoader.ino"
+            sed -i "s/int LED = .*/int LED = $LED_PIN;/" "$TEMP_SKETCH/CCLoader.ino"
+            
+            # Компилируем
+            BUILD_DIR="build_${BOARD_NAME}_$$"
+            mkdir -p "$BUILD_DIR"
+            
+            arduino-cli compile \
+              --fqbn "$FQBN" \
+              --export-binaries \
+              --output-dir "$BUILD_DIR" \
+              "$TEMP_SKETCH"
+            
+            # Формируем имя выходного файла
+            OUT_NAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            
+            # Обрабатываем бинарник в зависимости от типа платы
+            if [[ "$BOARD" == esp32* ]]; then
+              # ESP32: объединяем все части
+              APP_BIN=$(find "$BUILD_DIR" -name '*.ino.bin' -print -quit)
+              BOOTLOADER=$(find "$BUILD_DIR" -name '*bootloader*.bin' -print -quit)
+              PARTITIONS=$(find "$BUILD_DIR" -name '*partitions*.bin' -print -quit)
+              BOOT_APP0=$(find "$BUILD_DIR" -name '*boot_app0*.bin' -print -quit)
+              
+              if [ -z "$APP_BIN" ] || [ -z "$BOOTLOADER" ] || [ -z "$PARTITIONS" ]; then
+                echo "Error: Missing ESP32 binary files"
+                ls -la "$BUILD_DIR"/
+                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                continue
+              fi
+              
+              case "$BOARD" in
+                esp32_dev) ESPTOOL_CHIP="esp32" ;;
+                esp32c3_dev) ESPTOOL_CHIP="esp32c3" ;;
+                esp32s3_dev) ESPTOOL_CHIP="esp32s3" ;;
+              esac
+              
+              if [ -n "$BOOT_APP0" ]; then
+                esptool.py --chip $ESPTOOL_CHIP merge_bin \
+                  -o "bins/$OUT_NAME" \
+                  --flash_mode dio \
+                  --flash_size 4MB \
+                  0x1000 "$BOOTLOADER" \
+                  0x8000 "$PARTITIONS" \
+                  0xe000 "$BOOT_APP0" \
+                  0x10000 "$APP_BIN"
+              else
+                esptool.py --chip $ESPTOOL_CHIP merge_bin \
+                  -o "bins/$OUT_NAME" \
+                  --flash_mode dio \
+                  --flash_size 4MB \
+                  0x1000 "$BOOTLOADER" \
+                  0x8000 "$PARTITIONS" \
+                  0x10000 "$APP_BIN"
+              fi
+            elif [[ "$BOARD" == arduino_* ]]; then
+              # AVR: конвертируем HEX в BIN
+              HEX_FILE=$(find "$BUILD_DIR" -name '*.hex' -print -quit)
+              if [ -n "$HEX_FILE" ]; then
+                AVR_OBJCOPY=$(find ~/.arduino15 -name avr-objcopy -print -quit)
+                if [ -z "$AVR_OBJCOPY" ]; then
+                  echo "Error: avr-objcopy not found"
+                  rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                  continue
+                fi
+                "$AVR_OBJCOPY" -I ihex -O binary "$HEX_FILE" "bins/$OUT_NAME"
+              else
+                echo "Error: No HEX file found"
+                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                continue
+              fi
+            else
+              # ESP8266: копируем готовый BIN
+              BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
+              if [ -z "$BIN_SRC" ]; then
+                echo "Error: No BIN file produced"
+                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                continue
+              fi
+              cp "$BIN_SRC" "bins/$OUT_NAME"
+            fi
+            
+            echo "✓ Created: $OUT_NAME ($(stat -c%s "bins/$OUT_NAME" 2>/dev/null || stat -f%z "bins/$OUT_NAME") bytes)"
+            
+            # Очищаем временные файлы
+            rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+            
+          done <<< "$CONFIGS"
+          
+          echo "========================================="
+          echo "Build complete! Generated files:"
+          ls -lh bins/
+          echo "========================================="
+
+      - name: Generate manifest.json
+        run: |
+          cat > bins/manifest.json << 'EOF'
+          {
+            "firmwares": []
+          }
+          EOF
+          
+          # Читаем конфигурации из task.json
+          CONFIGS=$(cat task.json | jq -c '.builds[]')
+          
+          # Создаем массив для манифеста
+          MANIFEST_ITEMS="[]"
+          
+          while IFS= read -r config; do
+            BOARD=$(echo "$config" | jq -r '.board')
+            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
+            DD_PIN=$(echo "$config" | jq -r '.dd_pin')
+            RESET_PIN=$(echo "$config" | jq -r '.reset_pin')
+            LED_PIN=$(echo "$config" | jq -r '.led_pin')
+            
+            # Определяем имя файла и чип
+            case "$BOARD" in
+              arduino_uno)
+                BOARD_NAME="arduino_uno"
+                CHIP="ATmega328P"
+                ;;
+              arduino_nano)
+                BOARD_NAME="arduino_nano"
+                CHIP="ATmega328P"
+                ;;
+              arduino_mega)
+                BOARD_NAME="arduino_mega2560"
+                CHIP="ATmega2560"
+                ;;
+              arduino_micro)
+                BOARD_NAME="arduino_micro"
+                CHIP="ATmega32U4"
+                ;;
+              d1_mini)
+                BOARD_NAME="d1_mini"
+                CHIP="ESP8266"
+                ;;
+              nodemcu)
+                BOARD_NAME="nodemcu"
+                CHIP="ESP8266"
+                ;;
+              esp32_dev)
+                BOARD_NAME="esp32_dev"
+                CHIP="ESP32"
+                ;;
+              esp32c3_dev)
+                BOARD_NAME="esp32c3_dev"
+                CHIP="ESP32-C3"
+                ;;
+              esp32s3_dev)
+                BOARD_NAME="esp32s3_dev"
+                CHIP="ESP32-S3"
+                ;;
+            esac
+            
+            FILENAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            
+            # Проверяем, что файл существует
+            if [ ! -f "bins/$FILENAME" ]; then
+              echo "Warning: $FILENAME not found, skipping"
+              continue
+            fi
+            
+            # Добавляем запись в манифест
+            ITEM=$(jq -n \
+              --arg filename "$FILENAME" \
+              --arg url "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/$FILENAME" \
+              --arg board "$BOARD" \
+              --arg chip "$CHIP" \
+              --arg dc "$DC_PIN" \
+              --arg dd "$DD_PIN" \
+              --arg reset "$RESET_PIN" \
+              --arg led "$LED_PIN" \
+              '{
+                filename: $filename,
+                url: $url,
+                board: $board,
+                chip: $chip,
+                pins: {
+                  dc: $dc,
+                  dd: $dd,
+                  reset: $reset,
+                  led: $led
+                }
+              }')
+            
+            MANIFEST_ITEMS=$(echo "$MANIFEST_ITEMS" | jq --argjson item "$ITEM" '. += [$item]')
+          done <<< "$CONFIGS"
+          
+          # Записываем финальный манифест
+          jq --argjson items "$MANIFEST_ITEMS" '.firmwares = $items' bins/manifest.json > bins/manifest.json.tmp
+          mv bins/manifest.json.tmp bins/manifest.json
+          
+          echo "Generated manifest.json:"
+          cat bins/manifest.json
+
+      - name: Commit and push binaries
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add bins/
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Auto-build: Update CCLoader binaries [skip ci]"
+            git push
+          fi
