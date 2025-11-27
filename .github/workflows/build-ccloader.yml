@@ -37,12 +37,12 @@ jobs:
           CORES_TO_INSTALL=""
           for board in $BOARDS; do
             case "$board" in
-              d1_mini|nodemcu)
+              d1_mini|nodemcu|esp8266_generic)
                 if [[ ! "$CORES_TO_INSTALL" =~ "esp8266:esp8266" ]]; then
                   CORES_TO_INSTALL="$CORES_TO_INSTALL esp8266:esp8266"
                 fi
                 ;;
-              esp32_dev|esp32c3_dev|esp32s3_dev)
+              esp32_dev|esp32c3_dev|esp32s3_dev|esp32c6_dev)
                 if [[ ! "$CORES_TO_INSTALL" =~ "esp32:esp32" ]]; then
                   CORES_TO_INSTALL="$CORES_TO_INSTALL esp32:esp32"
                 fi
@@ -69,15 +69,15 @@ jobs:
           
           while IFS= read -r config; do
             BOARD=$(echo "$config" | jq -r '.board')
-            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
             DD_PIN=$(echo "$config" | jq -r '.dd_pin')
+            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
             RESET_PIN=$(echo "$config" | jq -r '.reset_pin')
             LED_PIN=$(echo "$config" | jq -r '.led_pin')
             
             echo "========================================="
             echo "Building configuration:"
             echo "Board: $BOARD"
-            echo "Pins: DC=$DC_PIN, DD=$DD_PIN, RESET=$RESET_PIN, LED=$LED_PIN"
+            echo "Pins: DD=$DD_PIN, DC=$DC_PIN, RESET=$RESET_PIN, LED=$LED_PIN"
             echo "========================================="
             
             # Determine FQBN, board name, and chip
@@ -90,6 +90,11 @@ jobs:
               nodemcu)
                 FQBN="esp8266:esp8266:nodemcuv2"
                 BOARD_NAME="nodemcu"
+                CHIP="ESP8266"
+                ;;
+              esp8266_generic)
+                FQBN="esp8266:esp8266:generic"
+                BOARD_NAME="esp8266_generic"
                 CHIP="ESP8266"
                 ;;
               esp32_dev)
@@ -107,6 +112,11 @@ jobs:
                 BOARD_NAME="esp32s3_dev"
                 CHIP="ESP32-S3"
                 ;;
+              esp32c6_dev)
+                FQBN="esp32:esp32:esp32c6"
+                BOARD_NAME="esp32c6_dev"
+                CHIP="ESP32-C6"
+                ;;
               *)
                 echo "Unsupported board: $BOARD"
                 continue
@@ -119,8 +129,8 @@ jobs:
             cp Arduino/CCLoader/CCLoader.ino "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
             # Patch pins
-            sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int DC = [0-9]\+/int DC = $DC_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
+            sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int RESET = [0-9]\+/int RESET = $RESET_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int LED = .*/int LED = $LED_PIN;/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
@@ -135,7 +145,7 @@ jobs:
               "$TEMP_SKETCH_DIR"
             
             # Form the output file name
-            OUT_NAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            OUT_NAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
             
             # Process the binary depending on the board type
             if [[ "$BOARD" == esp32* ]]; then
@@ -216,8 +226,8 @@ jobs:
           
           while IFS= read -r config; do
             BOARD=$(echo "$config" | jq -r '.board')
-            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
             DD_PIN=$(echo "$config" | jq -r '.dd_pin')
+            DC_PIN=$(echo "$config" | jq -r '.dc_pin')
             RESET_PIN=$(echo "$config" | jq -r '.reset_pin')
             LED_PIN=$(echo "$config" | jq -r '.led_pin')
             
@@ -249,7 +259,7 @@ jobs:
                 ;;
             esac
             
-            FILENAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            FILENAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
             
             # Check that the file exists
             if [ ! -f "bins/$FILENAME" ]; then
@@ -263,8 +273,8 @@ jobs:
               --arg url "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/$FILENAME" \
               --arg board "$BOARD" \
               --arg chip "$CHIP" \
-              --arg dc "$DC_PIN" \
               --arg dd "$DD_PIN" \
+              --arg dc "$DC_PIN" \
               --arg reset "$RESET_PIN" \
               --arg led "$LED_PIN" \
               '{
@@ -273,8 +283,8 @@ jobs:
                 board: $board,
                 chip: $chip,
                 pins: {
-                  dc: $dc,
                   dd: $dd,
+                  dc: $dc,
                   reset: $reset,
                   led: $led
                 }

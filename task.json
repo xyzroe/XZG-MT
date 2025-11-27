@@ -2,24 +2,45 @@
   "builds": [
     {
       "board": "d1_mini",
-      "dc_pin": "D1",
-      "dd_pin": "D2",
+      "dd_pin": "D1",
+      "dc_pin": "D2",
       "reset_pin": "D3",
       "led_pin": "D4"
     },
     {
       "board": "nodemcu",
-      "dc_pin": "14",
-      "dd_pin": "13",
-      "reset_pin": "12",
+      "dd_pin": "D5",
+      "dc_pin": "D6",
+      "reset_pin": "D7",
+      "led_pin": "LED_BUILTIN"
+    },
+    {
+      "board": "esp8266_generic",
+      "dd_pin": "5",
+      "dc_pin": "4",
+      "reset_pin": "0",
       "led_pin": "2"
     },
     {
       "board": "esp32_dev",
-      "dc_pin": "17",
       "dd_pin": "16",
-      "reset_pin": "26",
+      "dc_pin": "17",
+      "reset_pin": "21",
       "led_pin": "2"
+    },
+    {
+      "board": "esp32_dev",
+      "dd_pin": "26",
+      "dc_pin": "14",
+      "reset_pin": "13",
+      "led_pin": "2"
+    },
+    {
+      "board": "esp32c6_dev",
+      "dd_pin": "23",
+      "dc_pin": "22",
+      "reset_pin": "19",
+      "led_pin": "0"
     }
   ]
 }
