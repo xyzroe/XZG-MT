@@ -1,4 +1,4 @@
-CCLoader
-main.c
+/CCLoader
+/*main.c
 /*.bin
 /*.hex
