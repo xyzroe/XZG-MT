@@ -1,11 +1,15 @@
 name: Build CCLoader firmware
 
+permissions:
+  contents: write
+  
 on:
   push:
     branches:
       - cc_loader
     paths:
       - 'task.json'
+  workflow_dispatch:
 
 jobs:
   build:
