@@ -1,25 +1,11 @@
 {
   "builds": [
     {
-      "board": "arduino_uno",
-      "dc_pin": "5",
-      "dd_pin": "6",
-      "reset_pin": "4",
-      "led_pin": "13"
-    },
-    {
-      "board": "arduino_nano",
-      "dc_pin": "5",
-      "dd_pin": "6",
-      "reset_pin": "4",
-      "led_pin": "13"
-    },
-    {
       "board": "d1_mini",
       "dc_pin": "D1",
       "dd_pin": "D2",
       "reset_pin": "D3",
-      "led_pin": "LED_BUILTIN"
+      "led_pin": "D4"
     },
     {
       "board": "nodemcu",
@@ -30,9 +16,9 @@
     },
     {
       "board": "esp32_dev",
-      "dc_pin": "16",
-      "dd_pin": "17",
-      "reset_pin": "18",
+      "dc_pin": "17",
+      "dd_pin": "16",
+      "reset_pin": "26",
       "led_pin": "2"
     }
   ]
