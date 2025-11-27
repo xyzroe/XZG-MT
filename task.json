@@ -41,6 +41,20 @@
       "dc_pin": "22",
       "reset_pin": "19",
       "led_pin": "0"
+    },
+    {
+        "board": "esp32s3_dev",
+        "dd_pin": "15",
+        "dc_pin": "16",
+        "reset_pin": "17",
+        "led_pin": "18"
+    },
+    {
+        "board": "esp32c3_dev",
+        "dd_pin": "4",
+        "dc_pin": "3",
+        "reset_pin": "2",
+        "led_pin": "1"
     }
   ]
 }

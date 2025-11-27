@@ -170,19 +170,19 @@ jobs:
               esac
               
               if [ -n "$BOOT_APP0" ]; then
-                esptool.py --chip $ESPTOOL_CHIP merge_bin \
+                esptool --chip $ESPTOOL_CHIP merge-bin \
                   -o "bins/$OUT_NAME" \
-                  --flash_mode dio \
-                  --flash_size 4MB \
+                  --flash-mode dio \
+                  --flash-size 4MB \
                   0x1000 "$BOOTLOADER" \
                   0x8000 "$PARTITIONS" \
                   0xe000 "$BOOT_APP0" \
                   0x10000 "$APP_BIN"
               else
-                esptool.py --chip $ESPTOOL_CHIP merge_bin \
+                esptool --chip $ESPTOOL_CHIP merge-bin \
                   -o "bins/$OUT_NAME" \
-                  --flash_mode dio \
-                  --flash_size 4MB \
+                  --flash-mode dio \
+                  --flash-size 4MB \
                   0x1000 "$BOOTLOADER" \
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
