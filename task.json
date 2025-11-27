@@ -9,10 +9,10 @@
     },
     {
       "board": "nodemcu",
-      "dc_pin": "D1",
-      "dd_pin": "D2",
-      "reset_pin": "D3",
-      "led_pin": "LED_BUILTIN"
+      "dc_pin": "14",
+      "dd_pin": "12",
+      "reset_pin": "13",
+      "led_pin": "2"
     },
     {
       "board": "esp32_dev",
