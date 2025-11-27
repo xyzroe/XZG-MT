@@ -2,7 +2,7 @@ name: Build CCLoader firmware
 
 permissions:
   contents: write
-  
+
 on:
   push:
     branches:
@@ -31,17 +31,12 @@ jobs:
 
       - name: Install all required cores
         run: |
-          # Читаем task.json и определяем какие cores нужны
+          # Read task.json and determine which cores are needed
           BOARDS=$(cat task.json | jq -r '.builds[].board' | sort -u)
           
           CORES_TO_INSTALL=""
           for board in $BOARDS; do
             case "$board" in
-              arduino_uno|arduino_nano|arduino_mega|arduino_micro)
-                if [[ ! "$CORES_TO_INSTALL" =~ "arduino:avr" ]]; then
-                  CORES_TO_INSTALL="$CORES_TO_INSTALL arduino:avr"
-                fi
-                ;;
               d1_mini|nodemcu)
                 if [[ ! "$CORES_TO_INSTALL" =~ "esp8266:esp8266" ]]; then
                   CORES_TO_INSTALL="$CORES_TO_INSTALL esp8266:esp8266"
@@ -69,7 +64,7 @@ jobs:
         run: |
           mkdir -p bins
           
-          # Читаем все конфигурации из task.json
+          # Read all configurations from task.json
           CONFIGS=$(cat task.json | jq -c '.builds[]')
           
           while IFS= read -r config; do
@@ -85,28 +80,8 @@ jobs:
             echo "Pins: DC=$DC_PIN, DD=$DD_PIN, RESET=$RESET_PIN, LED=$LED_PIN"
             echo "========================================="
             
-            # Определяем FQBN, имя платы и чип
+            # Determine FQBN, board name, and chip
             case "$BOARD" in
-              arduino_uno)
-                FQBN="arduino:avr:uno"
-                BOARD_NAME="arduino_uno"
-                CHIP="ATmega328P"
-                ;;
-              arduino_nano)
-                FQBN="arduino:avr:nano"
-                BOARD_NAME="arduino_nano"
-                CHIP="ATmega328P"
-                ;;
-              arduino_mega)
-                FQBN="arduino:avr:mega"
-                BOARD_NAME="arduino_mega2560"
-                CHIP="ATmega2560"
-                ;;
-              arduino_micro)
-                FQBN="arduino:avr:micro"
-                BOARD_NAME="arduino_micro"
-                CHIP="ATmega32U4"
-                ;;
               d1_mini)
                 FQBN="esp8266:esp8266:d1_mini"
                 BOARD_NAME="d1_mini"
@@ -138,18 +113,18 @@ jobs:
                 ;;
             esac
             
-            # Создаем временную копию скетча
+            # Create a temporary copy of the sketch
             TEMP_SKETCH_DIR="Arduino/CCLoader_temp_$$"
             mkdir -p "$TEMP_SKETCH_DIR"
             cp Arduino/CCLoader/CCLoader.ino "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
-            # Патчим пины
+            # Patch pins
             sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int DC = [0-9]\+/int DC = $DC_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int RESET = [0-9]\+/int RESET = $RESET_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             sed -i "s/int LED = .*/int LED = $LED_PIN;/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
-            # Компилируем
+            # Compile
             BUILD_DIR="build_${BOARD_NAME}_$$"
             mkdir -p "$BUILD_DIR"
             
@@ -159,12 +134,12 @@ jobs:
               --output-dir "$BUILD_DIR" \
               "$TEMP_SKETCH_DIR"
             
-            # Формируем имя выходного файла
+            # Form the output file name
             OUT_NAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
             
-            # Обрабатываем бинарник в зависимости от типа платы
+            # Process the binary depending on the board type
             if [[ "$BOARD" == esp32* ]]; then
-              # ESP32: объединяем все части
+              # ESP32: merge all parts
               APP_BIN=$(find "$BUILD_DIR" -name '*.ino.bin' -print -quit)
               BOOTLOADER=$(find "$BUILD_DIR" -name '*bootloader*.bin' -print -quit)
               PARTITIONS=$(find "$BUILD_DIR" -name '*partitions*.bin' -print -quit)
@@ -181,6 +156,7 @@ jobs:
                 esp32_dev) ESPTOOL_CHIP="esp32" ;;
                 esp32c3_dev) ESPTOOL_CHIP="esp32c3" ;;
                 esp32s3_dev) ESPTOOL_CHIP="esp32s3" ;;
+                esp32c6_dev) ESPTOOL_CHIP="esp32c6" ;;
               esac
               
               if [ -n "$BOOT_APP0" ]; then
@@ -201,24 +177,8 @@ jobs:
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
               fi
-            elif [[ "$BOARD" == arduino_* ]]; then
-              # AVR: конвертируем HEX в BIN
-              HEX_FILE=$(find "$BUILD_DIR" -name '*.hex' -print -quit)
-              if [ -n "$HEX_FILE" ]; then
-                AVR_OBJCOPY=$(find ~/.arduino15 -name avr-objcopy -print -quit)
-                if [ -z "$AVR_OBJCOPY" ]; then
-                  echo "Error: avr-objcopy not found"
-                  rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
-                  continue
-                fi
-                "$AVR_OBJCOPY" -I ihex -O binary "$HEX_FILE" "bins/$OUT_NAME"
-              else
-                echo "Error: No HEX file found"
-                rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
-                continue
-              fi
             else
-              # ESP8266: копируем готовый BIN
+              # ESP8266: copy the ready BIN
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
                 echo "Error: No BIN file produced"
@@ -230,7 +190,7 @@ jobs:
             
             echo "✓ Created: $OUT_NAME ($(stat -c%s "bins/$OUT_NAME" 2>/dev/null || stat -f%z "bins/$OUT_NAME") bytes)"
             
-            # Очищаем временные файлы
+            # Clean up temporary files
             rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
             
           done <<< "$CONFIGS"
@@ -248,10 +208,10 @@ jobs:
           }
           EOF
           
-          # Читаем конфигурации из task.json
+          # Read configurations from task.json
           CONFIGS=$(cat task.json | jq -c '.builds[]')
           
-          # Создаем массив для манифеста
+          # Create an array for the manifest
           MANIFEST_ITEMS="[]"
           
           while IFS= read -r config; do
@@ -261,24 +221,8 @@ jobs:
             RESET_PIN=$(echo "$config" | jq -r '.reset_pin')
             LED_PIN=$(echo "$config" | jq -r '.led_pin')
             
-            # Определяем имя файла и чип
+            # Determine the file name and chip
             case "$BOARD" in
-              arduino_uno)
-                BOARD_NAME="arduino_uno"
-                CHIP="ATmega328P"
-                ;;
-              arduino_nano)
-                BOARD_NAME="arduino_nano"
-                CHIP="ATmega328P"
-                ;;
-              arduino_mega)
-                BOARD_NAME="arduino_mega2560"
-                CHIP="ATmega2560"
-                ;;
-              arduino_micro)
-                BOARD_NAME="arduino_micro"
-                CHIP="ATmega32U4"
-                ;;
               d1_mini)
                 BOARD_NAME="d1_mini"
                 CHIP="ESP8266"
@@ -299,17 +243,21 @@ jobs:
                 BOARD_NAME="esp32s3_dev"
                 CHIP="ESP32-S3"
                 ;;
+              esp32c6_dev)
+                BOARD_NAME="esp32c6_dev"
+                CHIP="ESP32-C6"
+                ;;
             esac
             
             FILENAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
             
-            # Проверяем, что файл существует
+            # Check that the file exists
             if [ ! -f "bins/$FILENAME" ]; then
               echo "Warning: $FILENAME not found, skipping"
               continue
             fi
             
-            # Добавляем запись в манифест
+            # Add an entry to the manifest
             ITEM=$(jq -n \
               --arg filename "$FILENAME" \
               --arg url "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/$FILENAME" \
@@ -335,7 +283,7 @@ jobs:
             MANIFEST_ITEMS=$(echo "$MANIFEST_ITEMS" | jq --argjson item "$ITEM" '. += [$item]')
           done <<< "$CONFIGS"
           
-          # Записываем финальный манифест
+          # Write the final manifest
           jq --argjson items "$MANIFEST_ITEMS" '.firmwares = $items' bins/manifest.json > bins/manifest.json.tmp
           mv bins/manifest.json.tmp bins/manifest.json
           
@@ -346,7 +294,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add bins/
+          git add bins/ -f
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else

@@ -10,8 +10,8 @@
     {
       "board": "nodemcu",
       "dc_pin": "14",
-      "dd_pin": "12",
-      "reset_pin": "13",
+      "dd_pin": "13",
+      "reset_pin": "12",
       "led_pin": "2"
     },
     {
