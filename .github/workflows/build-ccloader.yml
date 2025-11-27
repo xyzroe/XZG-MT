@@ -135,14 +135,15 @@ jobs:
             esac
             
             # Создаем временную копию скетча
-            TEMP_SKETCH="Arduino/CCLoader_temp_$$"
-            cp -r Arduino/CCLoader "$TEMP_SKETCH"
+            TEMP_SKETCH_DIR="Arduino/CCLoader_temp_$$"
+            mkdir -p "$TEMP_SKETCH_DIR"
+            cp Arduino/CCLoader/CCLoader.ino "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
             # Патчим пины
-            sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH/CCLoader.ino"
-            sed -i "s/int DC = [0-9]\+/int DC = $DC_PIN/" "$TEMP_SKETCH/CCLoader.ino"
-            sed -i "s/int RESET = [0-9]\+/int RESET = $RESET_PIN/" "$TEMP_SKETCH/CCLoader.ino"
-            sed -i "s/int LED = .*/int LED = $LED_PIN;/" "$TEMP_SKETCH/CCLoader.ino"
+            sed -i "s/int DD = [0-9]\+/int DD = $DD_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
+            sed -i "s/int DC = [0-9]\+/int DC = $DC_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
+            sed -i "s/int RESET = [0-9]\+/int RESET = $RESET_PIN/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
+            sed -i "s/int LED = .*/int LED = $LED_PIN;/" "$TEMP_SKETCH_DIR/CCLoader_temp_$$.ino"
             
             # Компилируем
             BUILD_DIR="build_${BOARD_NAME}_$$"
@@ -152,7 +153,7 @@ jobs:
               --fqbn "$FQBN" \
               --export-binaries \
               --output-dir "$BUILD_DIR" \
-              "$TEMP_SKETCH"
+              "$TEMP_SKETCH_DIR"
             
             # Формируем имя выходного файла
             OUT_NAME="CCLoader_${BOARD_NAME}_dc-${DC_PIN}_dd-${DD_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
@@ -168,7 +169,7 @@ jobs:
               if [ -z "$APP_BIN" ] || [ -z "$BOOTLOADER" ] || [ -z "$PARTITIONS" ]; then
                 echo "Error: Missing ESP32 binary files"
                 ls -la "$BUILD_DIR"/
-                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
                 continue
               fi
               
@@ -203,13 +204,13 @@ jobs:
                 AVR_OBJCOPY=$(find ~/.arduino15 -name avr-objcopy -print -quit)
                 if [ -z "$AVR_OBJCOPY" ]; then
                   echo "Error: avr-objcopy not found"
-                  rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                  rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
                   continue
                 fi
                 "$AVR_OBJCOPY" -I ihex -O binary "$HEX_FILE" "bins/$OUT_NAME"
               else
                 echo "Error: No HEX file found"
-                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
                 continue
               fi
             else
@@ -217,7 +218,7 @@ jobs:
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
                 echo "Error: No BIN file produced"
-                rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+                rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
                 continue
               fi
               cp "$BIN_SRC" "bins/$OUT_NAME"
@@ -226,7 +227,7 @@ jobs:
             echo "✓ Created: $OUT_NAME ($(stat -c%s "bins/$OUT_NAME" 2>/dev/null || stat -f%z "bins/$OUT_NAME") bytes)"
             
             # Очищаем временные файлы
-            rm -rf "$TEMP_SKETCH" "$BUILD_DIR"
+            rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
             
           done <<< "$CONFIGS"
           
