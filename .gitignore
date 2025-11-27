@@ -60,4 +60,9 @@ Thumbs.db
 *.dylib
 *.exe
 
+# Scripts
 clean.sh
+
+# Local markdown files
+commit.md
+to-do.md
