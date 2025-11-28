@@ -2,6 +2,16 @@
 <html lang="en">
 
 <head>
+    <!-- Google Tag Manager -->
+    <script>(function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-KJHBZBZN');</script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>XZG Multi-tool</title>
@@ -34,6 +44,10 @@
 </script>
 
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KJHBZBZN" height="0" width="0"
+            style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div class="container" style="max-width: 860px">
         <div class="d-flex align-items-center justify-content-between mb-3">
             <h1 class="h4 m-0">
@@ -158,7 +172,10 @@
                     <div id="serialControlsWrap">
                         <!-- Serial controls will be shown/hidden by JS depending on protocol -->
                         <div id="serialMobileMsg" class="serial-note alert alert-secondary d-none mb-2" role="status">
-                            Web Serial is not available on mobile devices, but you can use TCP mode 🚀
+                            <div class="text-center">
+                                Web Serial (USB) is yet not available on mobile devices 😞 <br><br>
+                                Google Chrome and Android teams, please make it possible! 🙏
+                            </div>
                         </div>
                         <div class="serial-controls mb-2">
 
@@ -451,9 +468,9 @@
                 </div>
             </div>
             <!-- Message for mobile mode -->
-            <div id="usbMobileMsg" class="serial-note alert alert-secondary d-none my-2" role="status">
+            <!-- <div id="usbMobileMsg" class="serial-note alert alert-secondary d-none my-2" role="status">
                 Web USB is not available on mobile devices, please use desktop 🚀
-            </div>
+            </div> -->
             <!-- Message for HTTP mode -->
             <div id="usbHttpMsg" class="alert alert-secondary text-center d-none" role="status">
                 <span style="font-size:1.2em;">⚡️ Web USB unavailable!</span><br>
@@ -558,25 +575,22 @@
                 </div>
             </div>
             <div class="row mt-3" id="debuggerOptionWrap">
-                <div class="col d-flex justify-content-center">
-
-                    <div class="col-3 d-flex justify-content-center">
-                        <div class="col-auto">
-                            <label class="col-form-label px-2" for="writeMethod">Write</label>
+                <div class="row mt-3 justify-content-center" id="debuggerOptionWrap">
+                    <div class="col-12 d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+                        <div class="col-10 col-md-4 d-flex justify-content-center align-items-center gap-2">
+                            <label class="col-form-label px-2 mb-0" for="writeMethod">Write</label>
+                            <select id="writeMethod" class="form-select">
+                                <option value="fast">Fast (DMA-based)</option>
+                                <option value="slow">Slow (safer)</option>
+                            </select>
                         </div>
-                        <select id="writeMethod" class="form-select" style="width: 100%;">
-                            <option value="fast">Fast (DMA-based)</option>
-                            <option value="slow">Slow (safer)</option>
-                        </select>
-                    </div>
-                    <div class="col-3 d-flex justify-content-center">
-                        <div class="col-auto">
-                            <label class="col-form-label px-2" for="verifyMethod">Verify</label>
+                        <div class="col-10 col-md-4 d-flex justify-content-center align-items-center gap-2">
+                            <label class="col-form-label px-2 mb-0" for="verifyMethod">Verify</label>
+                            <select id="verifyMethod" class="form-select">
+                                <option value="crc">Fast (by CRC, DMA-based)</option>
+                                <option value="read">Slow (read byte-by-byte)</option>
+                            </select>
                         </div>
-                        <select id="verifyMethod" class="form-select" style="width: 100%;">
-                            <option value="crc">Fast (by CRC, DMA-based)</option>
-                            <option value="read">Slow (read byte-by-byte)</option>
-                        </select>
                     </div>
                 </div>
             </div>
@@ -671,13 +685,9 @@
         </div>
 
         <div class="section" id="logSection">
-
-
-
-            <div class="d-flex align-items-center justify-content-between mt-2 mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mb-3">
                 <h2 class="h6 mb-0">Logs</h2>
-
-                <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="d-flex align-items-center gap-3 flex-wrap ms-auto">
                     <div class="form-check form-switch m-0">
                         <input id="autoScroll" class="form-check-input" type="checkbox" role="switch" checked />
                         <label class="form-check-label" for="autoScroll">Auto scroll</label>
@@ -686,14 +696,14 @@
                         <input id="showIo" class="form-check-input" type="checkbox" role="switch" />
                         <label class="form-check-label" for="showIo">Show TX/RX</label>
                     </div>
-                    <div class="ms-auto d-flex gap-2">
-                        <button id="btnClearLog" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i>Clear
-                        </button>
-                        <button id="btnCopyLog" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-clipboard me-1"></i>Copy
-                        </button>
-                    </div>
+                </div>
+                <div class="d-flex gap-2 ms-auto ms-md-0">
+                    <button id="btnClearLog" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Clear
+                    </button>
+                    <button id="btnCopyLog" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-clipboard me-1"></i>Copy
+                    </button>
                 </div>
             </div>
             <div id="consoleWrap" class="console-wrap">
