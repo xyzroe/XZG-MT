@@ -265,8 +265,8 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
   }
 
   /* 4. Serial: hide controls, show note */
-  .serial-controls { display: none; }
-  .serial-note { display: block !important; }
+  /* .serial-controls { display: none; } */
+  /* .serial-note { display: block !important; } */
 
   /* 5. Mobile: show TCP panel by default; user can hide it by adding .tcp-hidden on <html> or <body> */
   /* #tcpSettingsPanel { display: block; }
