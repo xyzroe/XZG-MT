@@ -1,7 +1,6 @@
 **/.DS_Store
 node_modules/
 dist/**/*
-commit
 
 # Logs
 npm-debug.log*

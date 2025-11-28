@@ -20,20 +20,27 @@
 }
 
 html.dark {
-  --bg: #0b0f14;
+  --bg: #20242b;
   --fg: #c9d1d9;
-  --section-bg: #0f141a;
+  --section-bg: #1a1f26;
   --border: #22303c;
   /* keep console as dark */
   --console-bg: #0d1117;
   --console-fg: #c9d1d9;
-  --input-bg: #0f141a;
+  --input-bg: #1a1f26;
   --input-fg: #e6edf3;
   --input-border: #2b3a48;
   --input-focus: #3b82f6;
   --muted: #8b949e;
   --progress-track: #1f2a33;
   --progress-text: #c9d1d9;
+
+  .bg-warning-subtle {
+    background-color: #ffc10773 !important;
+  }
+  .form-check-input:not(:checked) {
+    background-color: #ffffff;
+  }
 
   /* Tooltip */
   --tooltip-bg: #e6edf3;
@@ -258,8 +265,8 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
   }
 
   /* 4. Serial: hide controls, show note */
-  .serial-controls { display: none; }
-  .serial-note { display: block !important; }
+  /* .serial-controls { display: none; } */
+  /* .serial-note { display: block !important; } */
 
   /* 5. Mobile: show TCP panel by default; user can hide it by adding .tcp-hidden on <html> or <body> */
   /* #tcpSettingsPanel { display: block; }

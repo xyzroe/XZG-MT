@@ -719,25 +719,27 @@ export function updateConnectionUI() {
   if (netFwSelect) netFwSelect.disabled = !anyActive;
   if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
 
-  if (pinModeSelect?.checked) {
-    implyGateToggle?.setAttribute("disabled", "true");
-    invertLevel?.setAttribute("disabled", "true");
+  // Cause we have usb and tcp at the same time, we won't disable the rest of the controls
+  // Disable certain controls when in Pin Mode
+  // if (pinModeSelect?.checked) {
+  //   implyGateToggle?.setAttribute("disabled", "true");
+  //   invertLevel?.setAttribute("disabled", "true");
 
-    if (implyGateToggle) implyGateToggle.checked = false;
-    if (invertLevel) invertLevel.checked = false;
-  } else {
-    if (!anyActive) {
-      implyGateToggle?.removeAttribute("disabled");
-      invertLevel?.removeAttribute("disabled");
-    }
-  }
-
-  if (baudUrlSelect && baudUrlSelect.value == "none") {
-    findBaudToggle?.setAttribute("disabled", "true");
-    if (findBaudToggle) findBaudToggle.checked = false;
-  } else {
-    if (!anyActive) {
-      findBaudToggle?.removeAttribute("disabled");
-    }
-  }
+  //   if (implyGateToggle) implyGateToggle.checked = false;
+  //   if (invertLevel) invertLevel.checked = false;
+  // } else {
+  //   if (!anyActive) {
+  //     implyGateToggle?.removeAttribute("disabled");
+  //     invertLevel?.removeAttribute("disabled");
+  //   }
+  // }
+  // Disable Find Baud when no baud rate URL is selected
+  // if (baudUrlSelect && baudUrlSelect.value == "none") {
+  //   findBaudToggle?.setAttribute("disabled", "true");
+  //   if (findBaudToggle) findBaudToggle.checked = false;
+  // } else {
+  //   if (!anyActive) {
+  //     findBaudToggle?.removeAttribute("disabled");
+  //   }
+  // }
 }
