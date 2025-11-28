@@ -181,17 +181,27 @@ export class SerialPort {
     // On mobile, prefer WebUSB over Web Serial (which only shows Bluetooth)
     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
 
-    if (isMobile && SerialPort.isWebUSBSupported()) {
-      // Use WebUSB on mobile
-      await this.requestAndOpenUSB();
-    } else if (SerialPort.isWebSerialSupported()) {
-      // Use Web Serial on desktop
+    if (isMobile) {
+      // Mobile: try WebUSB first, fall back to Web Serial (Bluetooth) if no USB
+      if (SerialPort.isWebUSBSupported()) {
+        try {
+          await this.requestAndOpenUSB();
+          return;
+        } catch (err) {
+          console.log("WebUSB failed, trying Web Serial (Bluetooth):", err);
+          // Fall through to Web Serial
+        }
+      }
+    }
+
+    // Desktop or mobile fallback: use Web Serial
+    if (SerialPort.isWebSerialSupported()) {
       const port = await navigator.serial!.requestPort();
       await port.open({ baudRate: this.bitrate });
       this.port = port;
       this.startIO();
     } else if (SerialPort.isWebUSBSupported()) {
-      // Fallback to WebUSB
+      // Last resort: WebUSB on desktop
       await this.requestAndOpenUSB();
     } else {
       throw new Error("Neither Web Serial nor WebUSB is supported");
