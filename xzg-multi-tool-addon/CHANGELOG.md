@@ -1,3 +1,16 @@
+## v0.2.22
+
+## 🚀 Features
+
+- feat: update footer with trademark notice and adjust dark theme colors (#57) by @xyzroe
+- SmartRF04EB support and SLS presets (#56) by @xyzroe
+- feat: implement support for the CC2530 family (#55) by @xyzroe
+
+## 🐛 Bug Fixes
+
+- fix: comment out serial controls and note in CSS (#59) by @xyzroe
+- fix: update .gitignore to include some local files (#58) by @xyzroe
+
 ## v0.2.21
 
 ## 🚀 Features
