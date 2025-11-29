@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": true,
+  "files.associations": {
+    "sstream": "c",
+    "limits.h": "c",
+    "time.h": "c",
+    "stat.h": "c",
+    "termios.h": "c"
+  }
+}

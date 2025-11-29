@@ -13,12 +13,19 @@ This branch contains firmware for programming TI CC2530 chips using ESP8266/ESP3
     - `CCLoader.ino` - Arduino sketch for ESP8266/ESP32
 - `bins/` - Pre-compiled firmware binaries
   - `manifest.json` - Firmware manifest file
+- `src/` - Source code for host applications
+  - `mac_os_x/` - macOS implementation
+    - `main.c` - Host application for macOS
 
 ## 🛠 How to Use
 
 All firmware files in this branch are primarily intended to be used with the [XZG Multi Tool](http://mt.xyzroe.cc/), but can also be used with other compatible software.
 
 Ready to user firmware binaries for different ESP boards can be found in the `bins/` directory. Check `bins/manifest.json` for available configurations.
+
+To build the host application from source code:
+
+- **macOS**: `gcc src/mac_os_x/main.c -o CCLoader`
 
 ## 📋 Supported Hardware
 
@@ -34,24 +41,26 @@ Ready to user firmware binaries for different ESP boards can be found in the `bi
 
 The programmer communicates with CC2530 chip using 3 debug interface pins:
 
-| Function | CC2530 Pin | Description |
-|----------|-----------|-------------|
-| **DD** | P2.1 | Debug Data (bidirectional) |
-| **DC** | P2.2 | Debug Clock |
-| **RESET** | RST | Reset line |
-| **VCC** | VCC | Power supply (3.3V) |
-| **GND** | GND | Ground |
+| Function  | CC2530 Pin | Description                |
+| --------- | ---------- | -------------------------- |
+| **DD**    | P2.1       | Debug Data (bidirectional) |
+| **DC**    | P2.2       | Debug Clock                |
+| **RESET** | RST        | Reset line                 |
+| **VCC**   | VCC        | Power supply (3.3V)        |
+| **GND**   | GND        | Ground                     |
 
 ### ESP Pins
 
 ESP board GPIO pin assignments vary by build and are defined in `bins/manifest.json`:
+
 - **DD, DC, RESET** - Connected to CC2530 debug interface
 - **LED** - Status indicator
 
 ## 💡 Thanks to
 
-- RedBearLab for [CC Loader](https://github.com/RedBearLab/CCLoader) for the great job!
-  
+- RedBearLab for [CC Loader](https://github.com/RedBearLab/CCLoader) for the amazing job!
+- Timo Kokkonen for [CC Loader fork](https://github.com/tjko/CCLoader) with detect chip id and flash dump functionality!
+
 ## 🤝 Contributing
 
 Contributions are always welcome! Feel free to submit a pull request or create an issue for any updates, fixes, or improvements.

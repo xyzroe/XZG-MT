@@ -9,6 +9,7 @@ on:
       - cc_loader
     paths:
       - 'task.json'
+      - 'Arduino/CCLoader/CCLoader.ino'
   workflow_dispatch:
 
 jobs:
