@@ -1,6 +1,7 @@
 ## v0.2.22
 
 ## 🚀 Features
+
 - feat: Implement CC Loader module for flashing CC2530 family devices via ESP board as flasher interface. (#64) by @xyzroe
 - feat: Integrate cloud firmware repository listing for ESP platforms (currently scoped to CC Loader). (#64) by @xyzroe
 - feat: enhance mobile view (#63) by @xyzroe
@@ -8,37 +9,25 @@
 - feat: SmartRF04EB support and SLS presets (#56) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: Reset flash option checkboxes upon deselection of local firmware file (#64) by @xyzroe
 - fix: comment out serial controls and note in CSS (#59) by @xyzroe
 - fix: update .gitignore to include some local files (#58) by @xyzroe
 
 ##📘 Documentation
+
 - docs: Update README and UI with additional information on CC253X Debugger and Loader support (#64) by @xyzroe
-
-## v0.2.22
-
-## 🚀 Features
-
-- feat: enhance mobile view (#63) by @xyzroe
-- some UI fixes (#62) by @xyzroe
-- feat: update footer with trademark notice and adjust dark theme colors (#57) by @xyzroe
-- SmartRF04EB support and SLS presets (#56) by @xyzroe
-- feat: implement support for the CC2530 family (#55) by @xyzroe
-
-## 🐛 Bug Fixes
-
-- some UI fixes (#62) by @xyzroe
-- fix: comment out serial controls and note in CSS (#59) by @xyzroe
-- fix: update .gitignore to include some local files (#58) by @xyzroe
 
 ## v0.2.21
 
 ## 🚀 Features
+
 - feat: implement support for the CC2530 family (#55) by @xyzroe
 
 ## v0.2.20
 
 ## 🚀 Features
+
 - feat: automatic select BSL and RST GPIOs if existing (#54) by @xyzroe
 - feat: categories inside cloud FW list (#54) by @xyzroe
 - feat: individual accepted local file extensions for each family (#54) by @xyzroe
@@ -46,6 +35,7 @@
 - feat: update firmware manifest URL and add CC2538 support for cloud firmware list (#51) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: reworked mechanism of applying URLs based on templates (#54) by @xyzroe
 - fix: clear devices list if no connection to the bridge (#54) by @xyzroe
 - fix: cloud firmware list sorting. newest > oldest. (#54) by @xyzroe
@@ -55,50 +45,62 @@
 - fix: closing serial port after socket disconnect (#52) by @xyzroe
 
 ## 📘 Documentation
+
 - docs: update README to include ESP32 support and improve project structure (#50) by @xyzroe
-
-
 
 ## v0.2.19
 
 ## 🚀 Features
+
 - feat: Initial support of all ESP32 chips (#49) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: code clean up and reorganization (#49) by @xyzroe
 - fix: many lint errors (#49) by @xyzroe
 
 ## v0.2.18
 
 ## 🚀 Features
+
 - feat: add support of TI CC2538 (#47) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: verify CRC after flashing TI chips (#47) by @xyzroe
 - fix: some code cleanup (#47) by @xyzroe
 
 ## v0.2.17
 
 ## 🚀 Features
+
 #### Web UI
+
 - feat: one global "invert levels" switch, instead of two separate (#46) by @xyzroe
+
 #### GitHub
+
 - feat: implement separate task for release notification (#41) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 #### Web UI
+
 - fix: GPIOs group title in drop down lists (#46) by @xyzroe
 - fix: improve BSL and RST logic for remote connections (#46) by @xyzroe
 - fix: remove reset BSL and RST URLs while changing the port. (#46) by @xyzroe
+
 #### Bridge
+
 - fix: deprecate SERIAL_SCAN_INTERVAL option and update related documentation (#45) by @xyzroe
 - fix: don't showing non-existent serial ports (#45) by @xyzroe
 - fix: errors during intensive serial-tcp communication (#45) by @xyzroe
+
 #### GitHub
+
 - fix: update Telegram notification message format to use MarkdownV2 (#44) by @xyzroe
 - fix: correct photo URL in Telegram and Discord notifications (#43) by @xyzroe
 - fix: enhance notification to include photo and update message format (#42) by @xyzroe
-
 
 ## v0.2.16
 
@@ -124,7 +126,7 @@
 ## 🐛 Bug Fixes
 
 - feat: some small adjustments (#34) by @xyzroe
-- fix: improve HEX parsing logic  (#33) by @xyzroe
+- fix: improve HEX parsing logic (#33) by @xyzroe
 
 ## v0.2.13
 
@@ -170,6 +172,7 @@
 - fix: Print version while start in Docker images (#18) by @xyzroe
 
 ## 📚 Documentation
+
 - chore: update README.md to enhance project description (#19, #20, #21, #22, #23) by @xyzroe
 - chore: update CHANGELOG for v0.2.7 release (#17) by @xyzroe
 
