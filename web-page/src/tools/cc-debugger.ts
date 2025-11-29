@@ -4,7 +4,7 @@ interface HexSection {
 }
 
 import {
-  log,
+  //log,
   optErase,
   optWrite,
   optVerify,
@@ -1749,7 +1749,7 @@ export class CCDebugger {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    log(`Flash saved to ${a.download}`);
+    this.logger(`Flash saved to ${a.download}`);
 
     // Reset to normal mode after read
     await this.reset(false);
@@ -1766,7 +1766,7 @@ export class CCDebugger {
       if (targetIdEl) targetIdEl.textContent = `CC${info.chipId.toString(16).toUpperCase()}`;
       if (targetIeeeEl) targetIeeeEl.textContent = ieee;
     } catch (e: any) {
-      log(`Failed to read info: ${e.message}`);
+      this.logger(`Failed to read info: ${e.message}`);
     }
   }
 
@@ -1774,24 +1774,24 @@ export class CCDebugger {
     const firmwareFile = localFile.files?.[0];
 
     if (!optErase && !optWrite && !optVerify) {
-      log("Please select at least one operation");
+      this.logger("Please select at least one operation");
       return;
     }
 
     if ((optWrite || optVerify) && !firmwareFile) {
-      log("Please select a firmware file for write/verify operations");
+      this.logger("Please select a firmware file for write/verify operations");
       return;
     }
 
     try {
       if (optErase) {
-        log("Erasing chip...");
+        this.logger("Erasing chip...");
         await this.chipErase();
-        log("Chip erase complete!");
+        this.logger("Chip erase complete!");
       }
 
       if (optWrite && firmwareFile) {
-        log(`Writing firmware: ${firmwareFile.name}`);
+        this.logger(`Writing firmware: ${firmwareFile.name}`);
         const reader = new FileReader();
 
         if (firmwareFile.name.toLowerCase().endsWith(".bin")) {
@@ -1810,7 +1810,7 @@ export class CCDebugger {
           await this.writeHex(content, writeMethodSelect);
         }
 
-        log("Write complete!");
+        this.logger("Write complete!");
 
         // Only reset to normal mode if we're not going to verify
         // (verify needs debug mode, reset will be done after verify)
@@ -1822,7 +1822,7 @@ export class CCDebugger {
       }
 
       if (optVerify && firmwareFile) {
-        log(`Verifying firmware: ${firmwareFile.name}`);
+        this.logger(`Verifying firmware: ${firmwareFile.name}`);
         const reader = new FileReader();
 
         let verifyResult = false;
@@ -1843,9 +1843,9 @@ export class CCDebugger {
         }
 
         if (verifyResult) {
-          log("Verify successful - firmware matches!");
+          this.logger("Verify successful - firmware matches!");
         } else {
-          log("Verify FAILED - firmware does not match!");
+          this.logger("Verify FAILED - firmware does not match!");
         }
 
         // Reset to normal mode after verify
@@ -1854,9 +1854,9 @@ export class CCDebugger {
         // log("Device reset complete!");
       }
 
-      log("All operations complete!");
+      this.logger("All operations complete!");
     } catch (err: any) {
-      log(`Operation failed: ${err.message}`);
+      this.logger(`Operation failed: ${err.message}`);
     }
   }
 }

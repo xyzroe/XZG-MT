@@ -13,6 +13,14 @@ interface ZwFirmwareInfo {
   board?: string;
 }
 
+interface EspFirmwareInfo {
+  filename: string;
+  url: string;
+  board: string;
+  chip: string;
+  pins: Record<string, string>;
+}
+
 type TiCategory = Record<string, Record<string, ZwFirmwareInfo>>;
 type SlCategory = Record<string, Record<string, Record<string, ZwFirmwareInfo>>>;
 
@@ -25,7 +33,7 @@ export let netFwItems: Array<{
   category: string;
   board?: string;
 }> | null = null;
-export let netFwCache: TiZwManifest | SlZwManifest | null = null;
+export let netFwCache: TiZwManifest | SlZwManifest | EspManifest | null = null;
 let netFwCacheFamily: string | null = null;
 
 interface TiZwManifest {
@@ -43,8 +51,30 @@ interface SlZwManifest {
   [key: string]: SlCategory | undefined;
 }
 
-export async function fetchManifest(): Promise<TiZwManifest | SlZwManifest> {
+interface EspManifest {
+  firmwares: EspFirmwareInfo[];
+}
+
+export async function fetchManifest(): Promise<TiZwManifest | SlZwManifest | EspManifest> {
   const family = getSelectedFamily();
+  if (family === "esp") {
+    const urls = ["https://raw.githubusercontent.com/xyzroe/XZG-MT/refs/heads/cc_loader/bins/manifest.json"];
+    const combined: EspManifest = { firmwares: [] };
+    for (const url of urls) {
+      try {
+        const resp = await fetch(url, { cache: "no-cache" });
+        if (!resp.ok) continue;
+        const j = (await resp.json()) as EspManifest;
+        if (j.firmwares) {
+          combined.firmwares.push(...j.firmwares);
+        }
+      } catch (e) {
+        console.error(`Failed to fetch manifest from ${url}`, e);
+      }
+    }
+    return combined;
+  }
+
   const url = `https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/${family}/manifest.json`;
   const resp = await fetch(url, { cache: "no-cache" });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -125,6 +155,71 @@ export function filterFwByChipSL(man: SlZwManifest, chip: string) {
       }
     }
     if (result[cat]) result[cat]!.sort((a, b) => getVerNum(b.ver) - getVerNum(a.ver));
+  }
+  return result;
+}
+
+export function filterFwByChipESP(man: EspManifest, chip: string) {
+  const chipMap: Array<{ pattern: string; target: string }> = [
+    { pattern: "ESP8266EX", target: "ESP8266" },
+    { pattern: "ESP32-C6*", target: "ESP32-C6" },
+    { pattern: "ESP32-S3*", target: "ESP32-S3" },
+    { pattern: "ESP32-C3*", target: "ESP32-C3" },
+    { pattern: "ESP32-*", target: "ESP32" },
+  ];
+
+  let deviceName = chip;
+  for (const { pattern, target } of chipMap) {
+    if (pattern.endsWith("*")) {
+      const prefix = pattern.slice(0, -1);
+      if (chip.startsWith(prefix)) {
+        deviceName = target;
+        break;
+      }
+    } else {
+      if (chip === pattern) {
+        deviceName = target;
+        break;
+      }
+    }
+  }
+
+  const result: Record<string, ZwFirmwareInfo[]> = {};
+  if (man.firmwares) {
+    for (const fw of man.firmwares) {
+      if (deviceName && fw.chip !== deviceName) continue;
+      let notes =
+        "This firmware transforms your ESP device into a **CCLoader** programmer, allowing you to flash CC253x chips.\n\n";
+
+      notes += `**🧩 Chip Family:** ${fw.chip}\n\n`;
+      notes += `**🛹 Board:** ${fw.board}\n\n`;
+      notes += `**📄 File:** \`${fw.filename}\`\n\n\n`;
+
+      notes += "📍 Pin Configuration\n\n";
+      notes +=
+        "| Function &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPIO Pin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |\n";
+      notes += "| :--- | :--- |\n";
+
+      if (fw.pins) {
+        const pinEmojis: Record<string, string> = {
+          dd: "💾", // Data
+          dc: "⏱️", // Clock
+          reset: "🔄", // Reset
+          led: "💡", // LED
+        };
+        for (const [k, v] of Object.entries(fw.pins)) {
+          const emoji = pinEmojis[k.toLowerCase()] || "🔧";
+          notes += `| ${emoji} ${k.toUpperCase()} | \`${v.toUpperCase()}\` |\n`;
+        }
+      }
+      (result["ccloader"] ||= []).push({
+        file: fw.filename,
+        ver: 0,
+        link: fw.url,
+        notes: notes,
+        board: fw.board,
+      });
+    }
   }
   return result;
 }
@@ -228,9 +323,14 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
           }
         }
       }
-    } else {
+    } else if (family === "ti") {
       filtered = filterFwByChip(man as TiZwManifest, chip);
       categories = ["coordinator", "router", "thread"];
+    } else if (family === "esp") {
+      filtered = filterFwByChipESP(man as EspManifest, chip);
+      categories = ["ccloader"];
+    } else {
+      return;
     }
 
     const items: Array<{
@@ -260,6 +360,8 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
           else if (category === "multipan") typeStr = "MultiPAN";
           else if (category === "openthread_rcp") typeStr = "RCP";
           label = `[${typeStr}] ${it.ver} — ${it.file}`;
+        } else if (family === "esp") {
+          label = `${it.board} — ${it.file}`;
         } else {
           label = `${it.ver} — ${it.file}`;
         }
@@ -311,7 +413,11 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
       for (const cat of categories) {
         if (groups[cat]) {
           const g = document.createElement("optgroup");
-          g.label = cat.charAt(0).toUpperCase() + cat.slice(1); // Capitalize
+          if (cat === "ccloader") {
+            g.label = "CCLoader";
+          } else {
+            g.label = cat.charAt(0).toUpperCase() + cat.slice(1); // Capitalize
+          }
           for (const it of groups[cat]) {
             const o = document.createElement("option");
             o.value = it.key;

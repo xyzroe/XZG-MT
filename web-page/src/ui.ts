@@ -92,6 +92,9 @@ export const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonEle
 
 // CC Debugger elements
 export const connectDebuggerBtn = document.getElementById("connectDebugger") as HTMLButtonElement | null;
+export const debuggerConnectWrap = document.getElementById("debuggerConnectWrap") as HTMLElement | null;
+export const connectLoaderBtn = document.getElementById("connectLoader") as HTMLButtonElement | null;
+export const loaderConnectWrap = document.getElementById("loaderConnectWrap") as HTMLElement | null;
 export const debuggerSection = document.getElementById("debuggerSection") as HTMLElement | null;
 export const resetDebugBtn = document.getElementById("resetDebugBtn") as HTMLButtonElement | null;
 export const btnReadFlash = document.getElementById("btnReadFlash") as HTMLButtonElement;
@@ -296,8 +299,11 @@ export function updateUIForFamily() {
     if (deviceSection) deviceSection.classList.remove("d-none");
     if (debuggerSection) debuggerSection.classList.add("d-none");
     if (localFirmwareSection) localFirmwareSection.classList.add("d-none");
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
+    // if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.remove("d-none");
+    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
+    // espFilesContainer?.classList.replace("col-md-12", "col-md-6");
+
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
     if (flashSizeWrap) {
