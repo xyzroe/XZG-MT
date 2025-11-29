@@ -195,6 +195,9 @@ export function filterFwByChipESP(man: EspManifest, chip: string) {
       notes += `**🛹 Board:** ${fw.board}\n\n`;
       notes += `**📄 File:** \`${fw.filename}\`\n\n\n`;
 
+      notes +=
+        "⚠️ Only boards with **CH340** or **CP2102** USB-TTL converters are supported. Boards with other converters or native USB connections will **not** work.\n\n";
+
       notes += "📍 Pin Configuration\n\n";
       notes +=
         "| Function &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | GPIO Pin &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; |\n";
