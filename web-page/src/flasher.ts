@@ -7,7 +7,8 @@ import { TcpClient } from "./transport/tcp";
 
 import * as ti_tools from "./tools/ti";
 import { SilabsTools, enterSilabsBootloader, resetSilabs } from "./tools/sl";
-import { CCDebugger, generateHex } from "./tools/cc-debugger";
+import { CCDebugger } from "./tools/cc-debugger";
+import { CCLoader } from "./tools/cc-loader";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { deriveControlConfig, ControlConfig } from "./utils/control";
@@ -55,6 +56,9 @@ import {
   showIoEl,
   btnCopyLog,
   connectDebuggerBtn,
+  connectLoaderBtn,
+  debuggerConnectWrap,
+  loaderConnectWrap,
   debugModelEl,
   debugManufEl,
   debugSerialEl,
@@ -85,6 +89,7 @@ import {
   setBridgeLoading,
   deviceDetectBusy,
   updateConnectionUI,
+  debuggerOptionWrap,
 } from "./ui";
 
 // Global state variables and UI elements
@@ -94,6 +99,9 @@ let currentConnMeta: { type?: string; protocol?: string } = {};
 
 // CCDebugger instance for TI old family
 let ccDebugger: CCDebugger | null = null;
+
+// CCLoader instance for CC2530 via Arduino
+let ccLoader: CCLoader | null = null;
 
 export let activeConnection: "serial" | "tcp" | null = null;
 let esploader: ESPLoader | null = null;
@@ -130,6 +138,9 @@ chooseSerialBtn.addEventListener("click", async () => {
       const chipDesc = await esploader.main("default_reset");
 
       if (chipModelEl) chipModelEl.value = chipDesc || (esploader as any).chip.CHIP_NAME || "ESP Unknown";
+      refreshNetworkFirmwareList(chipModelEl?.value).catch((e) =>
+        log("Network FW list fetch failed: " + (e?.message || String(e)))
+      );
       if (ieeeMacEl) {
         try {
           const mac = await (esploader as any).chip.readMac(esploader);
@@ -283,7 +294,10 @@ netFwSelect?.addEventListener("change", async () => {
 
 localFile.addEventListener("change", async () => {
   const f = localFile.files?.[0];
-  if (!f) return;
+  if (!f) {
+    updateOptionsStateForFile(false);
+    return;
+  }
   try {
     log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
     // Read explicitly using slice to ensure full file read
@@ -371,14 +385,20 @@ enterBslBtn?.addEventListener("click", async () => {
 
 resetBtn?.addEventListener("click", async () => {
   await withButtonStatus(resetBtn!, async () => {
-    if (getSelectedFamily() !== "ti_old") {
-      await performReset();
-    } else {
-      try {
-        await ccDebugger?.reset(false);
-      } catch (e: any) {
-        log("Reset error: " + (e?.message || String(e)));
+    try {
+      if (getSelectedFamily() === "ti_old") {
+        if (ccDebugger) {
+          await ccDebugger?.reset(false);
+        } else if (ccLoader) {
+          log("Reset not supported for CC Loader");
+          return false;
+        }
+      } else {
+        await performReset();
       }
+    } catch (e: any) {
+      log("Reset error: " + (e?.message || String(e)));
+      return false;
     }
   });
 });
@@ -437,10 +457,14 @@ btnVersion?.addEventListener("click", async () => {
 // Get Model action: detect chip and memory without flashing
 btnGetModel?.addEventListener("click", async () => {
   await withButtonStatus(btnGetModel!, async () => {
-    if (getSelectedFamily() !== "ti_old") {
-      await readChipInfo();
+    if (getSelectedFamily() === "ti_old") {
+      if (ccDebugger) {
+        await ccDebugger?.refreshInfo();
+      } else if (ccLoader) {
+        await ccLoader?.getChipInfo();
+      }
     } else {
-      await ccDebugger?.refreshInfo();
+      await readChipInfo();
     }
   });
 });
@@ -548,7 +572,13 @@ btnFlash.addEventListener("click", async () => {
     if (getSelectedFamily() === "ti_old") {
       flashWarning?.classList.remove("d-none");
 
-      await ccDebugger?.flashAction();
+      if (ccLoader) {
+        // CC Loader (Arduino-based flasher for CC2530)
+        await ccLoader?.flashAction();
+      } else if (ccDebugger) {
+        // CC Debugger (TI's official debugger)
+        await ccDebugger?.flashAction();
+      }
 
       setTimeout(() => flashWarning?.classList.add("d-none"), 500);
 
@@ -645,7 +675,7 @@ connectDebuggerBtn?.addEventListener("click", async () => {
       ccDebugger = null;
       if (connectDebuggerBtn) {
         connectDebuggerBtn.classList.replace("btn-danger", "btn-primary");
-        connectDebuggerBtn.innerHTML = '<i class="bi bi-usb-plug-fill me-1"></i>Connect';
+        connectDebuggerBtn.innerHTML = '<i class="bi bi-usb-plug-fill me-1"></i>Connect Debugger';
       }
       if (debugModelEl) debugModelEl.value = "";
       if (debugManufEl) debugManufEl.value = "";
@@ -659,6 +689,7 @@ connectDebuggerBtn?.addEventListener("click", async () => {
     } catch (e: any) {
       log("Disconnect error: " + (e?.message || String(e)));
     }
+    loaderConnectWrap?.classList.remove("d-none");
   } else {
     // Connect
     debuggerDetectSpinner?.classList.remove("d-none");
@@ -668,6 +699,8 @@ connectDebuggerBtn?.addEventListener("click", async () => {
       ccDebugger.setProgressCallback((percent: number, msg: string) => {
         fwProgress(percent, msg);
       });
+
+      loaderConnectWrap?.classList.add("d-none");
 
       await ccDebugger.connect();
       const info = await ccDebugger.getDeviceInfo();
@@ -705,7 +738,16 @@ connectDebuggerBtn?.addEventListener("click", async () => {
 // Read Flash button handler
 btnReadFlash?.addEventListener("click", async () => {
   await withButtonStatus(btnReadFlash!, async () => {
-    await ccDebugger?.dumpFlash();
+    flashWarning?.classList.remove("d-none");
+    if (ccLoader) {
+      // Use Arduino-based CC Loader
+      await ccLoader?.dumpFlash();
+    } else if (ccDebugger) {
+      // Use CC Debugger
+      await ccDebugger?.dumpFlash();
+    }
+    setTimeout(() => flashWarning?.classList.add("d-none"), 500);
+
     return;
   });
 });
@@ -714,11 +756,121 @@ btnReadFlash?.addEventListener("click", async () => {
 resetDebugBtn?.addEventListener("click", async () => {
   await withButtonStatus(resetDebugBtn!, async () => {
     try {
-      await ccDebugger?.reset(true);
+      if (ccDebugger) {
+        await ccDebugger?.reset(true);
+      } else if (ccLoader) {
+        log("Reset not supported for CC Loader");
+        return false;
+      }
     } catch (e: any) {
       log("Reset error: " + (e?.message || String(e)));
     }
   });
+});
+
+// CC Loader (Arduino-based) event handlers
+connectLoaderBtn?.addEventListener("click", async () => {
+  //console.log("Connect Loader button clicked");
+
+  if (ccLoader) {
+    // Disconnect
+    //console.log("Disconnecting CC Loader");
+    try {
+      ccLoader.dispose();
+      ccLoader = null;
+
+      serial?.close();
+      serial = null;
+      if (connectLoaderBtn) {
+        connectLoaderBtn.classList.replace("btn-danger", "btn-warning");
+        connectLoaderBtn.innerHTML = '<i class="bi bi-usb-plug-fill me-1"></i>Connect Loader';
+      }
+      if (targetIdEl) targetIdEl.value = "";
+      if (targetIeeeEl) targetIeeeEl.value = "";
+      if (debugModelEl) debugModelEl.value = "";
+      if (debugManufEl) debugManufEl.value = "";
+      log("CC Loader disconnected");
+      activeConnection = null;
+      updateConnectionUI();
+    } catch (e: any) {
+      log("Disconnect error: " + (e?.message || String(e)));
+    }
+    debuggerOptionWrap?.classList.remove("d-none");
+    debuggerConnectWrap?.classList.remove("d-none");
+    // connectDebuggerBtn?.classList.remove("d-none");
+    optErase.disabled = false;
+    resetBtn?.classList.remove("d-none");
+    resetDebugBtn?.classList.remove("d-none");
+  } else {
+    if (!("serial" in navigator)) throw new Error("Web Serial not supported");
+    const br = 115200;
+    const chosen = await (navigator as any).serial.requestPort();
+    if (!chosen) throw new Error("No port selected");
+    debuggerOptionWrap?.classList.add("d-none");
+    debuggerConnectWrap?.classList.add("d-none");
+    // connectDebuggerBtn?.classList.add("d-none");
+    optErase.checked = true;
+    optErase.disabled = true;
+    resetBtn?.classList.add("d-none");
+    resetDebugBtn?.classList.add("d-none");
+    if (invertLevel) {
+      invertLevel.checked = false;
+    }
+    //console.log("Connecting CC Loader");
+    await chosen.open({ baudRate: br });
+    serial?.close();
+    serial = new SerialWrap(br);
+    serial.useExistingPortAndStart(chosen);
+    // Low-level RX/TX logs
+    serial.onData((d) => {
+      log(`RX: ${bufToHex(d)}`, "rx");
+    });
+    serial.onTx((d) => {
+      log(`TX: ${bufToHex(d)}`, "tx");
+    });
+    log("Serial selected and opened");
+    // Mark connection active immediately on open
+    activeConnection = "serial";
+    updateConnectionUI();
+
+    // Connect
+    debuggerDetectSpinner?.classList.remove("d-none");
+    try {
+      const link = getActiveLink();
+      if (!link) {
+        throw new Error("No active connection. Please connect Serial or TCP first.");
+      }
+
+      ccLoader = new CCLoader(link);
+
+      ccLoader.setLogger((msg: string) => log(msg));
+      ccLoader.setProgressCallback((percent: number, msg: string) => {
+        fwProgress(percent, msg);
+      });
+
+      log("Waiting for Arduino loader to initialize...");
+      // Set DTR/RTS lines (default to UNO: DTR=off, RTS=off)
+      await ccLoader.resetCCLoader(0);
+
+      await ccLoader.getChipInfo();
+
+      if (connectLoaderBtn) {
+        connectLoaderBtn.classList.replace("btn-warning", "btn-danger");
+        connectLoaderBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect Loader';
+      }
+
+      activeConnection = "serial";
+      updateConnectionUI();
+    } catch (e: any) {
+      log("CC Loader connection error: " + (e?.message || String(e)));
+      if (ccLoader) {
+        ccLoader.dispose();
+        ccLoader = null;
+      }
+    } finally {
+      debuggerDetectSpinner?.classList.add("d-none");
+    }
+  }
 });
 
 mdnsRefreshBtn?.addEventListener("click", () => {
@@ -2193,17 +2345,11 @@ function addControlTemplateOptgroups(target: HTMLSelectElement, def: string | nu
 
 function createEspFileRow() {
   const row = document.createElement("div");
-  row.className = "row g-2 mb-2 align-items-center esp-file-row";
+  row.className = "d-flex gap-2 mb-2 esp-file-row align-items-stretch";
   row.innerHTML = `
-    <div class="col-auto">
-      <input type="text" class="form-control font-monospace esp-addr-input" placeholder="0x1000" style="width: 100px;" value="0x0">
-    </div>
-    <div class="col">
-      <input class="form-control esp-file-input" type="file" accept=".bin" />
-    </div>
-    <div class="col-auto">
-      <button class="btn btn-outline-danger btn-lg remove-row" type="button"><i class="bi bi-x-circle"></i></button>
-    </div>
+    <input type="text" class="form-control font-monospace esp-addr-input" placeholder="0x1000" style="width: 100px;" value="0x0">
+    <input class="form-control esp-file-input flex-grow-1" type="file" accept=".bin" />
+    <button class="btn btn-outline-danger remove-row" type="button"><i class="bi bi-x-circle"></i></button>
   `;
   row.querySelector(".remove-row")?.addEventListener("click", () => {
     row.remove();
@@ -2216,7 +2362,18 @@ function createEspFileRow() {
     }
   });
   row.querySelector(".esp-file-input")?.addEventListener("change", () => {
-    updateOptionsStateForFile(true);
+    // if no file selected, update options state
+    // Check all ESP file rows for any selected files
+    const allRows = document.querySelectorAll(".esp-file-row");
+    let hasAnyFile = false;
+    for (const r of Array.from(allRows)) {
+      const fileInput = r.querySelector(".esp-file-input") as HTMLInputElement;
+      if (fileInput?.files?.[0]) {
+        hasAnyFile = true;
+        break;
+      }
+    }
+    updateOptionsStateForFile(hasAnyFile);
   });
   return row;
 }
@@ -2265,25 +2422,40 @@ async function eraseEsp() {
 async function flashEsp() {
   if (!esploader) throw new Error("ESP loader not initialized");
 
-  const rows = document.querySelectorAll(".esp-file-row");
   const fileArray: { data: string; address: number }[] = [];
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const addrInput = row.querySelector(".esp-addr-input") as HTMLInputElement;
-    const fileInput = row.querySelector(".esp-file-input") as HTMLInputElement;
+  // Check if cloud firmware is selected
+  if (netFwSelect && netFwSelect.value && hexImage) {
+    log(`Using pre-loaded firmware image...`);
+    let binary = "";
+    const bytes = hexImage.data;
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    fileArray.push({ data: binary, address: 0x0000 });
+  }
 
-    const file = fileInput.files?.[0];
-    if (!file) continue; // Skip empty rows
+  // If no cloud firmware, check local files
+  if (fileArray.length === 0) {
+    const rows = document.querySelectorAll(".esp-file-row");
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const addrInput = row.querySelector(".esp-addr-input") as HTMLInputElement;
+      const fileInput = row.querySelector(".esp-file-input") as HTMLInputElement;
 
-    let addrStr = addrInput.value.trim();
-    if (!addrStr) addrStr = "0x0";
-    const addr = parseInt(addrStr, 16);
-    if (isNaN(addr)) throw new Error(`Invalid address: ${addrStr}`);
+      const file = fileInput.files?.[0];
+      if (!file) continue; // Skip empty rows
 
-    log(`Reading ${file.name} for address 0x${addr.toString(16)}...`);
-    const data = await readAsBinaryString(file);
-    fileArray.push({ data, address: addr });
+      let addrStr = addrInput.value.trim();
+      if (!addrStr) addrStr = "0x0";
+      const addr = parseInt(addrStr, 16);
+      if (isNaN(addr)) throw new Error(`Invalid address: ${addrStr}`);
+
+      log(`Reading ${file.name} for address 0x${addr.toString(16)}...`);
+      const data = await readAsBinaryString(file);
+      fileArray.push({ data, address: addr });
+    }
   }
 
   if (fileArray.length === 0) throw new Error("No files selected for flashing");

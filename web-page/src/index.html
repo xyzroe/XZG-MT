@@ -431,9 +431,27 @@
             <div id="debugger-controls">
                 <div class="row mt-auto my-3">
                     <div class="col d-flex justify-content-center">
-                        <button id="connectDebugger" class="btn btn-primary">
-                            <i class="bi bi-usb-plug-fill me-1"></i>Connect
-                        </button>
+                        <div id="debuggerConnectWrap">
+                            <button class="btn btn-sm btn-link" type="button" aria-label="CC Debugger help"
+                                data-bs-toggle="tooltip" data-bs-placement="left"
+                                title="Connect to a CC Debugger or SmartRF04EB device using Web USB for flashing.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            </button>
+                            <button id="connectDebugger" class="btn btn-primary mx-2">
+                                <i class="bi bi-usb-plug-fill me-1"></i>Connect Debugger
+                            </button>
+                        </div>
+
+                        <div id="loaderConnectWrap">
+                            <button id="connectLoader" class="btn btn-warning mx-2">
+                                <i class="bi bi-usb-plug-fill me-1"></i>Connect Loader
+                            </button>
+                            <button class="btn btn-sm btn-link" type="button" aria-label="CC Loader help"
+                                data-bs-toggle="tooltip" data-bs-placement="right"
+                                title="Connect to an ESP8266/ESP32-based CC Loader device via Web Serial. Ensure the СС loader firmware is installed on the ESP device">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="row g-2 form-readonly mb-2">
@@ -521,7 +539,7 @@
         <div id="firmwareSection" class="section opacity-50 pe-none" aria-disabled="true">
             <h2 class="h6">Firmware</h2>
             <div class="row g-3">
-                <div class="col-md-12 d-none" id="espFirmwareSection">
+                <div class="col-md-6 d-none" id="espFirmwareSection">
                     <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
                     <div id="espFilesContainer">
                         <!-- Rows added via JS -->
@@ -529,7 +547,7 @@
                     <button id="btnAddEspFile" class="btn btn-sm btn-outline-secondary mt-2">
                         <i class="bi bi-plus-lg me-1"></i>Add File
                     </button>
-                    <div class="small text-muted mt-1">Use a local file (*.bin).</div>
+                    <div class="small text-muted mt-1">Use a local file(s) (*.bin).</div>
                     <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
                 </div>
                 <div class="col-md-6" id="localFirmwareSection">
@@ -547,7 +565,7 @@
                         <button id="netFwNotesBtn" class="btn btn-outline-info" disabled title="Show firmware info">
                             <i class="bi bi-info-circle"></i>
                         </button>
-                        <button id="netFwRefresh" class="btn btn-outline-secondary">
+                        <button id="netFwRefresh" class="btn btn-outline-secondary" title="Refresh firmware list">
                             <i class="bi bi-arrow-repeat"></i>
                         </button>
                     </div>
@@ -606,7 +624,7 @@
                 <div class="col">
                     <div class="alert alert-warning d-flex align-items-center mb-0" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <small>Do not close or minimize this page during the flashing process!</small>
+                        <small>Do not close or minimize this page during the process!</small>
                     </div>
                 </div>
             </div>

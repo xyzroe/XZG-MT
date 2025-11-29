@@ -1,4 +1,4 @@
-export function parseIntelHex(fullText: string): { startAddress: number; data: Uint8Array } {
+export function parseIntelHex(fullText: string, fillByte: number = 0x00): { startAddress: number; data: Uint8Array } {
   const lines = fullText
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -54,7 +54,8 @@ export function parseIntelHex(fullText: string): { startAddress: number; data: U
   if (size <= 0) return { startAddress: 0, data: new Uint8Array(0) };
   const out = new Uint8Array(size);
   // fill with 0x00 to represent erased flash
-  out.fill(0x00);
+  //out.fill(0x00);
+  out.fill(fillByte);
 
   // write records
   for (const r of recs) {

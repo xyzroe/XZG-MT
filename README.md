@@ -209,7 +209,8 @@ Built on the shoulders of giants:
 - **Silicon Labs** — inspired by [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
 - **Espressif Systems** — powered by [esptool-js](https://github.com/espressif/esptool-js) by
   Espressif Systems
-- **Texas Instruments CC25XX** — inspired by [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
+- **Texas Instruments CC25XX СС Debugger** — inspired by [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
+- **Texas Instruments CC25XX СС Loader** — inspired by [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab and [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 
 ---
 
