@@ -212,6 +212,17 @@ Built on the shoulders of giants:
 - **Texas Instruments CC25XX СС Debugger** — inspired by [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
 - **Texas Instruments CC25XX СС Loader** — inspired by [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab and [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 
+## 🌟 Star History
+<div align="center">
+<a href="https://www.star-history.com/#xyzroe/XZG-MT&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
+ </picture>
+</a>
+</div>
+
 ---
 
 <div align="center">
