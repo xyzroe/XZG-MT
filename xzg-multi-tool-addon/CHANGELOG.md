@@ -1,6 +1,23 @@
 ## v0.2.22
 
 ## 🚀 Features
+- feat: Implement CC Loader module for flashing CC2530 family devices via ESP board as flasher interface. (#64) by @xyzroe
+- feat: Integrate cloud firmware repository listing for ESP platforms (currently scoped to CC Loader). (#64) by @xyzroe
+- feat: enhance mobile view (#63) by @xyzroe
+- feat: update footer with trademark notice and adjust dark theme colors (#57) by @xyzroe
+- feat: SmartRF04EB support and SLS presets (#56) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: Reset flash option checkboxes upon deselection of local firmware file (#64) by @xyzroe
+- fix: comment out serial controls and note in CSS (#59) by @xyzroe
+- fix: update .gitignore to include some local files (#58) by @xyzroe
+
+##📘 Documentation
+- docs: Update README and UI with additional information on CC253X Debugger and Loader support (#64) by @xyzroe
+
+## v0.2.22
+
+## 🚀 Features
 
 - feat: enhance mobile view (#63) by @xyzroe
 - some UI fixes (#62) by @xyzroe
