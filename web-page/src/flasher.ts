@@ -700,9 +700,14 @@ connectDebuggerBtn?.addEventListener("click", async () => {
         fwProgress(percent, msg);
       });
 
+      await ccDebugger.connect();
+
+      if (connectDebuggerBtn) {
+        connectDebuggerBtn.classList.replace("btn-primary", "btn-danger");
+        connectDebuggerBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect';
+      }
       loaderConnectWrap?.classList.add("d-none");
 
-      await ccDebugger.connect();
       const info = await ccDebugger.getDeviceInfo();
 
       if (debugModelEl) debugModelEl.value = ccDebugger.device?.productName || "";
@@ -719,11 +724,8 @@ connectDebuggerBtn?.addEventListener("click", async () => {
       const ieee = await ccDebugger.readIEEEAddress();
       if (targetIeeeEl) targetIeeeEl.value = ieee;
 
-      if (connectDebuggerBtn) {
-        connectDebuggerBtn.classList.replace("btn-primary", "btn-danger");
-        connectDebuggerBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect';
-      }
       log("CC Debugger connected successfully");
+
       activeConnection = "serial";
       updateConnectionUI();
     } catch (e: any) {
@@ -802,40 +804,33 @@ connectLoaderBtn?.addEventListener("click", async () => {
     resetBtn?.classList.remove("d-none");
     resetDebugBtn?.classList.remove("d-none");
   } else {
-    if (!("serial" in navigator)) throw new Error("Web Serial not supported");
-    const br = 115200;
-    const chosen = await (navigator as any).serial.requestPort();
-    if (!chosen) throw new Error("No port selected");
-    debuggerOptionWrap?.classList.add("d-none");
-    debuggerConnectWrap?.classList.add("d-none");
-    // connectDebuggerBtn?.classList.add("d-none");
-    optErase.checked = true;
-    optErase.disabled = true;
-    resetBtn?.classList.add("d-none");
-    resetDebugBtn?.classList.add("d-none");
-    if (invertLevel) {
-      invertLevel.checked = false;
-    }
-    //console.log("Connecting CC Loader");
-    await chosen.open({ baudRate: br });
-    serial?.close();
-    serial = new SerialWrap(br);
-    serial.useExistingPortAndStart(chosen);
-    // Low-level RX/TX logs
-    serial.onData((d) => {
-      log(`RX: ${bufToHex(d)}`, "rx");
-    });
-    serial.onTx((d) => {
-      log(`TX: ${bufToHex(d)}`, "tx");
-    });
-    log("Serial selected and opened");
-    // Mark connection active immediately on open
-    activeConnection = "serial";
-    updateConnectionUI();
-
-    // Connect
     debuggerDetectSpinner?.classList.remove("d-none");
+    // Connect
     try {
+      if (!("serial" in navigator)) throw new Error("Web Serial not supported");
+      const br = 115200;
+      const chosen = await (navigator as any).serial.requestPort();
+      if (!chosen) throw new Error("No port selected");
+
+      if (invertLevel) {
+        invertLevel.checked = false;
+      }
+
+      await chosen.open({ baudRate: br });
+      serial?.close();
+      serial = new SerialWrap(br);
+      serial.useExistingPortAndStart(chosen);
+      // Low-level RX/TX logs
+      serial.onData((d) => {
+        log(`RX: ${bufToHex(d)}`, "rx");
+      });
+      serial.onTx((d) => {
+        log(`TX: ${bufToHex(d)}`, "tx");
+      });
+      log("Serial selected and opened");
+      // Mark connection active immediately on open
+      activeConnection = "serial";
+      updateConnectionUI();
       const link = getActiveLink();
       if (!link) {
         throw new Error("No active connection. Please connect Serial or TCP first.");
@@ -848,16 +843,22 @@ connectLoaderBtn?.addEventListener("click", async () => {
         fwProgress(percent, msg);
       });
 
+      if (connectLoaderBtn) {
+        connectLoaderBtn.classList.replace("btn-warning", "btn-danger");
+        connectLoaderBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect Loader';
+      }
+      debuggerOptionWrap?.classList.add("d-none");
+      debuggerConnectWrap?.classList.add("d-none");
+      optErase.checked = true;
+      optErase.disabled = true;
+      resetBtn?.classList.add("d-none");
+      resetDebugBtn?.classList.add("d-none");
+
       log("Waiting for Arduino loader to initialize...");
       // Set DTR/RTS lines (default to UNO: DTR=off, RTS=off)
       await ccLoader.resetCCLoader(0);
 
       await ccLoader.getChipInfo();
-
-      if (connectLoaderBtn) {
-        connectLoaderBtn.classList.replace("btn-warning", "btn-danger");
-        connectLoaderBtn.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>Disconnect Loader';
-      }
 
       activeConnection = "serial";
       updateConnectionUI();

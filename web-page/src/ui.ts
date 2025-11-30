@@ -114,6 +114,7 @@ export const writeMethodSelect = writeMethodWrap?.value as WriteMethod;
 export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
 const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
 
+const netFwSourceEl = document.getElementById("netFwSource") as HTMLAnchorElement | null;
 // Firmware Notes Logic
 const netFwNotesBtnEl = document.getElementById("netFwNotesBtn");
 const fwNotesModalEl = document.getElementById("fwNotesModal");
@@ -236,6 +237,10 @@ export function updateUIForFamily() {
     if (localFile) {
       localFile.accept = ".hex,.bin";
     }
+    if (netFwSourceEl) {
+      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/fw_files";
+      netFwSourceEl.textContent = "XZG-MT/fw_files";
+    }
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.remove("d-none");
     // Buttons
@@ -278,6 +283,10 @@ export function updateUIForFamily() {
     if (localFile) {
       localFile.accept = ".ota,.gbl";
     }
+    if (netFwSourceEl) {
+      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/fw_files";
+      netFwSourceEl.textContent = "XZG-MT/fw_files";
+    }
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
@@ -318,6 +327,11 @@ export function updateUIForFamily() {
     if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
     if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
     if (bootloaderVersionWrap) bootloaderVersionWrap.classList.add("d-none");
+
+    if (netFwSourceEl) {
+      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/cc_loader";
+      netFwSourceEl.textContent = "XZG-MT/cc_loader";
+    }
 
     // Toggles
     if (findBaudWrap) findBaudWrap.classList.add("d-none");

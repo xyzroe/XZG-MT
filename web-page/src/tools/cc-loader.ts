@@ -213,12 +213,12 @@ export class CCLoader {
       0xa5: "CC2530",
       0xb5: "CC2531",
       0x95: "CC2533",
-      0x43: "CC2543",
-      0x44: "CC2544",
-      0x45: "CC2545",
       0x8d: "CC2540",
       0x41: "CC2541",
       0x91: "CC2543",
+      0x43: "CC2543",
+      0x44: "CC2544",
+      0x45: "CC2545",
     };
 
     const chipName = chipModels[chipId] || "Unknown";
