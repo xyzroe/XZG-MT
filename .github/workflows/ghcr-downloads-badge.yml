@@ -3,7 +3,7 @@ name: Update GHCR downloads badge
 
 permissions:
   contents: write
-  
+
 on:
   schedule:
     - cron: '0 3 * * *'   # раз в день
@@ -30,7 +30,7 @@ jobs:
           GH_IMAGE: xzg-mt
         run: |
           mkdir -p .github/badges
-          python scripts/ghcr_downloads.py > .github/badges/ghcr-downloads.json
+          python .github/scripts/ghcr_downloads.py > .github/badges/ghcr-downloads.json
 
       - name: Commit badge
         uses: stefanzweifel/git-auto-commit-action@v5
