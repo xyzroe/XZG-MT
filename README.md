@@ -10,22 +10,38 @@
 <a href="https://github.com/xyzroe/XZG-MT/releases"><img src="https://img.shields.io/github/release/xyzroe/XZG-MT.svg" alt="GitHub version"></img></a>
 <a href="https://github.com/xyzroe/XZG-MT/actions/workflows/build-binaries.yml"><img src="https://img.shields.io/github/actions/workflow/status/xyzroe/XZG-MT/build-binaries.yml" alt="GitHub Actions Workflow Status"></img></a>
 <a href="https://github.com/xyzroe/XZG-MT/releases/latest"><img src="https://img.shields.io/github/downloads/xyzroe/XZG-MT/total.svg" alt="GitHub download"></img></a>
+<a href="https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/xyzroe/XZG-MT/main/.github/badges/ghcr-downloads.json" alt="GHCR pulls"></img></a>
 <a href="https://github.com/xyzroe/XZG-MT/issues"><img src="https://img.shields.io/github/issues/xyzroe/XZG-MT" alt="GitHub Issues or Pull Requests"></img></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/xyzroe/XZG-MT.svg" alt="License"></img></a>
 </div>
 
 ## 📖 About
 
-XZG Multi-tool is aimed at hobbyists and developers who need an easy way to flash TI CC2538 / CC1352 / CC2652, SL EFR32, ESP32 and TI CC25XX devices. The web frontend provides a polished UI and local flashing via Web Serial/USB. The `bridge` allows remote or headless hosts to expose serial devices over TCP and connect them to the web UI.
+The XZG Multi-Tool is a browser-based flashing solution that enables hobbyists and developers to program Texas Instruments, Silicon Labs, and Espressif devices. It provides a simple, polished web UI that enables users to flash adapters directly from the browser, eliminating the need for client software installation.
+
+The web front end performs local flashing via the WebSerial and WebUSB APIs, offering automatic device detection and convenient firmware flashing features. The bridge component (WebSocket ↔ TCP) enables headless or remote hosts to expose local serial ports via TCP and connect them to the web UI. The bridge also supports connecting to remote TCP-based adapters, enabling access to networked adapters from any browser.
 
 ## ⭐ Features
 
-- 🔌 Work with TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices locally via Web Serial or remote via WS-TCP bridge
-- 🛠️ Work with TI 25XX locally using CC Debugger vie Web USB
-- 📂 Flash firmware from custom local file or select from provided
-- 🦾 Automatic chip model, flash size, IEEE and firmware version detection
-- 📝 Cloud firmware's list with description
-- 💾 Backup, restore, and erase NVRAM (TI only)
+- 🔌 Work with various TI, SL, and ESP devices locally via WebSerial/WebUSB or remotely via the WS-TCP bridge.
+- 📂 Flash firmware from a local file or select from a provided list.
+- 📝 List of cloud firmware with descriptions
+- 🦾 Automatically detects chip model, flash size, IEEE, and firmware version
+- 💾 Backup, restore, and erase NVRAM
+
+## 💻 Supported Chips
+
+| Manufacturer      | Model                    | Notes                     | Interface | Detect | Erase | Write | Verify | Read | NVRAM |  Local files   | Cloud FWs |
+| ----------------- | ------------------------ | ------------------------- | :-------: | :----: | :---: | :---: | :----: | :--: | :---: | :------------: | :-------: |
+| Texas Instruments | CC2538 / CC1352 / CC2652 | with BSL loader           |  🔌 / 🌐  |   ✅   |  ✅   |  ✅   |   ✅   |  ❌  |  ✅   | `.hex`, `.bin` |    ✅     |
+| Silicon Labs      | EFR32 series             | with Gecko Bootloader     |  🔌 / 🌐  |   ⚠️   |  ❌   |  ✅   |   ❌   |  ❌  |  ❌   | `.ota`, `.gbl` |    ✅     |
+| Espressif         | ESP8266 / ESP32 series   | almost any chip           |    🔌     |   ✅   |  ✅   |  ✅   |   ❌   |  ❌  |  ◻️   |     `.bin`     |    ⚠️     |
+| Texas Instruments | CC253X / CC254X \*       | using TI CC Debugger      |    🧰     |   ✅   |  ✅   |  ✅   |   ✅   |  ✅  |  ❌   | `.hex`, `.bin` |    ❌     |
+| Texas Instruments | CC253X / CC254X \*       | using ESP based CC Loader |    🔌     |   ✅   |  ✅   |  ✅   |   ✅   |  ✅  |  ❌   | `.hex`, `.bin` |    ❌     |
+
+<small>\* CC2530, CC2531, CC2533, CC2540, CC2541, CC2543, CC2544, CC2545</small>
+
+<small>Legend: 🔌 Web Serial, 🧰 Web USB, 🌐 WS-TCP bridge. Status indicators: ✅ full support, ⚠️ partial support, ❌ not implemented, ◻️ not applicable</small>
 
 ## 🚀 Quick start
 
@@ -146,27 +162,20 @@ Read the individual project READMEs for full documentation and advanced options:
 - 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
-## 🛠️ Tech & badges
+## 🛠️ Tech badges
 
-Below are key technologies, libraries and tools used across the projects (click the badges for quick context):
+Below are key technologies used across the projects (click the badges for quick context):
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Node.js-%3E%3D20.18.0-brightgreen" alt="Node.js" />
-  <img src="https://img.shields.io/badge/TypeScript-%5E5.5-blue" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/esbuild-%3E%3D0.23.0-purple" alt="esbuild" />
-  <img src="https://img.shields.io/badge/pkg-for_binaries-lightgrey" alt="pkg" />
-  <img src="https://img.shields.io/badge/ws-WebSocket-orange" alt="ws" />
-  <img src="https://img.shields.io/badge/serialport-native-red" alt="serialport" />
-  <img src="https://img.shields.io/badge/browser--sync-dev_server-blue" alt="browser-sync" />
-  <img src="https://img.shields.io/badge/realfavicon-fav_gen-lightblue" alt="realfavicon" />
-  <img src="https://img.shields.io/badge/sharp-image_processing-teal" alt="sharp" />
-  <img src="https://img.shields.io/badge/concurrently-dev_helpers-grey" alt="concurrently" />
-  <img src="https://img.shields.io/badge/copyfiles-static_copy-grey" alt="copyfiles" />
-  <img src="https://img.shields.io/badge/nodemon-dev_watch-red" alt="nodemon" />
-  <img src="https://img.shields.io/badge/Docker-container-blue" alt="docker" />
-  <img src="https://img.shields.io/badge/Go-%3E%3D1.21-cyan" alt="Go" />
-  <img src="https://img.shields.io/badge/golangci--lint-linter-brightgreen" alt="golangci-lint" />
-  <img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS" />
+  <a href="web-page/package.json"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.18.0-brightgreen" alt="Node.js" /></a>
+  <a href="web-page/tsconfig.json"><img src="https://img.shields.io/badge/TypeScript-%5E5.5-blue" alt="TypeScript" /></a>
+  <a href="web-page/package.json"><img src="https://img.shields.io/badge/esbuild-%3E%3D0.23.0-purple" alt="esbuild" /></a>
+  <a href="web-page/src/transport/serial.ts"><img src="https://img.shields.io/badge/Web%20Serial-API-green" alt="Web Serial API" /></a>
+  <a href="web-page/src/tools/cc-debugger.ts"><img src="https://img.shields.io/badge/Web%20USB-API-blue" alt="Web USB" /></a>
+  <a href="web-page/src/transport/tcp.ts"><img src="https://img.shields.io/badge/Web-%20Socket-orange" alt="WebSocket" /></a>
+  <a href="bridge/go.mod"><img src="https://img.shields.io/badge/Go-%3E%3D1.21-cyan" alt="Go" /></a>
+  <a href="bridge/mdns.go"><img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS (zeroconf)" /></a>
+  <a href="bridge/Dockerfile"><img src="https://img.shields.io/badge/Docker-container-blue" alt="Docker" /></a>
 </div>
 
 ## 📁 Repository structure
@@ -179,7 +188,7 @@ Below are key technologies, libraries and tools used across the projects (click 
 
 ## 📜 License
 
-MIT — see `LICENSE` for details.
+MIT — see [`LICENSE`](LICENSE) for details.
 
 ## 👥 Community
 
@@ -205,14 +214,22 @@ If you find this project useful and want to support further development, you can
 
 Built on the shoulders of giants:
 
-- **Texas Instruments CCXX52 and CC2538** — inspired by [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete and [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
-- **Silicon Labs** — inspired by [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
-- **Espressif Systems** — powered by [esptool-js](https://github.com/espressif/esptool-js) by
-  Espressif Systems
-- **Texas Instruments CC25XX СС Debugger** — inspired by [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
-- **Texas Instruments CC25XX СС Loader** — inspired by [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab and [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
+- **Texas Instruments CCXX52 and CC2538** — inspired by
+  - [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete
+  - [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
+- **Silicon Labs** — inspired by
+  - [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
+- **Espressif Systems** — powered by
+  - [esptool-js](https://github.com/espressif/esptool-js) by
+    Espressif Systems
+- **Texas Instruments CC25XX СС Debugger** — inspired by
+  - [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
+- **Texas Instruments CC25XX СС Loader** — inspired by
+  - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab and
+  - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 
 ## 🌟 Star History
+
 <div align="center">
 <a href="https://www.star-history.com/#xyzroe/XZG-MT&Date">
  <picture>
