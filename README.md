@@ -41,7 +41,7 @@ The web front end performs local flashing via the WebSerial and WebUSB APIs, off
 
 <small>\* CC2530, CC2531, CC2533, CC2540, CC2541, CC2543, CC2544, CC2545</small>
 
-<small>Legend: 🔌 Web Serial, 🧰 Web USB, 🌐 WS-TCP bridge. Status indicators: ✅ full support, ⚠️ partial support, ❌ not implemented, ◻️ not applicable</small>
+<small>Legend: 🔌 Web Serial, 🧰 Web USB, 🌐 WS-TCP bridge, ✅ full support, ⚠️ partial support, ❌ not implemented, ◻️ not applicable</small>
 
 ## 🚀 Quick start
 
