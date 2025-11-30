@@ -9,7 +9,7 @@ categories:
     labels:
       - 'bug'
       - 'fix'
-  - title: '📚 Documentation'
+  - title: '📘 Documentation'
     labels:
       - 'chore'
       - 'docs'

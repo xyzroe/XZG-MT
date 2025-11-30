@@ -1,0 +1,39 @@
+# .github/workflows/ghcr-downloads-badge.yml
+name: Update GHCR downloads badge
+
+permissions:
+  contents: write
+  
+on:
+  schedule:
+    - cron: '0 3 * * *'   # раз в день
+  workflow_dispatch:
+
+jobs:
+  update-badge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install requests beautifulsoup4
+
+      - name: Generate badge JSON
+        env:
+          GH_OWNER: xyzroe
+          GH_REPO: XZG-MT
+          GH_IMAGE: xzg-mt
+        run: |
+          mkdir -p .github/badges
+          python scripts/ghcr_downloads.py > .github/badges/ghcr-downloads.json
+
+      - name: Commit badge
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: update GHCR downloads badge"
+          file_pattern: ".github/badges/ghcr-downloads.json"
