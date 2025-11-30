@@ -47,10 +47,23 @@ for h3 in soup.find_all("h3"):
     if found:
         break
 
+def _fmt_compact(n: int) -> str:
+    if n >= 1_000_000:
+        val = n / 1_000_000.0
+        s = f"{val:.1f}" + 'm'
+        return s
+    if n >= 1_000:
+        val = n / 1_000.0
+        s = f"{val:.1f}" + 'k'
+        return s
+    return str(n)
+
+message = _fmt_compact(total_downloads)
+
 badge = {
     "schemaVersion": 1,
     "label": "ghcr pulls",
-    "message": str(total_downloads),
+    "message": message,
     "color": "blue",
 }
 
