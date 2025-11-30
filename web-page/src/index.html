@@ -423,31 +423,33 @@
         </div>
 
         <div class="section" id="debuggerSection">
-            <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
+            <div class="d-flex align-items-center justify-content-between mb-3" style="height:1em">
                 <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>Debugger <span id="debuggerDetectSpinner"
                         class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status"
                         aria-hidden="true"></span></h3>
             </div>
             <div id="debugger-controls">
                 <div class="row mt-auto my-3">
-                    <div class="col d-flex justify-content-center">
-                        <div id="debuggerConnectWrap">
+                    <div class="col-12 d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+
+                        <div id="debuggerConnectWrap" class="col-md-6 d-flex justify-content-center">
+
+                            <button id="connectDebugger" class="btn btn-primary mx-2">
+                                <i class="bi bi-usb-plug-fill me-1"></i>Connect Debugger
+                            </button>
                             <button class="btn btn-sm btn-link" type="button" aria-label="CC Debugger help"
                                 data-bs-toggle="tooltip" data-bs-placement="left"
                                 title="Connect to a CC Debugger or SmartRF04EB device using Web USB for flashing.">
                                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                             </button>
-                            <button id="connectDebugger" class="btn btn-primary mx-2">
-                                <i class="bi bi-usb-plug-fill me-1"></i>Connect Debugger
-                            </button>
                         </div>
 
-                        <div id="loaderConnectWrap">
+                        <div id="loaderConnectWrap" class="col-md-6 d-flex justify-content-center">
                             <button id="connectLoader" class="btn btn-warning mx-2">
                                 <i class="bi bi-usb-plug-fill me-1"></i>Connect Loader
                             </button>
                             <button class="btn btn-sm btn-link" type="button" aria-label="CC Loader help"
-                                data-bs-toggle="tooltip" data-bs-placement="right"
+                                data-bs-toggle="tooltip" data-bs-placement="left"
                                 title="Connect to an ESP8266/ESP32-based CC Loader device via Web Serial. Ensure the СС loader firmware is installed on the ESP device">
                                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                             </button>
@@ -569,8 +571,9 @@
                             <i class="bi bi-arrow-repeat"></i>
                         </button>
                     </div>
-                    <div class="small text-muted mt-1">Source: <a href="https://github.com/xyzroe/XZG-MT/tree/fw_files"
-                            target="_blank" rel="noopener noreferrer">xyzroe/XZG-MT</a>, filtered by your chip model.
+                    <div class="small text-muted mt-1">Source: <a id="netFwSource"
+                            href="https://github.com/xyzroe/XZG-MT/tree/fw_files" target="_blank"
+                            rel="noopener noreferrer">xyzroe/XZG-MT</a>, filtered by your chip model.
                     </div>
                 </div>
             </div>
@@ -917,8 +920,7 @@
         </div>
 
     </div>
-    </div>
-    </div>
+
 </body>
 
 </html>
