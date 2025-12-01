@@ -13,23 +13,11 @@ A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP
 
 ## 🏗️ Architecture
 
-The Go implementation follows the same architecture as the original Node.js version:
-
-1. **HTTP Server**: Serves the web UI and API endpoints
-2. **WebSocket Handler**: Manages WebSocket connections and forwards to TCP
-3. **Serial Manager**: Handles serial port discovery and TCP server creation
-4. **mDNS Scanner**: Discovers devices on the local network
-5. **Embedded Assets**: Web UI files are embedded in the binary
-
-<div align="center">
-
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="../docs/imgs/dark.png" />
-   <source media="(prefers-color-scheme: light)" srcset="../docs/imgs/light.png" />
-   <img alt="Block Diagram" src="../docs/imgs/light.png" />
- </picture>
-
-</div>
+- **HTTP Server**: Serves the web UI and API endpoints
+- **WebSocket Handler**: Manages WebSocket connections and forwards to TCP
+- **Serial Manager**: Handles serial port discovery and TCP server creation
+- **mDNS Scanner**: Discovers devices on the local network
+- **Embedded Assets**: Web UI files are embedded in the binary
 
 ## 🚀 Quick Start
 
