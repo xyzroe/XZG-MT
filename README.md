@@ -31,7 +31,19 @@ The web front end performs local flashing via the WebSerial and WebUSB APIs, off
 
 ## 💻 Supported Chips
 
-For a complete, up-to-date list of supported devices, features, and device-specific notes, see the devices documentation: [docs/devices.md](/docs/devices.md).
+For a complete, up-to-date list of supported devices, features, and device-specific notes, see the [devices table](/docs/devices.md).
+
+## 🏗️ Architecture
+
+<div align="center">
+
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="docs/imgs/dark.png" />
+   <source media="(prefers-color-scheme: light)" srcset="docs/imgs/light.png" />
+   <img alt="Block Diagram" src="docs/imgs/light.png" />
+ </picture>
+
+</div>
 
 ## 🚀 Quick start
 
@@ -63,6 +75,8 @@ Prebuilt multi-arch images are published to [GHCR](https://github.com/xyzroe/XZG
 Latest image: `ghcr.io/xyzroe/XZG-MT:latest`  
 Special version image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
 
+<details>
+  <summary>Running instructions:</summary>
 - Run (basic):
 
 ```bash
@@ -94,11 +108,14 @@ docker run --rm \
   ghcr.io/xyzroe/XZG-MT:latest
 ```
 
+</details>
+
 #### 📦 Prebuilt binaries
 
 Download a ready-to-run binary from [Releases](https://github.com/xyzroe/XZG-MT/releases), make it executable (Linux/macOS), and run.
 
-#### ⚡ How to run:
+<details>
+  <summary>⚡ How to run:</summary>
 
 ##### Windows:
 
@@ -145,6 +162,8 @@ xattr -d com.apple.quarantine ./XZG-MT-darwin-*
 
 To run on custom port: `./XZG-MT-* 9999`
 
+</details>
+
 ## 📚 Where to read more
 
 For step-by-step guides and detailed documentation, explore the following:
@@ -154,41 +173,12 @@ For step-by-step guides and detailed documentation, explore the following:
 - 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
 
-## 🛠️ Tech badges
-
-Below are key technologies used across the projects (click the badges for quick context):
-
-<div align="center">
-  <a href="web-page/package.json"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.18.0-brightgreen" alt="Node.js" /></a>
-  <a href="web-page/tsconfig.json"><img src="https://img.shields.io/badge/TypeScript-%5E5.5-blue" alt="TypeScript" /></a>
-  <a href="web-page/package.json"><img src="https://img.shields.io/badge/esbuild-%3E%3D0.23.0-purple" alt="esbuild" /></a>
-  <a href="web-page/src/transport/serial.ts"><img src="https://img.shields.io/badge/Web%20Serial-API-green" alt="Web Serial API" /></a>
-  <a href="web-page/src/tools/cc-debugger.ts"><img src="https://img.shields.io/badge/Web%20USB-API-blue" alt="Web USB" /></a>
-  <a href="web-page/src/transport/tcp.ts"><img src="https://img.shields.io/badge/Web-%20Socket-orange" alt="WebSocket" /></a>
-  <a href="bridge/go.mod"><img src="https://img.shields.io/badge/Go-%3E%3D1.21-cyan" alt="Go" /></a>
-  <a href="bridge/mdns.go"><img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS (zeroconf)" /></a>
-  <a href="bridge/Dockerfile"><img src="https://img.shields.io/badge/Docker-container-blue" alt="Docker" /></a>
-</div>
-
-## 📁 Repository structure
-
-- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
-- bridge/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
-- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
-- docs - Folder consisting the documentation about this project.
-- LICENSE — License for the whole repository (MIT).
-- repository.json — repository metadata.
-
-## 📜 License
-
-MIT — see [`LICENSE`](LICENSE) for details.
-
 ## 👥 Community
 
-- 💬 [Telegram group](https://t.me/xzg_fw)
-- 🗨️ [Discord server](https://discord.gg/A5ge3cYRKW)
-
-If you found an issue or want to request a feature, please open an issue in this repository.
+<div align="center">
+  <a href="https://t.me/xzg_fw"><img src="docs/imgs/telegram_banner.png" alt="Telegram"></a>
+  <a href="https://discord.gg/A5ge3cYRKW"><img src="https://discord.com/api/guilds/1243921222220382228/widget.png?style=banner2" alt="Discord"></a>
+</div>
 
 ## 💖 Support
 
@@ -204,7 +194,50 @@ If you find this project useful and want to support further development, you can
 
 Thank you — every little contribution helps keep the project alive and maintained. 🙏
 
-## 💡 Thanks to
+## 🌟 Star History
+
+If you find this project useful, please consider giving it a ⭐ on GitHub!
+
+<div align="center">
+<a href="https://www.star-history.com/#xyzroe/XZG-MT&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
+ </picture>
+</a>
+</div>
+
+## 🛠️ Tech badges
+
+Below are key technologies used across the projects (click the badges for quick context):
+
+<div align="center">
+  <a href="web-page/package.json"><img src="https://img.shields.io/badge/Node.js-%3E%3D20.18.0-brightgreen" alt="Node.js" /></a>
+  <a href="web-page/tsconfig.json"><img src="https://img.shields.io/badge/TypeScript-%5E5.5-blue" alt="TypeScript" /></a>
+  <a href="web-page/package.json"><img src="https://img.shields.io/badge/esbuild-%3E%3D0.23.0-purple" alt="esbuild" /></a><br>
+  <a href="web-page/src/transport/serial.ts"><img src="https://img.shields.io/badge/Web%20Serial-API-green" alt="Web Serial API" /></a>
+  <a href="web-page/src/tools/cc-debugger.ts"><img src="https://img.shields.io/badge/Web%20USB-API-blue" alt="Web USB" /></a>
+  <a href="web-page/src/transport/tcp.ts"><img src="https://img.shields.io/badge/Web-%20Socket-orange" alt="WebSocket" /></a><br>
+  <a href="bridge/go.mod"><img src="https://img.shields.io/badge/Go-%3E%3D1.21-cyan" alt="Go" /></a>
+  <a href="bridge/mdns.go"><img src="https://img.shields.io/badge/mDNS-zeroconf-lightgrey" alt="mDNS (zeroconf)" /></a>
+  <a href="bridge/Dockerfile"><img src="https://img.shields.io/badge/Docker-container-blue" alt="Docker" /></a>
+</div>
+
+## 📁 Repository structure
+
+- web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
+- bridge/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
+- xzg-multi-tool-addon/ — Home Assistant add-on wrapper for the bridge.
+- docs - Folder consisting the documentation about this project.
+- LICENSE — License for the whole repository (MIT).
+- repository.json — repository metadata.
+
+## 📜 License
+
+MIT — see [`LICENSE`](LICENSE) for details.
+
+## 🙏 Acknowledgements
 
 Built on the shoulders of giants:
 
@@ -221,18 +254,6 @@ Built on the shoulders of giants:
 - **Texas Instruments CC25XX СС Loader** — inspired by
   - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab
   - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
-
-## 🌟 Star History
-
-<div align="center">
-<a href="https://www.star-history.com/#xyzroe/XZG-MT&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
- </picture>
-</a>
-</div>
 
 ---
 
