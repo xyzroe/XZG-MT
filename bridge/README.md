@@ -11,7 +11,32 @@ A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP
 - **Embedded Web UI**: Built-in web interface for device management
 - **Cross-Platform**: Builds for: **Linux**: (amd64, arm64, 386, arm, mips, mipsle, mips64, mips64le); **macOS** (darwin): (amd64, arm64); **Windows** (amd64, 386, arm64);
 
+## Architecture
+
+The Go implementation follows the same architecture as the original Node.js version:
+
+1. **HTTP Server**: Serves the web UI and API endpoints
+2. **WebSocket Handler**: Manages WebSocket connections and forwards to TCP
+3. **Serial Manager**: Handles serial port discovery and TCP server creation
+4. **mDNS Scanner**: Discovers devices on the local network
+5. **Embedded Assets**: Web UI files are embedded in the binary
+
+<div align="center">
+
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="../docs/imgs/dark.png" />
+   <source media="(prefers-color-scheme: light)" srcset="../docs/imgs/light.png" />
+   <img alt="Block Diagram" src="../docs/imgs/light.png" />
+ </picture>
+
+</div>
+
 ## Quick Start
+
+The easiest way is to use prebuild binaries, ready yo use Docker images or even HomeAssist Add-on.
+More info can be found in the [main readme](../README.md#-remote-tcp-or-remote-usbserial)
+
+## Build from the source
 
 ### Prerequisites
 
@@ -55,6 +80,12 @@ Build for current platform only:
 make build-local
 ```
 
+### Building Docker image
+
+```bash
+docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge/Dockerfile .
+```
+
 ## Usage
 
 ### Command Line Options
@@ -66,14 +97,12 @@ make build-local
 Options:
 
 - `-port`: WebSocket server port (default: 8765)
-- **DEPRECATED!** `-serial-scan-interval`: Serial port scan interval in milliseconds (default: 10000)
 - `-advertise-host`: Host to advertise for mDNS (default: auto-detect)
 - `-debug`: Enable debug mode (default: no)
 
 ### Environment Variables
 
 - `PORT`: WebSocket server port
-- **DEPRECATED!** `SERIAL_SCAN_INTERVAL`: Serial port scan interval in milliseconds
 - `ADVERTISE_HOST`: Host to advertise for mDNS
 - `DEBUG_MODE`: Enable debug mode (1, true, yes, on)
 
@@ -99,22 +128,10 @@ Options:
 
 - `GET /*`: Serve embedded web interface
 
-## Architecture
-
-The Go implementation follows the same architecture as the original Node.js version:
-
-1. **HTTP Server**: Serves the web UI and API endpoints
-2. **WebSocket Handler**: Manages WebSocket connections and forwards to TCP
-3. **Serial Manager**: Handles serial port discovery and TCP server creation
-4. **mDNS Scanner**: Discovers devices on the local network
-5. **Embedded Assets**: Web UI files are embedded in the binary
-
-## Development
-
 ### Project Structure
 
 ```
-go/
+bridge/
 ├── main.go          # Main application entry point
 ├── routes.go        # HTTP route handlers
 ├── websocket.go     # WebSocket connection handling
@@ -126,29 +143,4 @@ go/
 ├── Makefile         # Build automation
 ├── web/             # Web UI files (embedded)
 └── dist/            # Built binaries (created during build)
-```
-
-### Building
-
-```bash
-# Install dependencies
-make deps
-
-# Format code
-make fmt
-
-# Lint code
-make lint
-
-# Clean build artifacts if any
-make clean
-
-# Build for all platforms
-make build
-```
-
-### Building Docker image
-
-```bash
-docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge/Dockerfile .
 ```

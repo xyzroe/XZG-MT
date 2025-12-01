@@ -1724,7 +1724,7 @@ export class CCDebugger {
     if (!this.device) throw new Error("Device not connected");
     if (!this.initialized) await this.initDebugInterface();
 
-    log("Reading flash memory...");
+    this.logger("Reading flash memory...");
     const flashData = await this.readFlash();
 
     // Convert to Intel HEX format

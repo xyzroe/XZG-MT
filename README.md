@@ -56,11 +56,12 @@ You have some options:
  
 Just click on the button above or add this repository to your Home Assistant add-on store manually and then install the add-on to expose remote TCP / host serial devices to the web UI.
 
-#### 🐳 [Docker images](https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt)
+#### 🐳 Docker images
 
-Prebuilt multi-arch images are published to GHCR on each release/tag.
+Prebuilt multi-arch images are published to [GHCR](https://github.com/xyzroe/XZG-MT/pkgs/container/xzg-mt) on each release.
 
-Image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
+Latest image: `ghcr.io/xyzroe/XZG-MT:latest`  
+Special version image: `ghcr.io/xyzroe/XZG-MT:<tag>` (e.g. `v0.1.1`)
 
 - Run (basic):
 
@@ -97,13 +98,13 @@ docker run --rm \
 
 Download a ready-to-run binary from [Releases](https://github.com/xyzroe/XZG-MT/releases), make it executable (Linux/macOS), and run.
 
-##### ⚡ How to run:
+#### ⚡ How to run:
 
-Windows:
+##### Windows:
 
 - Run: `XZG-MT-windows-*.exe` or double click
 
-Linux:
+##### Linux:
 
 <details>
   <summary>Select the correct binary for your platform</summary>
@@ -131,7 +132,7 @@ chmod +x ./XZG-MT-linux-*
 
 2. Run: `./XZG-MT-linux-*` or double click
 
-macOS:
+##### macOS:
 
 1. Make executable and remove quarantine:
 
@@ -146,8 +147,9 @@ To run on custom port: `./XZG-MT-* 9999`
 
 ## 📚 Where to read more
 
-Read the individual project READMEs for full documentation and advanced options:
+For step-by-step guides and detailed documentation, explore the following:
 
+- 📚 How-To Guides: [Start here](docs/how-to/index.md)
 - 🌐 Web UI: [README](web-page/README.md)
 - 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
@@ -173,6 +175,7 @@ Below are key technologies used across the projects (click the badges for quick 
 - web-page/ — The web frontend. Contains source TypeScript, build scripts, favicon and static assets.
 - bridge/ - The small Go app that bridges WebSocket ↔ TCP, supports mDNS discovery and exposing local serial ports as TCP servers.
 - xzg-multi-tool-addon/ — Home Assistant add-on wrapper for `bridge`.
+- docs - Folder consisting the documentation about this project.
 - LICENSE — License for the whole repository (MIT).
 - repository.json — repository metadata.
 
@@ -196,9 +199,10 @@ If you find this project useful and want to support further development, you can
   <a href="https://www.buymeacoffee.com/xyzroe" title="Buy Me a Coffee"><img alt="Buy Me a Coffee" src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00.svg?logo=buy-me-a-coffee&logoColor=black" style="margin:6px;"/></a>
   <a href="https://www.paypal.com/paypalme/xyzroe" title="PayPal Me"><img alt="PayPal" src="https://img.shields.io/badge/PayPal-Donate-blue.svg?logo=paypal" style="margin:6px;"/></a>
   <a href="https://nowpayments.io/donation/xyzroe" title="Crypto donation via NOWPayments"><img alt="NOWPayments" src="https://img.shields.io/badge/Crypto-NOWPayments-purple.svg?logo=bitcoin" style="margin:6px;"/></a>
-<br><br>
-  Thank you — every little contribution helps keep the project alive and maintained. 🙏
+<br>
 </div>
+
+Thank you — every little contribution helps keep the project alive and maintained. 🙏
 
 ## 💡 Thanks to
 
@@ -215,7 +219,7 @@ Built on the shoulders of giants:
 - **Texas Instruments CC25XX СС Debugger** — inspired by
   - [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
 - **Texas Instruments CC25XX СС Loader** — inspired by
-  - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab and
+  - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab
   - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 
 ## 🌟 Star History
