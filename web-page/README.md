@@ -1,13 +1,13 @@
 # Web Page - Developer Documentation
 
-This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing TI CC2538 / CC1352 / CC2652, SL EFR32 and ESP32 devices.
+This directory contains the web frontend for XZG Multi-tool - a TypeScript-based web application for flashing various devices.
 
-## Requirements
+## 📋 Requirements
 
 - Node.js >= 20.18.0
 - npm (comes with Node.js)
 
-## Development Setup
+## ⚙️ Development Setup
 
 1. **Install dependencies:**
 
@@ -31,7 +31,7 @@ This directory contains the web frontend for XZG Multi-tool - a TypeScript-based
 3. **Access the development server:**
    Open http://localhost:3000 in your browser
 
-## Build Commands
+## 🏗️ Build Commands
 
 ### Full Production Build
 
@@ -63,7 +63,7 @@ Creates a minimal build without favicons and commit injection.
 - `npm run fav:inject` - Inject favicon tags into HTML
 - `npm run inject:commit` - Inject current git commit hash
 
-## Development Workflow
+## 🔄 Development Workflow
 
 ### Making Changes
 
@@ -88,7 +88,7 @@ npm run typecheck
 npm run lint
 ```
 
-## Architecture Overview
+## 🏛️ Architecture Overview
 
 ### Main Components
 
@@ -117,7 +117,7 @@ The application supports two transport modes:
 - **browser-sync** - Development server with live reload
 - **concurrently** - Run multiple build processes
 
-## Deployment
+## 🚀 Deployment
 
 ### Static Hosting
 
@@ -127,7 +127,7 @@ The built files in `dist/` can be served by any static web server. The applicati
 
 The `npm run copy:ready` command copies built files to `../bridge/web/` for embedding in the Go bridge binary.
 
-## Contributing Guidelines
+## 🤝 Contributing Guidelines
 
 ### Code Style
 
@@ -163,7 +163,7 @@ Before submitting changes:
 4. Test thoroughly
 5. Submit pull request
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
 ### Development Issues
 

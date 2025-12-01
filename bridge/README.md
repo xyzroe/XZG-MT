@@ -1,8 +1,8 @@
-# XZG-MT Bridge - Go
+# XZG-MT Bridge
 
 A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP bridge with mDNS discovery and local serial port exposure capabilities.
 
-## Features
+## ⭐ Features
 
 - **WebSocket ↔ TCP Bridge**: Forward WebSocket connections to TCP devices
 - **mDNS Discovery**: Automatically discover devices on the local network
@@ -11,7 +11,7 @@ A Go implementation of the XZG Multi-tool Bridge server. This is a WebSocket-TCP
 - **Embedded Web UI**: Built-in web interface for device management
 - **Cross-Platform**: Builds for: **Linux**: (amd64, arm64, 386, arm, mips, mipsle, mips64, mips64le); **macOS** (darwin): (amd64, arm64); **Windows** (amd64, 386, arm64);
 
-## Architecture
+## 🏗️ Architecture
 
 The Go implementation follows the same architecture as the original Node.js version:
 
@@ -31,12 +31,12 @@ The Go implementation follows the same architecture as the original Node.js vers
 
 </div>
 
-## Quick Start
+## 🚀 Quick Start
 
 The easiest way is to use prebuild binaries, ready yo use Docker images or even HomeAssist Add-on.
 More info can be found in the [main readme](../README.md#-remote-tcp-or-remote-usbserial)
 
-## Build from the source
+## 🛠️ Build from the source
 
 ### Prerequisites
 
@@ -86,7 +86,7 @@ make build-local
 docker buildx build --platform linux/amd64 --build-arg VERSION=dev -t xzg-mt-bridge:dev --load -f bridge/Dockerfile .
 ```
 
-## Usage
+## 📖 Usage
 
 ### Command Line Options
 
@@ -106,7 +106,7 @@ Options:
 - `ADVERTISE_HOST`: Host to advertise for mDNS
 - `DEBUG_MODE`: Enable debug mode (1, true, yes, on)
 
-### API Endpoints
+## 🔌 API Endpoints
 
 #### WebSocket Bridge
 
@@ -128,7 +128,7 @@ Options:
 
 - `GET /*`: Serve embedded web interface
 
-### Project Structure
+## 📁 Project Structure
 
 ```
 bridge/
