@@ -149,7 +149,7 @@ To run on custom port: `./XZG-MT-* 9999`
 
 For step-by-step guides and detailed documentation, explore the following:
 
-- 📚 How-To Guides: [Start here](docs/how-to/index.md)
+- 📚 How-To Guides: [Start here](docs/how-to/readme.md)
 - 🌐 Web UI: [README](web-page/README.md)
 - 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
