@@ -313,10 +313,14 @@ func handleSerialControl(c echo.Context) error {
 		} else if serial != nil {
 			// Set both DTR and RTS simultaneously for better timing
 			//setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
-			if dtrStr != "" {
+			if dtrStr != "" && rtsStr != "" {
+				setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
+
+			}
+			if dtrStr != "" && rtsStr == "" {
 				setSerialDTR(serial, setObj.DTR)
 			}
-			if rtsStr != "" {
+			if rtsStr != "" && dtrStr == "" {
 				setSerialRTS(serial, setObj.RTS)
 			}
 		}

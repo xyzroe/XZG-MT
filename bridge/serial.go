@@ -41,6 +41,7 @@ var (
 	serialServers       = make(map[string]ServerInfo)
 	serialPortDetails   = make(map[string]SerialPortInfo)
 	serialMutex         sync.RWMutex
+	portLocks           sync.Map
 )
 
 var validRates = []int{9600, 19200, 38400, 57600, 115200, 230400, 460800, 500000}
@@ -169,6 +170,14 @@ func rawOpenSerialPort(path string, baudRate int) serial.Port {
 
 // ensureSerialPort returns an existing port or opens a new one safely handling races.
 func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
+	// Use a mutex for a specific port to prevent simultaneous opening.
+	// This eliminates the race when two parallel requests cause double port opening
+	// and extra DTR/RTS switches.
+	val, _ := portLocks.LoadOrStore(path, &sync.Mutex{})
+	mu := val.(*sync.Mutex)
+	mu.Lock()
+	defer mu.Unlock()
+
 	serialMutex.Lock()
 	if port, exists := openSerialPorts[path]; exists && port != nil {
 		serialMutex.Unlock()
@@ -182,8 +191,17 @@ func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
 		return nil, fmt.Errorf("failed to open port")
 	}
 
+	// Apply stored state immediately to minimize glitch duration on open
+	// (OS drivers often assert DTR on open; we want to restore our logical state ASAP)
+	state := getSerialPortState(path)
+	if debugMode {
+		log.Printf("[serial] restoring state on open: DTR=%v, RTS=%v\n", state.DTR, state.RTS)
+	}
+	newPort.SetDTR(state.DTR)
+	newPort.SetRTS(state.RTS)
+
 	serialMutex.Lock()
-	// Check race
+	// Check race (now this is unlikely thanks to portLocks, but leave it for reliability)
 	if existingPort, exists := openSerialPorts[path]; exists && existingPort != nil {
 		serialMutex.Unlock()
 		if debugMode {
@@ -197,6 +215,7 @@ func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
 	// Note: we do not increment refcount here as this is used by stateless controllers
 	serialMutex.Unlock()
 	return newPort, nil
+
 }
 
 func closeSerial(port serial.Port) {
@@ -281,7 +300,7 @@ func setSerialDTR(port serial.Port, dtr bool) {
 		if err := port.SetDTR(dtr); err != nil {
 			log.Printf("[serial] DTR set error: %v\n", err)
 		}
-		time.Sleep(50 * time.Millisecond)
+		//time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -293,7 +312,7 @@ func setSerialRTS(port serial.Port, rts bool) {
 		if err := port.SetRTS(rts); err != nil {
 			log.Printf("[serial] RTS set error: %v\n", err)
 		}
-		time.Sleep(50 * time.Millisecond)
+		//time.Sleep(50 * time.Millisecond)
 	}
 }
 
