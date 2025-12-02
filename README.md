@@ -23,7 +23,7 @@ The web front end performs local flashing via the WebSerial and WebUSB APIs, off
 
 ## ⭐ Features
 
-- 🔌 Work with various TI, SL, and ESP devices locally via WebSerial/WebUSB or remotely via the WS-TCP bridge.
+- 🔌 Work with various TI, SL, and ESP devices locally via WebSerial/WebUSB or remotely via bridge.
 - 📂 Flash firmware from a local file or select from a provided list.
 - 📝 List of cloud firmware with descriptions
 - 🦾 Automatically detects chip model, flash size, IEEE, and firmware version
@@ -97,7 +97,7 @@ docker run --rm --network host \
   ghcr.io/xyzroe/XZG-MT:latest
 ```
 
-- Customize port, advertised host, disable serial scan amd enable debug logs:
+- Customize port, advertised host, disable serial scan and enable debug logs:
 
 ```bash
 docker run --rm \
@@ -249,11 +249,12 @@ Built on the shoulders of giants:
 - **Espressif Systems** — powered by
   - [esptool-js](https://github.com/espressif/esptool-js) by
     Espressif Systems
-- **Texas Instruments CC25XX СС Debugger** — inspired by
-  - [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
-- **Texas Instruments CC25XX СС Loader** — inspired by
-  - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab
-  - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
+- **Texas Instruments CC25XX**
+  - **СС Debugger** — inspired by
+    - [cc-tool](https://github.com/scott-42/cc-tool) by Scott Gustafson
+  - **СС Loader** — inspired by
+    - [CC Loader](https://github.com/RedBearLab/CCLoader) by RedBearLab
+    - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 
 ---
 
