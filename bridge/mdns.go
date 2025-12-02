@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -89,9 +90,9 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 		for _, t := range typeList {
 			typeNames = append(typeNames, fmt.Sprintf("%s.%s", t.Type, t.Protocol))
 		}
-		fmt.Printf("[mdns] scanning for: %s with timeout %d ms\n", strings.Join(typeNames, ", "), timeoutMs)
+		log.Printf("[mdns] scanning for: %s with timeout %d ms\n", strings.Join(typeNames, ", "), timeoutMs)
 	} else {
-		fmt.Printf("[mdns] no valid services requested for scan\n")
+		log.Printf("[mdns] no valid services requested for scan\n")
 		return results
 	}
 
@@ -111,7 +112,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 			// Create a new resolver for each service
 			resolver, err := zeroconf.NewResolver(nil)
 			if err != nil {
-				fmt.Printf("[mdns] failed to create resolver for %s: %v\n", serviceName, err)
+				log.Printf("[mdns] failed to create resolver for %s: %v\n", serviceName, err)
 				return
 			}
 
@@ -127,13 +128,13 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 				defer func() {
 					if r := recover(); r != nil {
 						// Ignore panic from the zeroconf library
-						fmt.Printf("[mdns] recovered from panic in %s: %v\n", serviceName, r)
+						log.Printf("[mdns] recovered from panic in %s: %v\n", serviceName, r)
 					}
 				}()
 
 				err := resolver.Browse(ctx, serviceName, "local.", entries)
 				if err != nil && err != context.Canceled && err != context.DeadlineExceeded {
-					fmt.Printf("[mdns] browse error for %s: %v\n", serviceName, err)
+					log.Printf("[mdns] browse error for %s: %v\n", serviceName, err)
 				}
 			}()
 
@@ -183,7 +184,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 						}
 
 						foundDevices[key] = service
-						fmt.Printf("[mdns] found: %s on %s:%d (%s, %s)\n", st.Type, host, entry.Port, txtMap["board"], txtMap["serial_number"])
+						log.Printf("[mdns] found: %s on %s:%d (%s, %s)\n", st.Type, host, entry.Port, txtMap["board"], txtMap["serial_number"])
 					}
 
 					mu.Unlock()
@@ -208,7 +209,7 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	case <-time.After(time.Duration(timeoutMs) * time.Millisecond):
 		// Global timeout
 		if debugMode {
-			fmt.Printf("[mdns] scan timeout reached\n")
+			log.Printf("[mdns] scan timeout reached\n")
 		}
 	}
 
@@ -234,12 +235,12 @@ func scanMdns(typeList []ServiceType, timeoutMs int) []ServiceInfo {
 	// if includeLocal {
 	// 	local := listLocalSerialAsServices()
 	// 	if len(local) > 0 {
-	// 		fmt.Printf("[mdns] adding %d local serial services\n", len(local))
+	// 		log.Printf("[mdns] adding %d local serial services\n", len(local))
 	// 		results = append(results, local...)
 	// 	}
 	// }
 
-	fmt.Printf("[mdns] scan done, found %d\n", len(results))
+	log.Printf("[mdns] scan done, found %d\n", len(results))
 	return results
 }
 
