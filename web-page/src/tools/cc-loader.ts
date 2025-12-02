@@ -586,7 +586,9 @@ export class CCLoader {
       this.progressCallback(100, "Done");
 
       // Download the file
-      const blob = new Blob([flashData], { type: "application/octet-stream" });
+      // Ensure we pass a standard ArrayBufferView (backed by ArrayBuffer) to Blob so TypeScript accepts it.
+      const copy = new Uint8Array(flashData);
+      const blob = new Blob([copy], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const now = new Date();

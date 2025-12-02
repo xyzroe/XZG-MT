@@ -4,6 +4,7 @@ import { padToMultiple } from "../utils/crc";
 import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
 import { setLines } from "../flasher";
+import { implyGateToggle } from "../ui";
 
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
@@ -43,6 +44,17 @@ export class SilabsTools {
   private promptRegex = /(?:^|[\r\n])BL ?> ?/i;
 
   private readonly boundDataHandler = (data: Uint8Array) => this.dataReceived(data);
+
+  private logger: (msg: string) => void = () => {};
+  private progressCallback: (percent: number, msg: string) => void = () => {};
+
+  public setLogger(logger: (msg: string) => void) {
+    this.logger = logger;
+  }
+
+  public setProgressCallback(cb: (percent: number, msg: string) => void) {
+    this.progressCallback = cb;
+  }
 
   constructor(link: Link) {
     this.link = link;
@@ -153,7 +165,7 @@ export class SilabsTools {
   }
 
   public async getChipInfo() {
-    await enterSilabsBootloader();
+    await this.enterBootloader(implyGateToggle?.checked ?? false);
     // Give BL a brief moment, then query menu/version
     await sleep(200);
     // Query bootloader version first
@@ -194,12 +206,21 @@ export class SilabsTools {
             reject(new Error("Timeout waiting for bootloader menu"));
           }, Math.max(500, timeoutMs));
 
+          let attempts = 0;
+          const maxAttempts = 20;
           const checkMenu = setInterval(() => {
+            attempts++;
             if (this.state === State.IN_MENU && this.version) {
               clearInterval(checkMenu);
               clearTimeout(timeout);
               resolve(this.version);
               console.log(`Bootloader version detected: v${this.version}`);
+              return;
+            }
+            if (attempts >= maxAttempts) {
+              clearInterval(checkMenu);
+              clearTimeout(timeout);
+              reject(new Error("Failed to detect bootloader menu after 20 attempts"));
               return;
             }
             try {
@@ -217,7 +238,7 @@ export class SilabsTools {
             } catch {
               // ignore
             }
-          }, 50);
+          }, 100);
         } catch (error) {
           reject(error);
         }
@@ -337,7 +358,7 @@ export class SilabsTools {
     }
   }
 
-  public async flash(firmware: Uint8Array, onProgress: (current: number, total: number) => void): Promise<void> {
+  public async flash(firmware: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
@@ -354,6 +375,12 @@ export class SilabsTools {
           this.xmodemTotalChunks = paddedFirmware.length / XMODEM_BLOCK_SIZE;
           this.xmodemRetries = 0;
           this.xmodemMaxRetries = 3;
+
+          const onProgress = (current: number, total: number) => {
+            const pct = Math.round((current / total) * 100);
+            this.progressCallback(pct, `${current} / ${total}`);
+          };
+
           this.xmodemProgressCallback = onProgress;
 
           // Set up promise callbacks
@@ -393,80 +420,109 @@ export class SilabsTools {
       this.ezspClient = null;
     }
   }
-}
 
-//export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
+  public async enterBootloader(implyGate: boolean): Promise<void> {
+    this.logger("Silabs entry bootloader, implyGate=" + implyGate);
 
-export async function enterSilabsBootloader(log?: (msg: string) => void): Promise<void> {
-  log?.("Silabs entry bootloader: RTS/DTR exact pattern");
+    // Assume standard scheme:
+    // RTS controls RESET (Active Low - 0 resets)
+    // DTR controls BOOT/GPIO (Active Low - 0 activates bootloader)
 
-  // await setLines(false, true);
-  // await sleep(1000);
+    // 1. Initial state: All released (High)
+    // (RTS=1, DTR=1) -> (false, false) in setLines logic, if false=High/Inactive
+    // In setLines: rstLevel=true -> RTS=1 (High), rstLevel=false -> RTS=0 (Low)
+    // Usually: true = active level (Low for reset), false = inactive (High)
+    // But let's check your setLines logic.
+    // In flasher.ts: log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} ...`)
+    // Usually USB-UART adapters invert signals, but drivers operate with logical levels.
 
-  //work with direct logic
-  // await setLines(true, false);
-  // await sleep(100);
+    // Let's try the classic sequence for "bare" UART (without auto-reset scheme like ESP):
 
-  // await setLines(true, true);
-  // await sleep(50);
+    if (!implyGate) {
+      // Step 0: Make sure everything is at high level (VCC), chip is running
+      // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
+      await setLines(false, false);
+      await sleep(100);
 
-  // // my gate work
-  // await setLines(false, false);
-  // await sleep(200);
-  // await setLines(false, true);
-  // await sleep(200);
-  // await setLines(true, true);
-  // await sleep(200);
-  // await setLines(false, true);
-  // await sleep(200);
-  // await setLines(false, false);
-  // await sleep(200);
+      // Step 1: Press RESET (RTS -> Low/GND)
+      // Don't touch DTR yet (or keep High)
+      // RTS=1 (Low/GND), DTR=0 (High/3.3V)
+      await setLines(true, false);
+      await sleep(100);
 
-  await setLines(true, true);
-  await sleep(50);
-  await setLines(true, false);
-  await sleep(100);
-  await setLines(false, true);
-  await sleep(100);
-  // await setLines(true, false);
-  // await sleep(500);
-  // await setLines(true, true);
-  // await setLines(false, false);
-  // await sleep(1000);
-  // await setLines(false, true);
-  // await sleep(1000);
-  // await setLines(true, true);
-  // await sleep(1000);
-}
+      // Step 2: Press BOOT (DTR -> Low/GND), while RESET is still pressed
+      // RTS=1 (Low/GND), DTR=1 (Low/GND)
+      await setLines(true, true);
+      await sleep(100);
 
-export async function resetSilabs(log?: (msg: string) => void): Promise<void> {
-  log?.("Silabs reset: RTS/DTR exact pattern");
+      // Step 3: Release RESET (RTS -> High/3.3V), but keep BOOT pressed!
+      // Chip wakes up, sees pressed BOOT and enters bootloader.
+      // RTS=0 (High/3.3V), DTR=1 (Low/GND)
+      await setLines(false, true);
+      await sleep(200); // Give time for bootloader to initialize
 
-  // log("Sending '2' to bootloader to run application");
-  // const encoder = new TextEncoder();
-  // await getActiveLink().write(encoder.encode("2\r\n"));
-  // await sleep(500); // Give time for bootloader to process
-  //await resetUseLines(); // Then reset the device
+      // Step 4: Release BOOT (DTR -> High/3.3V)
+      // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
+      await setLines(false, false);
+      await sleep(100);
+    }
 
-  // work with inverted logic
-  // await setLines(true, true);
-  // await sleep(500);
-  // await setLines(false, true);
-  // await sleep(500);
-  // await setLines(true, true);
-  // await sleep(1000);
+    // Logic for scheme with two transistors:
 
-  // await setLines(true, true);
-  // await sleep(100);
-  // await setLines(false, true);
-  // await sleep(500);
-  // await setLines(true, true);
-  // await setLines(false, false);
-  // await sleep(300);
-  await setLines(true, false);
-  await sleep(300);
-  await setLines(false, false);
-  await sleep(300);
+    // Truth table for such scheme:
+    // DTR=0, RTS=0 -> Idle (VCC, VCC)
+    // DTR=0, RTS=1 -> Reset (VCC, GND) -> CHIP IN RESET
+    // DTR=1, RTS=0 -> Boot  (GND, VCC) -> CHIP IN BOOT MODE
+    // DTR=1, RTS=1 -> Idle  (VCC, VCC) -> Protection from simultaneous pressing
+    if (implyGate) {
+      // 1. Initial state (Idle)
+      await setLines(false, false);
+      await sleep(100);
+
+      // 2. Press RESET (RTS=True, DTR=False)
+      // Chip stops
+      await setLines(true, false);
+      await sleep(100);
+
+      // 3. Switch to BOOT mode (RTS=False, DTR=True)
+      // At this moment Reset is released (becomes High), and Boot is pressed to ground (Low).
+      // Chip starts, sees low level on Boot pin and enters bootloader.
+      await setLines(false, true);
+      await sleep(250); // Give time for bootloader to initialize
+
+      // 4. Release everything (Idle)
+      // Boot pin returns to VCC
+      await setLines(false, false);
+      await sleep(100);
+    }
+  }
+
+  public async reset(implyGate: boolean): Promise<void> {
+    this.logger("Silabs reset, implyGate=" + implyGate);
+
+    if (!implyGate) {
+      // Just pull Reset
+      await setLines(true, false); // Press Reset
+      await sleep(200);
+      await setLines(false, false); // Release Reset
+      await sleep(500);
+    }
+
+    if (implyGate) {
+      // Simple reset for transistor scheme
+      // 1. Idle
+      await setLines(false, false);
+      await sleep(50);
+
+      // 2. Reset (RTS=True, DTR=False)
+      await setLines(true, false);
+      await sleep(200);
+
+      // 3. Back to Idle
+      await setLines(false, false);
+      await sleep(300);
+    }
+  }
 }
 
 const ASH_FLAG = 0x7e;

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -40,6 +41,7 @@ var (
 	serialServers       = make(map[string]ServerInfo)
 	serialPortDetails   = make(map[string]SerialPortInfo)
 	serialMutex         sync.RWMutex
+	portLocks           sync.Map
 )
 
 var validRates = []int{9600, 19200, 38400, 57600, 115200, 230400, 460800, 500000}
@@ -60,13 +62,13 @@ func listSerialPorts() []SerialPortInfo {
 	portList, err := serial.GetPortsList()
 	if err != nil {
 		if debugMode {
-			fmt.Printf("[serial] error getting port list: %v\n", err)
+			log.Printf("[serial] error getting port list: %v\n", err)
 		}
 
 		portList = []string{} // Initialize as empty if error
 	} else if len(portList) == 0 {
 		if debugMode {
-			fmt.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
+			log.Printf("[serial] GetPortsList returned 0 ports, will try /dev fallback\n")
 		}
 	}
 
@@ -128,9 +130,9 @@ func listSerialPorts() []SerialPortInfo {
 	}
 
 	if debugMode {
-		fmt.Printf("[serial] found %d serial ports\n", len(ports))
+		log.Printf("[serial] found %d serial ports\n", len(ports))
 		for _, port := range ports {
-			fmt.Printf("[serial] - %s\n", port.Path)
+			log.Printf("[serial] - %s\n", port.Path)
 		}
 	}
 
@@ -144,7 +146,7 @@ func listSerialPorts() []SerialPortInfo {
 
 func rawOpenSerialPort(path string, baudRate int) serial.Port {
 	if debugMode {
-		fmt.Printf("[serial] attempting to open serial port %s at %d baud\n", path, baudRate)
+		log.Printf("[serial] attempting to open serial port %s at %d baud\n", path, baudRate)
 	}
 
 	mode := &serial.Mode{
@@ -156,18 +158,26 @@ func rawOpenSerialPort(path string, baudRate int) serial.Port {
 
 	port, err := serial.Open(path, mode)
 	if err != nil {
-		fmt.Printf("[serial] failed to open port %s: %v\n", path, err)
+		log.Printf("[serial] failed to open port %s: %v\n", path, err)
 		return nil
 	}
 
 	if debugMode {
-		fmt.Printf("[serial] successfully opened serial port %s at %d baud\n", path, baudRate)
+		log.Printf("[serial] successfully opened serial port %s at %d baud\n", path, baudRate)
 	}
 	return port
 }
 
 // ensureSerialPort returns an existing port or opens a new one safely handling races.
 func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
+	// Use a mutex for a specific port to prevent simultaneous opening.
+	// This eliminates the race when two parallel requests cause double port opening
+	// and extra DTR/RTS switches.
+	val, _ := portLocks.LoadOrStore(path, &sync.Mutex{})
+	mu := val.(*sync.Mutex)
+	mu.Lock()
+	defer mu.Unlock()
+
 	serialMutex.Lock()
 	if port, exists := openSerialPorts[path]; exists && port != nil {
 		serialMutex.Unlock()
@@ -181,12 +191,21 @@ func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
 		return nil, fmt.Errorf("failed to open port")
 	}
 
+	// Apply stored state immediately to minimize glitch duration on open
+	// (OS drivers often assert DTR on open; we want to restore our logical state ASAP)
+	state := getSerialPortState(path)
+	if debugMode {
+		log.Printf("[serial] restoring state on open: DTR=%v, RTS=%v\n", state.DTR, state.RTS)
+	}
+	newPort.SetDTR(state.DTR)
+	newPort.SetRTS(state.RTS)
+
 	serialMutex.Lock()
-	// Check race
+	// Check race (now this is unlikely thanks to portLocks, but leave it for reliability)
 	if existingPort, exists := openSerialPorts[path]; exists && existingPort != nil {
 		serialMutex.Unlock()
 		if debugMode {
-			fmt.Printf("[serial] race detected in ensureSerialPort for %s, closing redundant\n", path)
+			log.Printf("[serial] race detected in ensureSerialPort for %s, closing redundant\n", path)
 		}
 		closeSerial(newPort)
 		return existingPort, nil
@@ -196,12 +215,13 @@ func ensureSerialPort(path string, baudRate int) (serial.Port, error) {
 	// Note: we do not increment refcount here as this is used by stateless controllers
 	serialMutex.Unlock()
 	return newPort, nil
+
 }
 
 func closeSerial(port serial.Port) {
 	if port != nil {
 		if debugMode {
-			fmt.Printf("[serial] closing serial port\n")
+			log.Printf("[serial] closing serial port\n")
 		}
 		port.Close()
 	}
@@ -209,25 +229,25 @@ func closeSerial(port serial.Port) {
 
 func writeSerial(port serial.Port, data []byte) (int, error) {
 	if port == nil {
-		fmt.Printf("[serial] mock write %d bytes: %x\n", len(data), data)
+		log.Printf("[serial] mock write %d bytes: %x\n", len(data), data)
 		// Log to debug file for testing
 		// In real implementation, you might want to log to a file
 		return len(data), nil
 	}
 
 	if debugMode {
-		fmt.Printf("[serial] writing %d bytes to real serial port: %x\n", len(data), data)
+		log.Printf("[serial] writing %d bytes to real serial port: %x\n", len(data), data)
 	}
 	n, err := port.Write(data)
 	if err != nil {
 		if debugMode {
-			fmt.Printf("[serial] write error: %v\n", err)
+			log.Printf("[serial] write error: %v\n", err)
 		}
 		return 0, err
 	}
 
 	// if debugMode {
-	// 	fmt.Printf("[serial] successfully wrote %d bytes to serial port\n", n)
+	// 	log.Printf("[serial] successfully wrote %d bytes to serial port\n", n)
 	// }
 	return n, nil
 }
@@ -254,21 +274,45 @@ func readSerial(port serial.Port, maxBytes int) ([]byte, error) {
 func setSerialDTRRTS(port serial.Port, dtr, rts bool) {
 	if port != nil {
 		if debugMode {
-			fmt.Printf("[serial] DTR set to %v, RTS set to %v\n", dtr, rts)
+			log.Printf("[serial] DTR set to %v, RTS set to %v\n", dtr, rts)
 		}
 
 		// Set DTR
 		if err := port.SetDTR(dtr); err != nil {
-			fmt.Printf("[serial] DTR set error: %v\n", err)
+			log.Printf("[serial] DTR set error: %v\n", err)
 		}
 
 		// Set RTS
 		if err := port.SetRTS(rts); err != nil {
-			fmt.Printf("[serial] RTS set error: %v\n", err)
+			log.Printf("[serial] RTS set error: %v\n", err)
 		}
 
 		// Small delay to ensure the signals are processed
 		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func setSerialDTR(port serial.Port, dtr bool) {
+	if port != nil {
+		if debugMode {
+			log.Printf("[serial] DTR set to %v\n", dtr)
+		}
+		if err := port.SetDTR(dtr); err != nil {
+			log.Printf("[serial] DTR set error: %v\n", err)
+		}
+		//time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func setSerialRTS(port serial.Port, rts bool) {
+	if port != nil {
+		if debugMode {
+			log.Printf("[serial] RTS set to %v\n", rts)
+		}
+		if err := port.SetRTS(rts); err != nil {
+			log.Printf("[serial] RTS set error: %v\n", err)
+		}
+		//time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -283,7 +327,7 @@ func reopenSerialPort(path string, newBaudRate int) bool {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	fmt.Printf("[serial] closed serial port for %s, new baudrate %d will be used\n", path, newBaudRate)
+	log.Printf("[serial] closed serial port for %s, new baudrate %d will be used\n", path, newBaudRate)
 	return true
 }
 
@@ -310,12 +354,12 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 			if err != nil {
 				if strings.Contains(err.Error(), "use of closed network connection") {
 					if debugMode {
-						fmt.Printf("[serial] listener for %s closed, stopping accept loop\n", path)
+						log.Printf("[serial] listener for %s closed, stopping accept loop\n", path)
 					}
 					break // Exit the goroutine on shutdown
 				}
 				if debugMode {
-					fmt.Printf("[serial] connection error: %v\n", err)
+					log.Printf("[serial] connection error: %v\n", err)
 				}
 				continue
 			}
@@ -330,13 +374,13 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 				// optional: enable keepalive to help persistent connections
 				_ = tcpConn.SetKeepAlive(true)
 			}
-			fmt.Printf("[serial] client connected for %s\n", path)
+			log.Printf("[serial] client connected for %s\n", path)
 
 			// Handle connection
 			go func(c net.Conn) {
 				connId := time.Now().UnixNano()
 				if debugMode {
-					fmt.Printf("[serial] handling connection %d for %s\n", connId, path)
+					log.Printf("[serial] handling connection %d for %s\n", connId, path)
 				}
 
 				// Get current baud rate and control-line state from stored state
@@ -345,7 +389,7 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 
 				serialPort, err := ensureSerialPort(path, currentBaudRate)
 				if err != nil {
-					fmt.Printf("[serial] %d: failed to get serial port: %v\n", connId, err)
+					log.Printf("[serial] %d: failed to get serial port: %v\n", connId, err)
 					c.Close()
 					return
 				}
@@ -356,18 +400,18 @@ func ensureSerialTcpServer(path string, baudRate int) (*ServerInfo, error) {
 				serialMutex.Unlock()
 
 				if debugMode {
-					fmt.Printf("[serial] %d: ready for %s, refs: %d\n", connId, path, currentRefs)
+					log.Printf("[serial] %d: ready for %s, refs: %d\n", connId, path, currentRefs)
 				}
 
 				// Ensure control lines reflect desired state
-				setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
+				// setSerialDTRRTS(serialPort, currentState.DTR, currentState.RTS)
 
 				handleSerialConnection(c, serialPort, path)
 			}(conn)
 		}
 	}()
 
-	fmt.Printf("[serial] TCP for %s on %d with baud %d\n", path, port, baudRate)
+	log.Printf("[serial] TCP for %s on %d with baud %d\n", path, port, baudRate)
 
 	info := ServerInfo{
 		Server: listener,
@@ -398,14 +442,14 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 					delete(serialPortRefCount, path)
 					if p, exists := openSerialPorts[path]; exists {
 						if debugMode {
-							fmt.Printf("[serial] closing serial port for %s (last ref)\n", path)
+							log.Printf("[serial] closing serial port for %s (last ref)\n", path)
 						}
 						closeSerial(p)
 						delete(openSerialPorts, path)
 					}
 				} else {
 					serialPortRefCount[path] = cnt - 1
-					fmt.Printf("[serial] decremented refs for %s to %d\n", path, cnt-1)
+					log.Printf("[serial] decremented refs for %s to %d\n", path, cnt-1)
 				}
 			}
 			close(stop)
@@ -426,18 +470,18 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			if err != nil {
 				// signal stop and exit
 				if debugMode {
-					fmt.Printf("[Serial] read error: %v\n", err)
+					log.Printf("[Serial] read error: %v\n", err)
 				}
 				closeStop()
 				return
 			}
 			if len(data) > 0 {
 				if debugMode {
-					fmt.Printf("[Serial] received %d bytes: %x\n", len(data), data)
+					log.Printf("[Serial] received %d bytes: %x\n", len(data), data)
 				}
 				if _, err := conn.Write(data); err != nil {
 					if debugMode {
-						fmt.Printf("[Serial] error sending to client: %v\n", err)
+						log.Printf("[Serial] error sending to client: %v\n", err)
 					}
 					closeStop()
 					return
@@ -462,7 +506,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			n, err := conn.Read(buffer)
 			if err != nil {
 				if debugMode {
-					fmt.Printf("[TCP] client read error: %v\n", err)
+					log.Printf("[TCP] client read error: %v\n", err)
 				}
 				// on client error — signal stop and exit
 				closeStop()
@@ -470,12 +514,12 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 			}
 			if n > 0 {
 				if debugMode {
-					fmt.Printf("[TCP] received %d bytes: %x\n", n, buffer[:n])
+					log.Printf("[TCP] received %d bytes: %x\n", n, buffer[:n])
 				}
 				_, err := writeSerial(serialPort, buffer[:n])
 				if err != nil {
 					if debugMode {
-						fmt.Printf("[TCP] error writing to serial: %v\n", err)
+						log.Printf("[TCP] error writing to serial: %v\n", err)
 					}
 					closeStop()
 					return
@@ -490,7 +534,7 @@ func handleSerialConnection(conn net.Conn, serialPort serial.Port, path string) 
 
 	// Cleanup is fully handled by closeStop which is guaranteed to run
 	// either by error or by the other goroutine triggering it.
-	fmt.Printf("[serial] connection handler finished for %s\n", path)
+	log.Printf("[serial] connection handler finished for %s\n", path)
 }
 
 func scanAndSyncSerialPorts() {
@@ -530,7 +574,7 @@ func scanAndSyncSerialPorts() {
 				delete(serialPortRefCount, existingPath)
 			}
 
-			fmt.Printf("[serial] closed TCP server for %s\n", existingPath)
+			log.Printf("[serial] closed TCP server for %s\n", existingPath)
 		}
 	}
 	serialMutex.Unlock()
@@ -540,7 +584,7 @@ func scanAndSyncSerialPorts() {
 	sort.Strings(toCreate)
 	for _, path := range toCreate {
 		if _, err := ensureSerialTcpServer(path, 115200); err != nil {
-			fmt.Printf("[serial] failed to create tcp server for %s: %v\n", path, err)
+			log.Printf("[serial] failed to create tcp server for %s: %v\n", path, err)
 		}
 	}
 }

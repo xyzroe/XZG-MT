@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -284,7 +284,7 @@ func handleSerialControl(c echo.Context) error {
 
 		// Reopen immediately to ensure it's ready
 		if _, err := ensureSerialPort(path, baud); err != nil {
-			fmt.Printf("[routes] failed to reopen port %s at %d: %v\n", path, baud, err)
+			log.Printf("[routes] failed to reopen port %s at %d: %v\n", path, baud, err)
 		}
 	}
 
@@ -309,10 +309,20 @@ func handleSerialControl(c echo.Context) error {
 		if err != nil {
 			// Log error but continue? Or return error?
 			// For now, just log and fail the DTR/RTS part
-			fmt.Printf("[routes] failed to ensure port for %s: %v\n", path, err)
+			log.Printf("[routes] failed to ensure port for %s: %v\n", path, err)
 		} else if serial != nil {
 			// Set both DTR and RTS simultaneously for better timing
-			setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
+			//setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
+			if dtrStr != "" && rtsStr != "" {
+				setSerialDTRRTS(serial, setObj.DTR, setObj.RTS)
+
+			}
+			if dtrStr != "" && rtsStr == "" {
+				setSerialDTR(serial, setObj.DTR)
+			}
+			if rtsStr != "" && dtrStr == "" {
+				setSerialRTS(serial, setObj.RTS)
+			}
 		}
 	}
 

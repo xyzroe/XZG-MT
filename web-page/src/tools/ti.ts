@@ -1,5 +1,5 @@
 import { sleep, toHex } from "../utils/index";
-import { setLines } from "../flasher";
+import { setLines, TiChipFamily } from "../flasher";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
@@ -448,6 +448,7 @@ export interface TiDeviceInfo {
   chipModel?: string;
   flashSizeBytes?: number;
   ieeeMac?: string;
+  family?: TiChipFamily;
 }
 
 export async function readDeviceInfo(link: Link, log?: (msg: string) => void): Promise<TiDeviceInfo> {
@@ -460,50 +461,105 @@ export async function readDeviceInfo(link: Link, log?: (msg: string) => void): P
 
   const info: TiDeviceInfo = { chipIdHex: chipHex };
 
-  try {
-    const FLASH_SIZE = 0x4003002c;
-    const IEEE_ADDR_PRIMARY = 0x500012f0;
-    const ICEPICK_DEVICE_ID = 0x50001318;
-    const TESXT_ID = 0x57fb4;
+  // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
+  let chipIsCC26xx = false;
+  chipIsCC26xx = !(chipHex === "0000b964" || chipHex === "0000b965");
 
-    const dev = await bsl.memRead32(ICEPICK_DEVICE_ID);
-    const usr = await bsl.memRead32(TESXT_ID);
-    if (dev && usr && dev.length >= 4 && usr.length >= 4) {
-      const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
-      const pg_rev = (dev[3] & 0xf0) >> 4;
-      info.chipModel = getChipDescription(id, wafer_id, pg_rev, usr[1]);
-      log?.(`Chip model: ${info.chipModel}`);
-    }
+  let chipIsCC2538 = false;
+  chipIsCC2538 = chipHex === "0000b964" || chipHex === "0000b965";
 
-    const flashSz = await bsl.memRead32(FLASH_SIZE);
-    if (flashSz && flashSz.length >= 4) {
-      const pages = flashSz[0];
-      let size = pages * 8192;
-      if (size >= 64 * 1024) size -= 8192;
-      info.flashSizeBytes = size;
-      log?.(`Flash size estimate: ${size} bytes`);
-    }
-
-    const mac_lo = await bsl.memRead32(IEEE_ADDR_PRIMARY + 0);
-    const mac_hi = await bsl.memRead32(IEEE_ADDR_PRIMARY + 4);
-    if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
-      const mac = [...mac_lo, ...mac_hi]
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("")
-        .toUpperCase();
-      const macFmt = mac
-        .match(/.{1,2}/g)
-        ?.reverse()
-        ?.join(":");
-      if (macFmt) {
-        info.ieeeMac = macFmt;
-        log?.(`IEEE MAC: ${macFmt}`);
-      }
-    }
-  } catch (err) {
-    log?.(`TI device info read partially failed: ${err instanceof Error ? err.message : String(err)}`);
+  if (chipIsCC26xx) {
+    log?.("Chip family: CC26xx/CC13xx");
+  }
+  if (chipIsCC2538) {
+    log?.("Chip family: CC2538");
   }
 
+  if (chipIsCC26xx) {
+    info.family = "cc26xx";
+    try {
+      const FLASH_SIZE = 0x4003002c;
+      const IEEE_ADDR_PRIMARY = 0x500012f0;
+      const ICEPICK_DEVICE_ID = 0x50001318;
+      const TESXT_ID = 0x57fb4;
+
+      const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
+      const usr = await (bsl as any).memRead32?.(TESXT_ID);
+      if (dev && usr && dev.length >= 4 && usr.length >= 4) {
+        const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
+        const pg_rev = (dev[3] & 0xf0) >> 4;
+        const model = getChipDescription(id, wafer_id, pg_rev, usr[1]);
+        log?.(`Chip model: ${model}`);
+        info.chipModel = model;
+      }
+
+      const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
+      if (flashSz && flashSz.length >= 4) {
+        const pages = flashSz[0];
+        let size = pages * 8192;
+        if (size >= 64 * 1024) size -= 8192;
+        log?.(`Flash size estimate: ${size} bytes`);
+        info.flashSizeBytes = size;
+      }
+
+      const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
+      const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
+      if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
+        const mac = [...mac_lo, ...mac_hi]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("")
+          .toUpperCase();
+        const macFmt = mac
+          .match(/.{1,2}/g)
+          ?.reverse()
+          ?.join(":");
+        if (macFmt) {
+          log?.(`IEEE MAC: ${macFmt}`);
+          info.ieeeMac = macFmt;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  } else if (chipIsCC2538) {
+    info.family = "cc2538";
+    // Read flash size from FLASH_CTRL_DIECFG0
+    const FLASH_CTRL_DIECFG0 = 0x400d3014;
+    const model = await (bsl as any).memRead?.(FLASH_CTRL_DIECFG0);
+    if (model && model.length >= 4) {
+      const sizeCode = (model[3] & 0x70) >> 4;
+      let flashSizeBytes = 0x10000; // default 64KB
+      if (sizeCode > 0 && sizeCode <= 4) {
+        flashSizeBytes = sizeCode * 0x20000; // 128KB per unit
+      }
+      log?.(`Flash size estimate: ${flashSizeBytes} bytes`);
+      info.flashSizeBytes = flashSizeBytes;
+    }
+
+    // Read primary IEEE address from 0x00280028
+    const addr_ieee_address_primary = 0x00280028;
+    const ti_oui = [0x00, 0x12, 0x4b];
+    const ieee_addr_start = await (bsl as any).memRead?.(addr_ieee_address_primary);
+    const ieee_addr_end = await (bsl as any).memRead?.(addr_ieee_address_primary + 4);
+    if (ieee_addr_start && ieee_addr_end && ieee_addr_start.length >= 4 && ieee_addr_end.length >= 4) {
+      let ieee_addr: Uint8Array;
+      if (ieee_addr_start.slice(0, 3).every((b: number, i: number) => b === ti_oui[i])) {
+        // TI OUI at start, append end
+        ieee_addr = new Uint8Array([...ieee_addr_start, ...ieee_addr_end]);
+      } else {
+        // Otherwise, end first, then start
+        ieee_addr = new Uint8Array([...ieee_addr_end, ...ieee_addr_start]);
+      }
+      const macFmt = Array.from(ieee_addr)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(":")
+        .toUpperCase();
+      log?.(`IEEE MAC: ${macFmt}`);
+      info.ieeeMac = macFmt;
+    }
+    // Set chip model
+    info.chipModel = "CC2538";
+  }
   return info;
 }
 
@@ -528,7 +584,7 @@ export async function pingApp(link: Link, timeoutMs = 3000): Promise<boolean> {
 }
 
 // ----------- Legacy OSAL NV -----------
-export async function sysOsalNvLength(link: Link, id: number): Promise<number | null> {
+async function sysOsalNvLength(link: Link, id: number): Promise<number | null> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const resp = await sendMtAndWait(link, 0x21, 0x13, [idLo, idHi], 1500);
@@ -537,7 +593,7 @@ export async function sysOsalNvLength(link: Link, id: number): Promise<number | 
   return len;
 }
 
-export async function sysOsalNvRead(link: Link, id: number, offset = 0, length?: number): Promise<Uint8Array | null> {
+async function sysOsalNvRead(link: Link, id: number, offset = 0, length?: number): Promise<Uint8Array | null> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const offLo = offset & 0xff,
@@ -551,7 +607,7 @@ export async function sysOsalNvRead(link: Link, id: number, offset = 0, length?:
   return new Uint8Array(resp.payload.subarray(2, 2 + l));
 }
 
-export async function sysOsalNvReadExtAll(link: Link, id: number, totalLen: number): Promise<Uint8Array> {
+async function sysOsalNvReadExtAll(link: Link, id: number, totalLen: number): Promise<Uint8Array> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const out: number[] = [];
@@ -572,7 +628,7 @@ export async function sysOsalNvReadExtAll(link: Link, id: number, totalLen: numb
   return new Uint8Array(out.slice(0, totalLen));
 }
 
-export async function sysOsalNvItemInit(link: Link, id: number, length: number): Promise<boolean> {
+async function sysOsalNvItemInit(link: Link, id: number, length: number): Promise<boolean> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const lenLo = length & 0xff,
@@ -583,7 +639,7 @@ export async function sysOsalNvItemInit(link: Link, id: number, length: number):
   return statusOk(st) || st === 9;
 }
 
-export async function sysOsalNvWrite(link: Link, id: number, value: Uint8Array, offset = 0): Promise<boolean> {
+async function sysOsalNvWrite(link: Link, id: number, value: Uint8Array, offset = 0): Promise<boolean> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const offLo = offset & 0xff,
@@ -595,7 +651,7 @@ export async function sysOsalNvWrite(link: Link, id: number, value: Uint8Array, 
   return statusOk(resp.payload[0] ?? 1);
 }
 
-export async function sysOsalNvDelete(link: Link, id: number): Promise<boolean> {
+async function sysOsalNvDelete(link: Link, id: number): Promise<boolean> {
   const idLo = id & 0xff,
     idHi = (id >> 8) & 0xff;
   const resp = await sendMtAndWait(link, 0x21, 0x12, [idLo, idHi], 2000);
@@ -604,7 +660,7 @@ export async function sysOsalNvDelete(link: Link, id: number): Promise<boolean> 
 }
 
 // ----------- Extended NV -----------
-export async function sysNvLength(link: Link, itemId: number, subId: number): Promise<number | null> {
+async function sysNvLength(link: Link, itemId: number, subId: number): Promise<number | null> {
   const sysId = 0x01;
   const payload = [sysId, itemId & 0xff, (itemId >> 8) & 0xff, subId & 0xff, (subId >> 8) & 0xff];
   const resp = await sendMtAndWait(link, 0x21, 0x32, payload, 1500);
@@ -615,12 +671,7 @@ export async function sysNvLength(link: Link, itemId: number, subId: number): Pr
   return len;
 }
 
-export async function sysNvRead(
-  link: Link,
-  itemId: number,
-  subId: number,
-  totalLen: number
-): Promise<Uint8Array | null> {
+async function sysNvRead(link: Link, itemId: number, subId: number, totalLen: number): Promise<Uint8Array | null> {
   const sysId = 0x01;
   const out: number[] = [];
   let offset = 0;
@@ -648,7 +699,7 @@ export async function sysNvRead(
   return new Uint8Array(out.slice(0, totalLen));
 }
 
-export async function sysNvCreate(link: Link, itemId: number, subId: number, length: number): Promise<boolean> {
+async function sysNvCreate(link: Link, itemId: number, subId: number, length: number): Promise<boolean> {
   const sysId = 0x01;
   const payload = [
     sysId,
@@ -666,7 +717,7 @@ export async function sysNvCreate(link: Link, itemId: number, subId: number, len
   return statusOk(resp.payload[0] ?? 1) || (resp.payload[0] ?? 1) === 0x0a;
 }
 
-export async function sysNvWrite(link: Link, itemId: number, subId: number, value: Uint8Array): Promise<boolean> {
+async function sysNvWrite(link: Link, itemId: number, subId: number, value: Uint8Array): Promise<boolean> {
   const sysId = 0x01;
   for (let offset = 0; offset < value.length; offset += 244) {
     const slice = value.subarray(offset, Math.min(value.length, offset + 244));
@@ -686,7 +737,7 @@ export async function sysNvWrite(link: Link, itemId: number, subId: number, valu
   return true;
 }
 
-export async function sysNvDelete(link: Link, itemId: number, subId: number): Promise<boolean> {
+async function sysNvDelete(link: Link, itemId: number, subId: number): Promise<boolean> {
   const sysId = 0x01;
   const payload = [sysId, itemId & 0xff, (itemId >> 8) & 0xff, subId & 0xff, (subId >> 8) & 0xff];
   const resp = await sendMtAndWait(link, 0x21, 0x31, payload, 1500);
@@ -694,7 +745,7 @@ export async function sysNvDelete(link: Link, itemId: number, subId: number): Pr
   return statusOk(resp.payload[0] ?? 1);
 }
 
-export async function nvramReadLegacyFull(
+async function nvramReadLegacyFull(
   link: Link,
   progress?: (pct: number, label?: string) => void
 ): Promise<Record<string, string>> {
@@ -727,7 +778,7 @@ export async function nvramReadLegacyFull(
   return out;
 }
 
-export async function nvramReadExtendedAll(
+async function nvramReadExtendedAll(
   link: Link,
   progress?: (pct: number, label?: string) => void
 ): Promise<Record<string, Record<string, string>> | null> {
@@ -908,7 +959,7 @@ export async function nvramWriteAll(
 
 export async function bslUseLines(implyGate: boolean, log?: (msg: string) => void): Promise<void> {
   log?.(`Using BSL lines (implyGate=${implyGate})`);
-  if (implyGate != true) {
+  if (!implyGate) {
     await setLines(true, true);
     await sleep(250);
     await setLines(true, false);
@@ -919,7 +970,8 @@ export async function bslUseLines(implyGate: boolean, log?: (msg: string) => voi
     await sleep(500);
     await setLines(true, true);
     await sleep(500);
-  } else {
+  }
+  if (implyGate) {
     await setLines(true, true);
     await sleep(250);
     await setLines(true, false);

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"sync"
@@ -113,45 +113,45 @@ func (c *wsNetConn) Read(b []byte) (int, error) {
 }
 
 func (c *wsNetConn) Write(b []byte) (int, error) {
-    c.writeMu.Lock()
-    defer c.writeMu.Unlock()
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 
-    // ensure we don't block forever on NextWriter/Close
-    _ = c.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	// ensure we don't block forever on NextWriter/Close
+	_ = c.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
 
-    w, err := c.ws.NextWriter(websocket.BinaryMessage)
-    if err != nil {
-        // clear deadline on error (best-effort)
-        _ = c.ws.SetWriteDeadline(time.Time{})
-        return 0, err
-    }
-    // write full payload
-    n, err := w.Write(b)
-    closeErr := w.Close()
-    // clear deadline after finished
-    _ = c.ws.SetWriteDeadline(time.Time{})
-    if err != nil {
-        return n, err
-    }
-    if closeErr != nil {
-        return n, closeErr
-    }
-    return n, nil
+	w, err := c.ws.NextWriter(websocket.BinaryMessage)
+	if err != nil {
+		// clear deadline on error (best-effort)
+		_ = c.ws.SetWriteDeadline(time.Time{})
+		return 0, err
+	}
+	// write full payload
+	n, err := w.Write(b)
+	closeErr := w.Close()
+	// clear deadline after finished
+	_ = c.ws.SetWriteDeadline(time.Time{})
+	if err != nil {
+		return n, err
+	}
+	if closeErr != nil {
+		return n, closeErr
+	}
+	return n, nil
 }
 
 func (c *wsNetConn) Close() error {
-    c.closeMu.Lock()
-    defer c.closeMu.Unlock()
-    if c.closed {
-        return nil
-    }
-    c.closed = true
-    // close underlying websocket and pipe
-    _ = c.ws.Close()
-    // ensure pipe readers are unblocked with an error so io.Copy returns
-    _ = c.pw.CloseWithError(io.EOF)
-    _ = c.pr.Close()
-    return nil
+	c.closeMu.Lock()
+	defer c.closeMu.Unlock()
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	// close underlying websocket and pipe
+	_ = c.ws.Close()
+	// ensure pipe readers are unblocked with an error so io.Copy returns
+	_ = c.pw.CloseWithError(io.EOF)
+	_ = c.pr.Close()
+	return nil
 }
 
 func (c *wsNetConn) LocalAddr() net.Addr  { return c.local }
@@ -178,12 +178,14 @@ func (c *wsNetConn) SetWriteDeadline(t time.Time) error {
 
 func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort int) {
 	target := net.JoinHostPort(targetHost, strconv.Itoa(targetPort))
-	if debugMode {fmt.Printf("[websocket] establishing TCP connection to %s\n", target)}
+	if debugMode {
+		log.Printf("[websocket] establishing TCP connection to %s\n", target)
+	}
 
 	// Create TCP connection to target
 	tcpConn, err := net.Dial("tcp", target)
 	if err != nil {
-		fmt.Printf("[websocket] failed to connect to %s: %v\n", target, err)
+		log.Printf("[websocket] failed to connect to %s: %v\n", target, err)
 		_ = ws.Close()
 		return
 	}
@@ -198,7 +200,7 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 		_ = tcp.SetKeepAlivePeriod(30 * time.Second)
 	}
 
-	fmt.Printf("[websocket] TCP connection established to %s\n", target)
+	log.Printf("[websocket] TCP connection established to %s\n", target)
 
 	// wrap websocket as net.Conn
 	wsConn := newWsNetConn(ws, ws.LocalAddr().String(), ws.RemoteAddr().String())
@@ -280,22 +282,24 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 	}()
 
 	// wait for first error/close
-    err = <-errCh
-    if err != nil && err != io.EOF {
-         if debugMode {fmt.Printf("[websocket] proxy error: %v\n", err)}
-     }
-    // wake up/blocking ops: set immediate deadlines so blocked reads/writes unblock
-    _ = tcpConn.SetDeadline(time.Now())
-    _ = ws.SetWriteDeadline(time.Now())
-    _ = ws.SetReadDeadline(time.Now())
+	err = <-errCh
+	if err != nil && err != io.EOF {
+		if debugMode {
+			log.Printf("[websocket] proxy error: %v\n", err)
+		}
+	}
+	// wake up/blocking ops: set immediate deadlines so blocked reads/writes unblock
+	_ = tcpConn.SetDeadline(time.Now())
+	_ = ws.SetWriteDeadline(time.Now())
+	_ = ws.SetReadDeadline(time.Now())
 
-    // ensure close both sides
-    _ = tcpConn.Close()
-    _ = wsConn.Close()
-    // extra log: if ws returned a close code -- it often appears in error string, print it
-    // (websocket library returns CloseError in some cases)
-    if ce, ok := err.(*websocket.CloseError); ok {
-        fmt.Printf("[websocket] remote close code=%d text=%s\n", ce.Code, ce.Text)
-    }
-    fmt.Printf("[websocket] connection closing for %s\n", target)
+	// ensure close both sides
+	_ = tcpConn.Close()
+	_ = wsConn.Close()
+	// extra log: if ws returned a close code -- it often appears in error string, print it
+	// (websocket library returns CloseError in some cases)
+	if ce, ok := err.(*websocket.CloseError); ok {
+		log.Printf("[websocket] remote close code=%d text=%s\n", ce.Code, ce.Text)
+	}
+	log.Printf("[websocket] connection closing for %s\n", target)
 }
