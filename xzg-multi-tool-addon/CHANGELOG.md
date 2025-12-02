@@ -1,3 +1,32 @@
+## v0.2.23
+
+## 🚀 Features
+- feat: add separate imply gate and original logic to SL reset and boot loader (#77) by @xyzroe
+- feat: bridge: separate function to trigger DTR and RTS (#77) by @xyzroe
+- feat: bridge: support trigger both using one request (#77) by @xyzroe
+- feat: enhance debugger and loader connection UI, update firmware source links (#70) by @xyzroe
+- feat: add workflow to update GHCR downloads  (#66) by @xyzroe
+- feat: enhance debugger and loader connection UI, update firmware source links (#70) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: make possible to flash dongles with imply gate logic vie bridge (#77) by @xyzroe
+- fix: refactor SL tools and TI tools integration (#77) by @xyzroe
+- fix: small UI enhancements (#77) by @xyzroe
+- fix: bridge: logs with timestamp (#77) by @xyzroe
+
+## 📘 Documentation
+- docs: some docs improvements (#77) by @xyzroe
+- docs: update .gitignore and update telegram banner (#76) by @xyzroe
+- docs: refactor documentation (#75) by @xyzroe
+- docs: update how-to guides structure by renaming index.md (#74) by @xyzroe
+- docs: update READMEs for improved clarity and consistency in section headings (#73) by @xyzroe
+- docs: First how-to guides, bridge diagram, rework some files (#72) by @xyzroe
+- docs: move supported chips list and notes to a separate file (#71) by @xyzroe
+- docs: improve documentation and add GHCR pulls badge (#69) by @xyzroe
+- docs: update badge message formatting for total downloads (#68) by @xyzroe
+- docs: correct script path in GHCR downloads badge workflow (#67) by @xyzroe
+- docs: reorder and clean up CHANGELOG entries for clarity (#65) by @xyzroe
+
 ## v0.2.22
 
 ## 🚀 Features
