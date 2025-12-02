@@ -154,6 +154,7 @@ bslUrlInput?.addEventListener("change", saveCtrlSettings);
 rstUrlInput?.addEventListener("change", saveCtrlSettings);
 baudUrlInput?.addEventListener("change", saveCtrlSettings);
 invertLevel?.addEventListener("change", saveCtrlSettings);
+implyGateToggle?.addEventListener("change", saveCtrlSettings);
 bridgeHostInput?.addEventListener("input", scheduleBridgeRefresh);
 bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
 

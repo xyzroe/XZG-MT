@@ -6,7 +6,7 @@ import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
 
 import * as ti_tools from "./tools/ti";
-import { SilabsTools, enterSilabsBootloader, resetSilabs } from "./tools/sl";
+import { SilabsTools } from "./tools/sl";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
@@ -110,8 +110,8 @@ let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let sl_tools: SilabsTools | null = null;
-type TiChipFamily = "cc26xx" | "cc2538";
-let detectedTiChipFamily: TiChipFamily | null = null;
+export type TiChipFamily = "cc26xx" | "cc2538";
+export let detectedTiChipFamily: TiChipFamily | null = null;
 
 chooseSerialBtn.addEventListener("click", async () => {
   if (activeConnection) {
@@ -441,7 +441,7 @@ btnVersion?.addEventListener("click", async () => {
       if (!ok) throw new Error("Version not available");
     }
     if (family === "sl") {
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
       const ezspVersion = await sl_tools.getApplicationVersion();
       if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
       if (ezspVersion && firmwareVersionEl) {
@@ -614,7 +614,7 @@ btnFlash.addEventListener("click", async () => {
           // After flash, re-read device info
           await sleep(5000);
 
-          if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+          if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
           const ezspVersion = await sl_tools.getApplicationVersion();
           if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
           log(`EZSP app version: ${ezspVersion}`);
@@ -1036,6 +1036,7 @@ function loadCtrlSettings() {
     if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
     if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
     if (invertLevel) invertLevel.checked = localStorage.getItem("invertLevel") === "1";
+    if (implyGateToggle) implyGateToggle.checked = localStorage.getItem("implyGate") === "1";
     const savedFamily = localStorage.getItem("chip_family");
     if (savedFamily) {
       const radio = document.querySelector(`input[name="chip_family"][value="${savedFamily}"]`) as HTMLInputElement;
@@ -1056,6 +1057,7 @@ export function saveCtrlSettings() {
     if (rstUrlInput) localStorage.setItem("rstUrlInput", rstUrlInput.value.trim());
     if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
     if (invertLevel) localStorage.setItem("invertLevel", invertLevel.checked ? "1" : "0");
+    if (implyGateToggle) localStorage.setItem("implyGate", implyGateToggle.checked ? "1" : "0");
     localStorage.setItem("chip_family", getSelectedFamily());
   } catch {
     // ignore
@@ -1098,7 +1100,7 @@ function nvProgressReset(text = "") {
     clearTimeout(nvResetTimer);
     nvResetTimer = null;
   }
-  nvProgressEl.style.width = "100%";
+  nvProgressEl.style.width = "0%";
   nvProgressEl.setAttribute("aria-valuenow", "0");
   nvProgressEl.textContent = text;
 }
@@ -1244,7 +1246,7 @@ async function enterBsl(): Promise<void> {
   //log(`Using line sequences for family: ${family}`);
   // Use line sequences via direct serial or remote bridge pins
   if (family === "sl") {
-    await enterSilabsBootloader(log);
+    await sl_tools?.enterBootloader(implyGateToggle?.checked ?? false);
   }
   if (family === "ti") {
     await ti_tools.bslUseLines(implyGateToggle?.checked ?? false, log);
@@ -1298,7 +1300,7 @@ async function performReset(): Promise<void> {
     await ti_tools.resetUseLines(log);
   }
   if (family === "sl") {
-    await resetSilabs(log);
+    await sl_tools?.reset(implyGateToggle?.checked ?? false);
   }
   if (family === "esp") {
     if (esploader) {
@@ -1317,128 +1319,29 @@ async function performReset(): Promise<void> {
 // For the initial connect flow, we manage the spinner at a higher level and pass false here.
 async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | null> {
   let detectedFamily: TiChipFamily | null = null;
-  detectedTiChipFamily = null;
   try {
     if (showBusy) deviceDetectBusy(true);
     const family = getSelectedFamily();
     if (family === "ti") {
       const link = getActiveLink();
-      const bsl = await ti_tools.sync(link);
-      const id = await bsl.chipId();
-      const chipHex = Array.from(id as Uint8Array)
-        .map((b: number) => b.toString(16).padStart(2, "0"))
-        .join("");
-      log(`BSL OK. ChipId packet: ${chipHex}`);
-
-      // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
-      let chipIsCC26xx = false;
-
-      chipIsCC26xx = !(chipHex === "0000b964" || chipHex === "0000b965");
-      let chipIsCC2538 = false;
-      chipIsCC2538 = chipHex === "0000b964" || chipHex === "0000b965";
-      if (chipIsCC26xx) {
-        log("Chip family: CC26xx/CC13xx");
-      }
-      if (chipIsCC2538) {
-        log("Chip family: CC2538");
-      }
-
-      if (chipIsCC26xx) {
-        detectedFamily = "cc26xx";
-        try {
-          const FLASH_SIZE = 0x4003002c;
-          const IEEE_ADDR_PRIMARY = 0x500012f0;
-          const ICEPICK_DEVICE_ID = 0x50001318;
-          const TESXT_ID = 0x57fb4;
-
-          const dev = await (bsl as any).memRead32?.(ICEPICK_DEVICE_ID);
-          const usr = await (bsl as any).memRead32?.(TESXT_ID);
-          if (dev && usr && dev.length >= 4 && usr.length >= 4) {
-            const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
-            const pg_rev = (dev[3] & 0xf0) >> 4;
-            const model = ti_tools.getChipDescription(id, wafer_id, pg_rev, usr[1]);
-            log(`Chip model: ${model}`);
-            if (chipModelEl) chipModelEl.value = model;
-            refreshNetworkFirmwareList(model).catch((e) =>
-              log("Network FW list fetch failed: " + (e?.message || String(e)))
-            );
-          }
-
-          const flashSz = await (bsl as any).memRead32?.(FLASH_SIZE);
-          if (flashSz && flashSz.length >= 4) {
-            const pages = flashSz[0];
-            let size = pages * 8192;
-            if (size >= 64 * 1024) size -= 8192;
-            log(`Flash size estimate: ${size} bytes`);
-            if (flashSizeEl) flashSizeEl.value = `${size} bytes`;
-          }
-
-          const mac_lo = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 0);
-          const mac_hi = await (bsl as any).memRead32?.(IEEE_ADDR_PRIMARY + 4);
-          if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
-            const mac = [...mac_lo, ...mac_hi]
-              .map((b) => b.toString(16).padStart(2, "0"))
-              .join("")
-              .toUpperCase();
-            const macFmt = mac
-              .match(/.{1,2}/g)
-              ?.reverse()
-              ?.join(":");
-            if (macFmt) {
-              log(`IEEE MAC: ${macFmt}`);
-              if (ieeeMacEl) ieeeMacEl.value = macFmt;
-            }
-          }
-        } catch {
-          // ignore
-        }
-      } else if (chipIsCC2538) {
-        detectedFamily = "cc2538";
-        // Read flash size from FLASH_CTRL_DIECFG0
-        const FLASH_CTRL_DIECFG0 = 0x400d3014;
-        const model = await (bsl as any).memRead?.(FLASH_CTRL_DIECFG0);
-        if (model && model.length >= 4) {
-          const sizeCode = (model[3] & 0x70) >> 4;
-          let flashSizeBytes = 0x10000; // default 64KB
-          if (sizeCode > 0 && sizeCode <= 4) {
-            flashSizeBytes = sizeCode * 0x20000; // 128KB per unit
-          }
-          log(`Flash size estimate: ${flashSizeBytes} bytes`);
-          if (flashSizeEl) flashSizeEl.value = `${flashSizeBytes} bytes`;
-        }
-
-        // Read primary IEEE address from 0x00280028
-        const addr_ieee_address_primary = 0x00280028;
-        const ti_oui = [0x00, 0x12, 0x4b];
-        const ieee_addr_start = await (bsl as any).memRead?.(addr_ieee_address_primary);
-        const ieee_addr_end = await (bsl as any).memRead?.(addr_ieee_address_primary + 4);
-        if (ieee_addr_start && ieee_addr_end && ieee_addr_start.length >= 4 && ieee_addr_end.length >= 4) {
-          let ieee_addr: Uint8Array;
-          if (ieee_addr_start.slice(0, 3).every((b: number, i: number) => b === ti_oui[i])) {
-            // TI OUI at start, append end
-            ieee_addr = new Uint8Array([...ieee_addr_start, ...ieee_addr_end]);
-          } else {
-            // Otherwise, end first, then start
-            ieee_addr = new Uint8Array([...ieee_addr_end, ...ieee_addr_start]);
-          }
-          const macFmt = Array.from(ieee_addr)
-            .map((b) => b.toString(16).padStart(2, "0"))
-            .join(":")
-            .toUpperCase();
-          log(`IEEE MAC: ${macFmt}`);
-          if (ieeeMacEl) ieeeMacEl.value = macFmt;
-        }
-        // Set chip model
-        if (chipModelEl) chipModelEl.value = "CC2538";
-
-        refreshNetworkFirmwareList("CC2538").catch((e) =>
+      const info = await ti_tools.readDeviceInfo(link, log);
+      console.log("Device info:", info);
+      if (info) {
+        if (chipModelEl) chipModelEl.value = info.chipModel || "";
+        if (flashSizeEl && info.flashSizeBytes)
+          flashSizeEl.value = `${info.flashSizeBytes} bytes (${(info.flashSizeBytes / 1024).toFixed(2)} KB)`;
+        if (ieeeMacEl && info.ieeeMac) ieeeMacEl.value = info.ieeeMac;
+        await refreshNetworkFirmwareList(info.chipModel || "").catch((e) =>
           log("Network FW list fetch failed: " + (e?.message || String(e)))
         );
+        if (info.family) detectedFamily = info.family;
+      } else {
+        log("Failed to read device info via TI BSL");
       }
     } else if (family === "sl") {
       detectedFamily = null;
       // Silabs stub path for now
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
       const info = await sl_tools.getChipInfo();
       if (chipModelEl) chipModelEl.value = info.chipName;
       if (bootloaderVersionEl) bootloaderVersionEl.value = info.bootloaderVersion || "";
@@ -1607,6 +1510,10 @@ async function runConnectSequence(): Promise<void> {
     } else if (family === "sl") {
       // Silabs path: enter bootloader, read BL version, then reset back to app
       if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      sl_tools.setLogger((msg: string) => log(msg));
+      sl_tools.setProgressCallback((percent: number, msg: string) => {
+        fwProgress(percent, msg);
+      });
       try {
         // // Enter Gecko Bootloader
         // await enterBsl();
@@ -1628,7 +1535,7 @@ async function runConnectSequence(): Promise<void> {
       // Read application firmware version via EZSP
       await sleep(1000); // Give more time for application to start
       try {
-        if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+        if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
         const ezspVersion = await sl_tools.getApplicationVersion();
         if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
         log(`EZSP app version: ${ezspVersion}`);
@@ -1697,16 +1604,13 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   // Branch for Silabs vs TI vs ESP
 
   if (getSelectedFamily() === "sl") {
-    if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+    if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
 
     log(`Flashing Silabs firmware: ${data.length} bytes`);
     fwProgressReset("Flashing Silabs...");
 
     try {
-      await sl_tools.flash(data, (current, total) => {
-        const pct = Math.round((current / total) * 100);
-        fwProgress(pct, `${current} / ${total}`);
-      });
+      await sl_tools.flash(data);
 
       log("Silabs flash complete!");
       fwProgress(100, "Done");
@@ -1719,7 +1623,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
       log("Silabs flash error: " + (error?.message || String(error)));
       throw error;
     }
-
+    setTimeout(() => flashWarning?.classList.add("d-none"), 500);
     return; // Exit early for Silabs path
   }
 
@@ -1928,30 +1832,30 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
   nvProgressSetColor("primary");
-  nvProgressReset("Reading...");
+  // nvProgressReset("Reading...");
   await sleep(500);
   const link = getActiveLink();
   const payload = await ti_tools.nvramReadAll(link, nvProgress);
-  nvProgress(100, "Done");
+  // nvProgress(100, "Done");
   return payload;
 }
 
 async function nvramEraseAll(): Promise<void> {
   nvProgressSetColor("danger");
-  nvProgressReset("Erasing...");
+  // nvProgressReset("Erasing...");
   await sleep(500);
   const link = getActiveLink();
   await ti_tools.nvramEraseAll(link, nvProgress);
-  nvProgress(100, "Erase done");
+  // nvProgress(100, "Erase done");
 }
 
 async function nvramWriteAll(obj: any): Promise<void> {
   nvProgressSetColor("warning");
-  nvProgressReset("Writing...");
+  // nvProgressReset("Writing...");
   await sleep(500);
   const link = getActiveLink();
   await ti_tools.nvramWriteAll(link, obj, (s: string) => log(s), nvProgress);
-  nvProgress(100, "Write done");
+  // nvProgress(100, "Write done");
 }
 
 //export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
@@ -1982,9 +1886,43 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
 
     const bslHasSet = /\{SET\}/.test(bslTpl);
     const rstHasSet = /\{SET\}/.test(rstTpl);
+
+    const bridgeSelected = /\{BRIDGE\}/.test(bslTpl) && /\{BRIDGE\}/.test(rstTpl);
     log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} BSL=${bsl ? "1" : "0"} `);
-    await sendCtrlUrl(bslTpl, bslHasSet ? (bsl ? 1 : 0) : undefined);
-    await sendCtrlUrl(rstTpl, rstHasSet ? (rst ? 1 : 0) : undefined);
+    //check if templates has same beginning before "&" - make one request if so
+    if (bridgeSelected && bslHasSet && rstHasSet && bslTpl.split("&")[0] === rstTpl.split("&")[0]) {
+      const combinedTpl = bslTpl.split("&")[0];
+      const finalTplNoHttp = combinedTpl.replace(/^http:\/\//, "");
+
+      const combinedSet = `rts=${rst ? "1" : "0"}&dtr=${bsl ? "1" : "0"}`;
+
+      const fullUrl = finalTplNoHttp
+        .replace("{BRIDGE}", getBridgeBase("http"))
+        .replace("{PORT}", portInput.value || "");
+      const endUrl = fullUrl + `&${combinedSet}`;
+
+      // log(`  final URL with params: ${endUrl}`);
+
+      // make link and send using httpGetWithFallback
+      await httpGetWithFallback(endUrl).catch((e: any) => {
+        log("send request failed: " + (e?.message || String(e)));
+        sleep(1000);
+      });
+      return;
+    }
+
+    // log(`  using BSL template: ${bslTpl}`);
+    // // await sendCtrlUrl(bslTpl, bslHasSet ? (bsl ? 1 : 0) : undefined);
+    // log(`  using RST template: ${rstTpl}`);
+    // // await sendCtrlUrl(rstTpl, rstHasSet ? (rst ? 1 : 0) : undefined);
+
+    const bslVal = bslHasSet ? (bsl ? 1 : 0) : undefined;
+    const rstVal = rstHasSet ? (rst ? 1 : 0) : undefined;
+
+    const p1 = sendCtrlUrl(bslTpl, bslVal);
+    const p2 = sendCtrlUrl(rstTpl, rstVal);
+
+    await Promise.all([p1, p2]);
     return;
   }
 };
