@@ -1,4 +1,4 @@
-name: Update Release Drafter draft
+name: Update Release Draft
 
 on:
   pull_request:

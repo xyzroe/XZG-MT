@@ -13,6 +13,25 @@ categories:
     labels:
       - 'chore'
       - 'docs'
+      - 'documentation'
 change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
 template: |
   $CHANGES
+
+autolabeler:
+  - label: 'feature'
+    title:
+      - '/^feat:/i'
+      - '/^feature:/i'
+  - label: 'fix'
+    title:
+      - '/^fix:/i'
+      - '/^bug:/i'
+  - label: 'documentation'
+    title:
+      - '/^docs:/i'
+      - '/^chore:/i'
+    files:
+      - '*.md'
+      - 'docs/**/*'
+      - 'README*'
