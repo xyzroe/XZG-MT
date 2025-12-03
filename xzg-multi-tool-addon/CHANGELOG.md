@@ -1,3 +1,19 @@
+## v0.2.24
+
+## 🚀 Features
+- feat: add dump flash option to CCXX52 devices (#82) by @xyzroe
+- feat: hide unrelated option in ESP section (#79) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: massive code cleanup (#82) by @xyzroe
+- fix: improve progress logging and update checkbox handling for CC Debugger (#81) by @xyzroe
+
+## 📘 Documentation
+- docs: update release drafter version and make auto labeler work (#80) by @xyzroe
+- docs: update release drafter configuration  (#78) by @xyzroe
+
+
+
 ## v0.2.23
 
 ## 🚀 Features
