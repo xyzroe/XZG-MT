@@ -2,19 +2,21 @@ name: Update Release Draft
 
 on:
   pull_request:
-    types: [closed]  
-  workflow_dispatch: 
+    types: [opened, reopened, synchronize, closed]
+  workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   update-draft:
     runs-on: ubuntu-latest
     steps:
       - name: Update release draft
-        uses: release-drafter/release-drafter@v5
+        uses: release-drafter/release-drafter@v6
         with:
           config-name: release-drafter.yml
         env:
