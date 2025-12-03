@@ -1,5 +1,11 @@
 export type Transport = "serial" | "tcp";
 
+export type Link = {
+  write: (d: Uint8Array) => Promise<void>;
+  onData: (cb: (d: Uint8Array) => void) => void;
+  offData?: (cb: (d: Uint8Array) => void) => void;
+};
+
 export interface TcpConnectParams {
   host: string;
   port: number;
