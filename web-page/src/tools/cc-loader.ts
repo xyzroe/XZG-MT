@@ -304,7 +304,7 @@ export class CCLoader {
       //this.progressCallback(this.blockNum, this.blockTotal);
       this.progressCallback(
         Math.round((this.blockNum / this.blockTotal) * 100),
-        `Reading ${this.blockNum} / ${this.blockTotal} blocks`
+        `Reading ${this.blockNum} / ${this.blockTotal}`
       );
     }
 
@@ -403,7 +403,7 @@ export class CCLoader {
       //this.progressCallback(this.blockNum, this.blockTotal);
       this.progressCallback(
         Math.round((this.blockNum / this.blockTotal) * 100),
-        `Writing ${this.blockNum} / ${this.blockTotal} blocks`
+        `Writing ${this.blockNum} / ${this.blockTotal}`
       );
     }
   }
