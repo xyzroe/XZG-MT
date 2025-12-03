@@ -5,7 +5,7 @@ import { ESPLoader, Transport } from "esptool-js";
 import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
 
-import * as ti_tools from "./tools/ti";
+import { TiTools, TiChipFamily } from "./tools/ti";
 import { SilabsTools } from "./tools/sl";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
@@ -110,8 +110,8 @@ let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let sl_tools: SilabsTools | null = null;
-export type TiChipFamily = "cc26xx" | "cc2538";
-export let detectedTiChipFamily: TiChipFamily | null = null;
+let ti_tools: TiTools | null = null;
+let detectedTiChipFamily: TiChipFamily | null = null;
 
 chooseSerialBtn.addEventListener("click", async () => {
   if (activeConnection) {
@@ -202,6 +202,7 @@ disconnectBtn.addEventListener("click", async () => {
 
   // Reset protocol tools
   sl_tools = null;
+  ti_tools = null;
   detectedTiChipFamily = null;
 
   if (activeConnection === "serial") {
@@ -414,9 +415,9 @@ btnPing?.addEventListener("click", async () => {
       log("Ping is not supported for Silabs yet");
       throw new Error("Unsupported for Silabs");
     }
-    const link = getActiveLink();
+    if (!ti_tools) throw new Error("TiTools not initialized");
     log("Pinging application...");
-    const ok = await ti_tools.pingApp(link);
+    const ok = await ti_tools.pingApp();
     if (!ok) throw new Error("Ping failed");
     //else log("Pong");
   });
@@ -430,9 +431,8 @@ btnVersion?.addEventListener("click", async () => {
       log("ESP: Firmware version check not implemented");
     }
     if (family === "ti") {
-      const link = getActiveLink();
-
-      const info = await ti_tools.getFwVersion(link);
+      if (!ti_tools) throw new Error("TiTools not initialized");
+      const info = await ti_tools.getFwVersion();
       const ok = !!info;
       if (info && firmwareVersionEl) {
         firmwareVersionEl.value = String(info.fwRev);
@@ -602,7 +602,7 @@ btnFlash.addEventListener("click", async () => {
         if (family == "ti") {
           //log("Pinging device...");
           try {
-            const ok = await pingWithBaudRetries(getActiveLink());
+            const ok = await pingWithBaudRetries();
             if (!ok) log("Ping: timed out or no response");
           } catch (e: any) {
             log("Ping error: " + (e?.message || String(e)));
@@ -622,7 +622,8 @@ btnFlash.addEventListener("click", async () => {
         if (family == "ti") {
           try {
             // use local wrapper to log and update UI
-            const info = await ti_tools.getFwVersion(getActiveLink());
+            if (!ti_tools) throw new Error("TiTools not initialized");
+            const info = await ti_tools.getFwVersion();
             if (info && firmwareVersionEl) {
               firmwareVersionEl.value = String(info.fwRev);
               log(`FW version: ${info.fwRev}`);
@@ -747,7 +748,33 @@ btnReadFlash?.addEventListener("click", async () => {
     } else if (ccDebugger) {
       // Use CC Debugger
       await ccDebugger?.dumpFlash();
+    } else if (ti_tools) {
+      try {
+        if (activeConnection === "serial") {
+          await (serial as any)?.reopenWithBaudrate?.(500000);
+          log("Serial: switched baud to 500000");
+        } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
+          await changeBaudOverTcp(460800);
+          log("TCP: switched baud to 460800");
+        }
+      } catch {
+        log("Serial: failed to switch baud");
+      }
+      await ti_tools?.dumpFlash();
+      const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
+      try {
+        if (activeConnection === "serial") {
+          await (serial as any)?.reopenWithBaudrate?.(originalBaudRate);
+          log(`Serial: switched baud to ${originalBaudRate}`);
+        } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
+          await changeBaudOverTcp(originalBaudRate);
+          log(`TCP: switched baud to ${originalBaudRate}`);
+        }
+      } catch {
+        log("Serial: failed to switch baud");
+      }
     }
+
     setTimeout(() => flashWarning?.classList.add("d-none"), 500);
 
     return;
@@ -1249,7 +1276,7 @@ async function enterBsl(): Promise<void> {
     await sl_tools?.enterBootloader(implyGateToggle?.checked ?? false);
   }
   if (family === "ti") {
-    await ti_tools.bslUseLines(implyGateToggle?.checked ?? false, log);
+    await ti_tools?.enterBootloader(implyGateToggle?.checked ?? false);
   }
 
   if (family === "esp") {
@@ -1297,7 +1324,7 @@ async function performReset(): Promise<void> {
   //log(`Using line sequences for family: ${family}`);
   // Use line sequences via direct serial or remote bridge pins
   if (family === "ti") {
-    await ti_tools.resetUseLines(log);
+    await ti_tools?.reset(implyGateToggle?.checked ?? false);
   }
   if (family === "sl") {
     await sl_tools?.reset(implyGateToggle?.checked ?? false);
@@ -1323,8 +1350,8 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
     if (showBusy) deviceDetectBusy(true);
     const family = getSelectedFamily();
     if (family === "ti") {
-      const link = getActiveLink();
-      const info = await ti_tools.readDeviceInfo(link, log);
+      if (!ti_tools) throw new Error("TiTools not initialized");
+      const info = await ti_tools.readDeviceInfo();
       console.log("Device info:", info);
       if (info) {
         if (chipModelEl) chipModelEl.value = info.chipModel || "";
@@ -1362,14 +1389,14 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
 }
 
 async function pingWithBaudRetries(
-  link: any,
   baudCandidates: number[] = [9600, 19200, 38400, 57600, 115200, 230400, 460800]
 ): Promise<boolean> {
   // Try a normal ping first
   const findBaud = !!findBaudToggle?.checked;
+  if (!ti_tools) return false;
   try {
     log("Pinging application...");
-    const ok0 = await ti_tools.pingApp(link);
+    const ok0 = await ti_tools.pingApp();
     if (
       (findBaud && activeConnection === "serial") ||
       (findBaud && activeConnection === "tcp" && (baudUrlInput?.value ?? "").trim() !== "")
@@ -1423,7 +1450,7 @@ async function pingWithBaudRetries(
 
     try {
       log("Pinging application...");
-      const ok = await ti_tools.pingApp(link);
+      const ok = await ti_tools.pingApp();
       if (ok) {
         // keep new baud in UI
         try {
@@ -1479,13 +1506,20 @@ async function runConnectSequence(): Promise<void> {
     }
     const family = getSelectedFamily();
     if (family === "ti") {
+      // Initialize TiTools if needed
+      if (!ti_tools) ti_tools = new TiTools(getActiveLink());
+      ti_tools.setLogger((msg: string) => log(msg));
+      ti_tools.setProgressCallback((percent: number, msg: string) => {
+        fwProgress(percent, msg);
+      });
+      ti_tools.setSetLinesHandler(setLines);
+
       await enterBsl();
       await readChipInfo(false);
       await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
       await sleep(1000);
       try {
-        const link = getActiveLink();
-        const ok = await pingWithBaudRetries(link);
+        const ok = await pingWithBaudRetries();
         if (!ok) {
           log("App ping: timed out or no response");
         } else {
@@ -1495,9 +1529,9 @@ async function runConnectSequence(): Promise<void> {
         log("App ping skipped");
       }
       try {
-        const link = getActiveLink();
+        if (!ti_tools) throw new Error("TiTools not initialized");
         log("Checking firmware version...");
-        const info = await ti_tools.getFwVersion(link);
+        const info = await ti_tools.getFwVersion();
         if (!info) {
           log("FW version request: timed out or no response");
         } else if (firmwareVersionEl) {
@@ -1628,7 +1662,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   }
 
   // TI path continues below
-  const bsl = await ti_tools.sync(link);
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  await ti_tools.sync();
 
   if (optErase.checked) {
     if (chipFamily === "cc26xx") {
@@ -1636,7 +1671,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
       log("Erase...");
       fwProgress(50, `Erasing...`);
       try {
-        await (bsl as any).bankErase?.();
+        await ti_tools.bankErase();
         log("Bank erase done");
         fwProgress(100, `Erase done`);
         await sleep(500);
@@ -1649,7 +1684,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         for (let a = from; a < to; a += pageSize) {
           fwProgress(Math.min(100, Math.round(((a - from) / (to - from)) * 100)), `Erasing... ${toHex(a, 8)}`);
           try {
-            await (bsl as any).sectorErase?.(a);
+            await ti_tools.sectorErase(a);
           } catch {
             // ignore sector erase errors
           }
@@ -1661,7 +1696,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     } else if (chipFamily === "cc2538") {
       log("Erase " + data.length + " bytes at " + toHex(startAddr, 8) + "...");
       fwProgress(50, `Erasing...`);
-      await bsl.erase(startAddr, data.length);
+      await ti_tools.erase(startAddr, data.length);
       log("Erase done");
       fwProgress(100, `Erase done`);
       await sleep(500);
@@ -1693,12 +1728,12 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         }
       }
       if (!skip) {
-        await bsl.downloadTo(startAddr + off, chunk);
+        await ti_tools.downloadTo(startAddr + off, chunk);
       }
       const cur = off + chunk.length;
       const pct = Math.min(100, Math.round((cur / data.length) * 100));
       // Show relative progress (bytes written / total bytes)
-      fwProgress(pct, `${cur} / ${data.length}`);
+      fwProgress(pct, `Writing ${cur} / ${data.length}`);
       // Avoid artificial throttling over TCP; keep tiny yield for Web Serial only
       if (activeConnection === "serial") await sleep(1);
     }
@@ -1710,8 +1745,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Verify...");
     let ok = false;
     try {
-      if (chipFamily === "cc26xx" && (bsl as any).crc32Cc26xx) {
-        const crcDev = await (bsl as any).crc32Cc26xx(startAddr, data.length);
+      if (chipFamily === "cc26xx") {
+        const crcDev = await ti_tools.crc32Cc26xx(startAddr, data.length);
         // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
         const deviceData = new Uint8Array(data.length);
         deviceData.fill(0xff); // Start with erased state (all 0xFF)
@@ -1742,7 +1777,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
         ok = crcDev === crcLocal;
       } else if (chipFamily === "cc2538") {
         // For CC2538 we use crc32 (command 0x27 with addr+size)
-        const crcDev = await bsl.crc32(startAddr, data.length);
+        const crcDev = await ti_tools.crc32(startAddr, data.length);
         // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
         const deviceData = new Uint8Array(data.length);
         deviceData.fill(0xff); // Start with erased state (all 0xFF)
@@ -1834,8 +1869,8 @@ async function nvramReadAll(): Promise<any> {
   nvProgressSetColor("primary");
   // nvProgressReset("Reading...");
   await sleep(500);
-  const link = getActiveLink();
-  const payload = await ti_tools.nvramReadAll(link, nvProgress);
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  const payload = await ti_tools.nvramReadAll(nvProgress);
   // nvProgress(100, "Done");
   return payload;
 }
@@ -1844,8 +1879,8 @@ async function nvramEraseAll(): Promise<void> {
   nvProgressSetColor("danger");
   // nvProgressReset("Erasing...");
   await sleep(500);
-  const link = getActiveLink();
-  await ti_tools.nvramEraseAll(link, nvProgress);
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  await ti_tools.nvramEraseAll(nvProgress);
   // nvProgress(100, "Erase done");
 }
 
@@ -1853,12 +1888,10 @@ async function nvramWriteAll(obj: any): Promise<void> {
   nvProgressSetColor("warning");
   // nvProgressReset("Writing...");
   await sleep(500);
-  const link = getActiveLink();
-  await ti_tools.nvramWriteAll(link, obj, (s: string) => log(s), nvProgress);
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  await ti_tools.nvramWriteAll(obj, (s: string) => log(s), nvProgress);
   // nvProgress(100, "Write done");
 }
-
-//export type SetLinesHandler = (rstLow: boolean, bslLow: boolean) => Promise<void>;
 
 // DTR = BSL(FLASH), RTS = RESET; (active low);
 // without NPN - rts=0 reset=0, dtr=0 bsl=0

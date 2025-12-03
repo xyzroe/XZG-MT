@@ -1,4 +1,4 @@
-import { Link } from "./ti";
+import { Link } from "../types/index";
 import { sleep } from "../utils/index";
 import { padToMultiple } from "../utils/crc";
 import { crc16 } from "../utils/crc";
@@ -499,9 +499,11 @@ export class SilabsTools {
 
   public async reset(implyGate: boolean): Promise<void> {
     this.logger("Silabs reset, implyGate=" + implyGate);
-
+    await sleep(1000);
     if (!implyGate) {
       // Just pull Reset
+      await setLines(false, false); // Release Reset
+      await sleep(500);
       await setLines(true, false); // Press Reset
       await sleep(200);
       await setLines(false, false); // Release Reset

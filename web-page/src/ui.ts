@@ -247,7 +247,7 @@ export function updateUIForFamily() {
     if (autoBslWrap) autoBslWrap.classList.remove("d-none");
     if (findBaudWrap) findBaudWrap.classList.remove("d-none");
     // Buttons
-    if (btnReadFlash) btnReadFlash.classList.add("d-none");
+    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
     if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.remove("d-none");
