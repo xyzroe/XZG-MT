@@ -1000,7 +1000,7 @@ export class CCDebugger {
 
       this.progressCallback(
         Math.min(100, Math.round((((i + 1) * PROG_BLOCK_SIZE) / paddedData.length) * 100)),
-        `Writing... ${Math.min(100, Math.round((((i + 1) * PROG_BLOCK_SIZE) / paddedData.length) * 100))}%`
+        `Writing ${Math.min((i + 1) * PROG_BLOCK_SIZE, paddedData.length)} / ${paddedData.length}`
       );
     }
 
@@ -1074,7 +1074,7 @@ export class CCDebugger {
     for (let i = 0; i < paddedData.length; i += blockSize) {
       const localPercent = i / paddedData.length;
       const percent = Math.round(progressStart + localPercent * (progressEnd - progressStart));
-      this.progressCallback(percent, `Writing... ${percent}%`);
+      this.progressCallback(percent, `Writing ${i}/${paddedData.length}`);
 
       const chunk = paddedData.slice(i, i + blockSize);
 
@@ -1773,24 +1773,24 @@ export class CCDebugger {
   public async flashAction(): Promise<void> {
     const firmwareFile = localFile.files?.[0];
 
-    if (!optErase && !optWrite && !optVerify) {
+    if (!optErase.checked && !optWrite.checked && !optVerify.checked) {
       this.logger("Please select at least one operation");
       return;
     }
 
-    if ((optWrite || optVerify) && !firmwareFile) {
+    if ((optWrite.checked || optVerify.checked) && !firmwareFile) {
       this.logger("Please select a firmware file for write/verify operations");
       return;
     }
 
     try {
-      if (optErase) {
+      if (optErase.checked) {
         this.logger("Erasing chip...");
         await this.chipErase();
         this.logger("Chip erase complete!");
       }
 
-      if (optWrite && firmwareFile) {
+      if (optWrite.checked && firmwareFile) {
         this.logger(`Writing firmware: ${firmwareFile.name}`);
         const reader = new FileReader();
 
@@ -1814,14 +1814,14 @@ export class CCDebugger {
 
         // Only reset to normal mode if we're not going to verify
         // (verify needs debug mode, reset will be done after verify)
-        if (!optVerify) {
+        if (!optVerify.checked) {
           // log("Resetting device to normal mode...");
           await this.reset(false);
           // log("Device reset complete!");
         }
       }
 
-      if (optVerify && firmwareFile) {
+      if (optVerify.checked && firmwareFile) {
         this.logger(`Verifying firmware: ${firmwareFile.name}`);
         const reader = new FileReader();
 
