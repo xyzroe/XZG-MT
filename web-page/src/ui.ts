@@ -11,6 +11,7 @@ export const bootloaderVersionEl = document.getElementById("bootloaderVersion") 
 export const netFwSelect = document.getElementById("netFwSelect") as HTMLSelectElement | null;
 export const netFwRefreshBtn = document.getElementById("netFwRefresh") as HTMLButtonElement | null;
 export const bitrateInput = document.getElementById("bitrateInput") as HTMLInputElement;
+export const autoBslWrap = document.getElementById("autoBslWrap") as HTMLDivElement | null;
 export const chooseSerialBtn = document.getElementById("chooseSerial") as HTMLButtonElement;
 export const disconnectBtn = document.getElementById("disconnectBtn") as HTMLButtonElement;
 export const hostInput = document.getElementById("hostInput") as HTMLInputElement;
@@ -243,6 +244,7 @@ export function updateUIForFamily() {
       netFwSourceEl.textContent = "XZG-MT/fw_files";
     }
     // Toggles
+    if (autoBslWrap) autoBslWrap.classList.remove("d-none");
     if (findBaudWrap) findBaudWrap.classList.remove("d-none");
     // Buttons
     if (btnReadFlash) btnReadFlash.classList.add("d-none");
@@ -289,6 +291,7 @@ export function updateUIForFamily() {
       netFwSourceEl.textContent = "XZG-MT/fw_files";
     }
     // Toggles
+    if (autoBslWrap) autoBslWrap.classList.remove("d-none");
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
     if (btnReadFlash) btnReadFlash.classList.add("d-none");
@@ -301,7 +304,7 @@ export function updateUIForFamily() {
   }
   if (family === "esp") {
     // Sections
-    if (generalSection) generalSection.classList.remove("d-none");
+    if (generalSection) generalSection.classList.add("d-none");
     if (connectionSection) connectionSection.classList.remove("d-none");
 
     if (tcpSection) tcpSection.classList.add("d-none");
@@ -335,6 +338,7 @@ export function updateUIForFamily() {
     }
 
     // Toggles
+    if (autoBslWrap) autoBslWrap.classList.add("d-none");
     if (findBaudWrap) findBaudWrap.classList.add("d-none");
     // Buttons
     if (btnReadFlash) btnReadFlash.classList.add("d-none");
