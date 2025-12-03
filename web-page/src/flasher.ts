@@ -12,7 +12,7 @@ import { CCLoader } from "./tools/cc-loader";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { deriveControlConfig, ControlConfig } from "./utils/control";
-import { httpGetWithFallback } from "./utils/http";
+import { httpGetWithFallback, saveToFile } from "./utils/http";
 import { crc32 as computeCrc32 } from "./utils/crc";
 
 import {
@@ -327,27 +327,20 @@ btnNvRead?.addEventListener("click", async () => {
   await withButtonStatus(btnNvRead!, async () => {
     try {
       const payload = await nvramReadAll();
-      const blob = new Blob([JSON.stringify(payload, null, 2) + "\n"], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      // Build filename: nvram_<model>_<ieee>_<YYYYMMDD-HHMMSS>.json
-      const modelRaw = (chipModelEl?.value || "device").trim();
-      const modelSafe = modelRaw.replace(/\s+/g, "-").replace(/[^A-Za-z0-9._-]/g, "");
-      const ieeeRaw = (ieeeMacEl?.value || "").toUpperCase();
-      const ieeeSafe = ieeeRaw.replace(/[^A-F0-9]/g, ""); // drop ':' and anything non-hex
-      const d = new Date();
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(
-        d.getMinutes()
-      )}${pad(d.getSeconds())}`;
-      const nameParts = ["NVRAM", modelSafe || "device", ieeeSafe || "unknown", ts];
-      a.download = nameParts.join("_") + ".json";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      log("NVRAM backup downloaded");
+
+      const jsonContent = JSON.stringify(payload, null, 2) + "\n";
+
+      const filename = saveToFile(
+        jsonContent,
+        "application/json",
+        "json",
+        "NVRAM",
+        chipModelEl?.value,
+        ieeeMacEl?.value
+      );
+
+      log("NVRAM backup saved to " + filename);
+
       nvProgress(100, "Done");
       return true;
     } catch (e: any) {

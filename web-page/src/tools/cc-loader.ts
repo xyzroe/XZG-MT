@@ -1,5 +1,6 @@
 import { sleep } from "../utils/index";
 import { parseIntelHex } from "../utils/intelhex";
+import { saveToFile } from "../utils/http";
 
 import {
   //log,
@@ -576,7 +577,7 @@ export class CCLoader {
   public async dumpFlash(): Promise<void> {
     // Read flash using CC Loader
     try {
-      this.logger("Reading flash from CC2530...");
+      this.logger("Reading flash memory...");
       this.progressCallback(0, "Reading flash...");
 
       // Read 512 blocks (256KB - full flash of CC2530)
@@ -585,25 +586,16 @@ export class CCLoader {
       this.logger(`Flash read complete: ${flashData.length} bytes`);
       this.progressCallback(100, "Done");
 
-      // Download the file
-      // Ensure we pass a standard ArrayBufferView (backed by ArrayBuffer) to Blob so TypeScript accepts it.
-      const copy = new Uint8Array(flashData);
-      const blob = new Blob([copy], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const now = new Date();
-      const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
+      const filename = saveToFile(
+        flashData,
+        "application/octet-stream",
+        "bin",
+        "dump",
+        targetIdEl?.value,
+        targetIeeeEl?.value
+      );
 
-      const targetId = targetIdEl?.value || "unknown";
-      const targetIeee = targetIeeeEl?.value || "unknown";
-      a.href = url;
-      a.download = `dump_${targetId}_${targetIeee}_${timestamp}.bin`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-      this.logger(`Flash dump saved to ${a.download}`);
+      this.logger(`Flash dump saved to ${filename}`);
     } catch (e: any) {
       this.logger("Flash read error: " + (e?.message || String(e)));
       throw e;

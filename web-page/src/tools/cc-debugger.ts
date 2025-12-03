@@ -3,6 +3,8 @@ interface HexSection {
   data: Uint8Array;
 }
 
+import { saveToFile } from "../utils/http";
+
 import {
   //log,
   optErase,
@@ -751,7 +753,7 @@ export class CCDebugger {
     // Convert to hex string (Big Endian display - reverse the bytes)
     const ieee = Array.from(ieeeBytes)
       .reverse()
-      .map((b) => b.toString(16).padStart(2, "0"))
+      .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
       .join(":");
 
     // this.logger(
@@ -1730,26 +1732,12 @@ export class CCDebugger {
     // Convert to Intel HEX format
     const hexContent = generateHex(flashData, 0);
 
-    // Create download link
-    const blob = new Blob([hexContent], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    this.logger(`Flash read complete: ${flashData.length} bytes`);
+    this.progressCallback(100, "Done");
 
-    // Generate filename with timestamp
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
+    const filename = saveToFile(hexContent, "text/plain", "hex", "dump", targetIdEl?.value, targetIeeeEl?.value);
 
-    const targetId = targetIdEl?.value || "unknown";
-    const targetIeee = targetIeeeEl?.value || "unknown";
-    a.download = `dump_${targetId}_${targetIeee}_${timestamp}.hex`;
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    this.logger(`Flash saved to ${a.download}`);
+    this.logger(`Flash saved to ${filename}`);
 
     // Reset to normal mode after read
     await this.reset(false);

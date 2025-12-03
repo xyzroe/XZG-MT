@@ -1,5 +1,6 @@
 import { Link } from "../types/index";
 import { sleep, toHex } from "../utils/index";
+import { saveToFile } from "../utils/http";
 
 export type TiChipFamily = "cc26xx" | "cc2538";
 
@@ -1190,23 +1191,15 @@ export class TiTools {
     this.progressCallback(100, "Read complete");
     this.logger(`Flash read complete: ${flashData.length} bytes`);
 
-    // Save to file
-    const blob = new Blob([flashData], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
+    const filename = saveToFile(
+      flashData,
+      "application/octet-stream",
+      "bin",
+      "dump",
+      deviceInfo.chipModel,
+      deviceInfo.ieeeMac?.replace(/:/g, "")
+    );
 
-    const chipModel = deviceInfo.chipModel || "unknown";
-    const ieeeMac = deviceInfo.ieeeMac?.replace(/:/g, "") || "unknown";
-
-    a.href = url;
-    a.download = `dump_${chipModel}_${ieeeMac}_${timestamp}.bin`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-    this.logger(`Flash dump saved to ${a.download}`);
+    this.logger(`Flash dump saved to ${filename}`);
   }
 }
