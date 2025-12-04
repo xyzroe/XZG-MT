@@ -11,6 +11,7 @@ on:
       - "ti/**"
       - "!ti/manifest.json"
       - ".github/scripts/process_ti.py"
+      - ".github/scripts/update_readme.py"
   workflow_dispatch:
 
 jobs:
