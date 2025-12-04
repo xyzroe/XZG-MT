@@ -87,6 +87,25 @@
           "mask": "ot-rcp"
         }
       }
+    ],
+    "Sonoff Dongle-LMG21": [
+      {
+        "json": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/FIRMWARE_LIST.json",
+        "dongleType": "Dongle-LMG21",
+        "signed": false,
+        "zigbee_ncp": {
+          "firmwareType": "Zigbee"
+        },
+        "multipan": {
+          "firmwareType": "MultiPAN"
+        },
+        "openthread_rcp": {
+          "firmwareType": "OpenThread"
+        },
+        "zb_router": {
+          "firmwareType": "Zigbee Router"
+        }
+      }
     ]
   }
 }
