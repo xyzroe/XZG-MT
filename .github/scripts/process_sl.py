@@ -8,6 +8,11 @@ from urllib.parse import urljoin, urlparse
 # File paths
 TASK_FILE = 'sl/task.json'
 MANIFEST_FILE = 'sl/manifest.json'
+SL_DIR = 'sl'
+
+# GitHub repository info for generating raw URLs
+GITHUB_REPO = 'xyzroe/XZG-MT'
+GITHUB_BRANCH = 'fw_files'
 
 # Headers for GitHub API (GitHub requires User-Agent)
 HEADERS = {
@@ -78,6 +83,35 @@ def get_download_url_from_json(json_url, filename):
     base_url = f"{parsed.scheme}://{parsed.netloc}{base_path}"
     return f"{base_url}/{filename}"
 
+def download_file(url, local_path):
+    """Downloads a file from URL to local path."""
+    try:
+        response = requests.get(url, headers=HEADERS, stream=True)
+        response.raise_for_status()
+        
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        
+        with open(local_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"Downloaded: {local_path}")
+        return True
+    except Exception as e:
+        print(f"Error downloading {url}: {e}")
+        return False
+
+def get_local_raw_url(local_path):
+    """Generates raw GitHub URL for a local file path."""
+    # Convert local path like 'sl/zigbee_ncp/file.gbl' to raw GitHub URL
+    return f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/{local_path}"
+
+def sanitize_folder_name(name):
+    """Sanitizes folder name by replacing invalid characters."""
+    # Replace characters that are invalid in folder names
+    return re.sub(r'[<>:"/\\|?*]', '_', name).strip()
+
 def process_json_firmware_config(config, chip_family, board_name, manifest):
     """Processes configuration with JSON firmware source (e.g., Sonoff)."""
     json_url = config.get('json')
@@ -118,8 +152,21 @@ def process_json_firmware_config(config, chip_family, board_name, manifest):
         version = fw.get('version', '0.0.0')
         baud_rate = fw.get('baudRate', '115200')
         
-        # Form download URL
-        download_url = get_download_url_from_json(json_url, filename)
+        # Form remote download URL
+        remote_url = get_download_url_from_json(json_url, filename)
+        
+        # Create local path: sl/<fw_type>/<sanitized_board_name>/<filename>
+        sanitized_board = sanitize_folder_name(board_name)
+        local_dir = os.path.join(SL_DIR, fw_type, sanitized_board)
+        local_path = os.path.join(local_dir, filename)
+        
+        # Download file
+        if download_file(remote_url, local_path):
+            # Generate raw GitHub URL for the local file
+            download_url = get_local_raw_url(local_path)
+        else:
+            # If download fails, skip this file
+            continue
         
         # Add to manifest
         if fw_type not in manifest:
