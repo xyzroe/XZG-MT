@@ -10,6 +10,7 @@ on:
     paths:
       - "ti/**"
       - "!ti/manifest.json"
+      - ".github/scripts/process_ti.py"
   workflow_dispatch:
 
 jobs:

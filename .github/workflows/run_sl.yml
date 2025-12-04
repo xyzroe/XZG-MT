@@ -10,6 +10,7 @@ on:
     paths:
       - "sl/**"
       - "!sl/manifest.json"
+      - ".github/scripts/process_sl.py"
   workflow_dispatch:
 
 jobs:
