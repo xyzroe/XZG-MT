@@ -3,19 +3,20 @@ import os
 import re
 import requests
 import sys
+from urllib.parse import urljoin, urlparse
 
-# Пути к файлам
+# File paths
 TASK_FILE = 'sl/task.json'
 MANIFEST_FILE = 'sl/manifest.json'
 
-# Заголовки для GitHub API (GitHub требует User-Agent)
+# Headers for GitHub API (GitHub requires User-Agent)
 HEADERS = {
     'User-Agent': 'Firmware-Manifest-Generator'
 }
 
 def get_github_api_url(web_url):
-    """Преобразует URL веб-интерфейса GitHub в URL API."""
-    # Пример: https://github.com/user/repo/tree/branch/path
+    """Converts GitHub web interface URL to API URL."""
+    # Example: https://github.com/user/repo/tree/branch/path
     # API: https://api.github.com/repos/user/repo/contents/path?ref=branch
     
     pattern = r"github\.com/([^/]+)/([^/]+)/tree/([^/]+)/?(.*)"
@@ -28,22 +29,22 @@ def get_github_api_url(web_url):
     return None
 
 def extract_version(filename):
-    """Пытается найти версию в имени файла (например, 6.7.10)."""
-    # Ищем паттерны вида v1.2.3 или 6.7.10
+    """Attempts to find version in filename (e.g., 6.7.10)."""
+    # Search for patterns like v1.2.3 or 6.7.10
     match = re.search(r"(\d+\.\d+\.\d+(\.\d+)?)", filename)
     if match:
         return match.group(1)
-    return "0.0.0" # Если версия не найдена
+    return "0.0.0" # If version not found
 
 def extract_baud(filename):
-    """Пытается найти скорость (baud rate) в имени файла."""
+    """Attempts to find baud rate in filename."""
     match = re.search(r"(115200|230400|460800)", filename)
     if match:
         return match.group(1)
     return "115200"
 
 def fetch_files_from_github(folder_url):
-    """Получает список файлов из папки GitHub."""
+    """Fetches list of files from GitHub folder."""
     api_url = get_github_api_url(folder_url)
     if not api_url:
         print(f"Error: Could not parse URL {folder_url}")
@@ -58,8 +59,87 @@ def fetch_files_from_github(folder_url):
         print(f"Error fetching {api_url}: {e}")
         return []
 
+def fetch_json_firmware_list(json_url):
+    """Fetches firmware list from JSON file (e.g., Sonoff)."""
+    print(f"Fetching JSON firmware list: {json_url}")
+    try:
+        response = requests.get(json_url, headers=HEADERS)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"Error fetching {json_url}: {e}")
+        return None
+
+def get_download_url_from_json(json_url, filename):
+    """Forms download URL for file based on JSON URL."""
+    # Get base URL (directory where JSON is located)
+    parsed = urlparse(json_url)
+    base_path = '/'.join(parsed.path.split('/')[:-1])
+    base_url = f"{parsed.scheme}://{parsed.netloc}{base_path}"
+    return f"{base_url}/{filename}"
+
+def process_json_firmware_config(config, chip_family, board_name, manifest):
+    """Processes configuration with JSON firmware source (e.g., Sonoff)."""
+    json_url = config.get('json')
+    dongle_type = config.get('dongleType')
+    is_signed = config.get('signed', False)
+    
+    if not json_url or not dongle_type:
+        return
+    
+    # Get JSON with firmware
+    json_data = fetch_json_firmware_list(json_url)
+    if not json_data or 'firmwareList' not in json_data:
+        print(f"Error: Invalid JSON structure from {json_url}")
+        return
+    
+    firmware_list = json_data['firmwareList']
+    
+    # Filter by dongleType
+    filtered_firmware = [fw for fw in firmware_list if fw.get('dongleType') == dongle_type]
+    
+    # Mapping of firmware types from task.json to firmwareType from JSON
+    # Example: zigbee_ncp -> "Zigbee", multipan -> "MultiPAN"
+    fw_type_mapping = {}
+    for key in config.keys():
+        if key not in ['json', 'dongleType', 'signed']:
+            fw_config = config[key]
+            if isinstance(fw_config, dict) and 'firmwareType' in fw_config:
+                fw_type_mapping[fw_config['firmwareType']] = key
+    
+    # Process each firmware
+    for fw in filtered_firmware:
+        json_fw_type = fw.get('firmwareType')
+        if json_fw_type not in fw_type_mapping:
+            continue
+        
+        fw_type = fw_type_mapping[json_fw_type]
+        filename = fw.get('name')
+        version = fw.get('version', '0.0.0')
+        baud_rate = fw.get('baudRate', '115200')
+        
+        # Form download URL
+        download_url = get_download_url_from_json(json_url, filename)
+        
+        # Add to manifest
+        if fw_type not in manifest:
+            manifest[fw_type] = {}
+        if chip_family not in manifest[fw_type]:
+            manifest[fw_type][chip_family] = {}
+        if board_name not in manifest[fw_type][chip_family]:
+            manifest[fw_type][chip_family][board_name] = {}
+        
+        file_entry = {
+            "ver": version,
+            "link": download_url,
+            "baud": baud_rate,
+            "signed": is_signed
+        }
+        
+        manifest[fw_type][chip_family][board_name][filename] = file_entry
+
 def main():
-    # 1. Чтение task.json
+    # 1. Read task.json
     try:
         with open(TASK_FILE, 'r', encoding='utf-8') as f:
             task_data = json.load(f)
@@ -69,55 +149,60 @@ def main():
 
     manifest = {}
 
-    # 2. Обход структуры task.json
-    # Структура: Chip -> Board -> List of Configs
+    # 2. Traverse task.json structure
+    # Structure: Chip -> Board -> List of Configs
     for chip_family, boards in task_data.items():
         for board_name, config_list in boards.items():
             
-            # config_list это массив настроек
+            # config_list is an array of configurations
             for config in config_list:
                 
-                # Определяем базовую папку и настройки, если они общие
+                # Check if this is a JSON configuration (e.g., Sonoff)
+                if 'json' in config:
+                    process_json_firmware_config(config, chip_family, board_name, manifest)
+                    continue
+                
+                # Determine base folder and settings if they are common
                 base_folder = config.get('folder')
                 base_signed = config.get('signed')
 
-                # Итерируемся по типам прошивок (zigbee_ncp, zb_router, multipan, etc.)
-                # Исключаем ключи 'folder' и 'signed', так как это метаданные
+                # Iterate over firmware types (zigbee_ncp, zb_router, multipan, etc.)
+                # Exclude 'folder' and 'signed' keys as they are metadata
                 fw_types = [k for k in config.keys() if k not in ['folder', 'signed']]
 
                 for fw_type in fw_types:
                     fw_config = config[fw_type]
                     
-                    # Определяем конкретную папку и статус подписи
-                    # Если внутри типа есть 'folder', используем её, иначе базовую
+                    # Determine specific folder and signature status
+                    # If 'folder' exists within the type, use it, otherwise use base
                     target_folder = fw_config.get('folder', base_folder)
                     is_signed = fw_config.get('signed', base_signed)
-                    mask = fw_config.get('mask') # Маска для фильтрации (например "ncp-uart")
+                    mask = fw_config.get('mask') # Mask for filtering (e.g., "ncp-uart")
 
                     if not target_folder:
                         continue
 
-                    # Получаем список файлов
+                    # Get list of files
                     files = fetch_files_from_github(target_folder)
 
                     for file_info in files:
                         filename = file_info['name']
                         download_url = file_info['download_url']
 
-                        # Пропускаем, если это не файл (например, папка)
+                        # Skip if not a file (e.g., folder)
                         if file_info['type'] != 'file':
                             continue
                         
-                        # Фильтрация по расширению (обычно .gbl или .s37)
+                        # Filter by extension (usually .gbl or .s37)
                         if not (filename.endswith('.gbl') or filename.endswith('.s37') or filename.endswith('.ota')):
                             continue
 
-                        # Фильтрация по маске (если задана)
+                        # Filter by mask (if specified)
                         if mask and mask not in filename:
                             continue
 
-                        # 3. Формирование структуры Manifest
-                        # Структура: fw_type -> chip -> board -> filename -> details
+                        # 3. Form Manifest structure
+                        # Structure: fw_type -> chip -> board -> filename -> details
                         
                         if fw_type not in manifest:
                             manifest[fw_type] = {}
@@ -126,7 +211,7 @@ def main():
                         if board_name not in manifest[fw_type][chip_family]:
                             manifest[fw_type][chip_family][board_name] = {}
 
-                        # Данные файла
+                        # File data
                         file_entry = {
                             "ver": extract_version(filename),
                             "link": download_url,
@@ -136,7 +221,7 @@ def main():
 
                         manifest[fw_type][chip_family][board_name][filename] = file_entry
 
-    # 4. Сохранение manifest.json
+    # 4. Save manifest.json
     with open(MANIFEST_FILE, 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2, ensure_ascii=False)
     
