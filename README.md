@@ -27,7 +27,7 @@ Downloaded from:
 ## 💚 Sl 
 <div align="center">
 
-![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-5_files-brightgreen?style=for-the-badge) ![Zigbee NCP](https://img.shields.io/badge/Zigbee_NCP-101_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread RCP](https://img.shields.io/badge/OpenThread-65_files-brightgreen?style=for-the-badge&color=0000ff) ![Multi PAN](https://img.shields.io/badge/Multi_PAN-66_files-brightgreen?style=for-the-badge&color=ffff00)
+![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-6_files-brightgreen?style=for-the-badge) ![Zigbee NCP](https://img.shields.io/badge/Zigbee_NCP-104_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread RCP](https://img.shields.io/badge/OpenThread-66_files-brightgreen?style=for-the-badge&color=0000ff) ![Multi PAN](https://img.shields.io/badge/Multi_PAN-67_files-brightgreen?style=for-the-badge&color=ffff00)
 
 </div>
 
@@ -35,6 +35,7 @@ Indexed from:
 
 - [darkxst/silabs-firmware-builder](https://github.com/darkxst/silabs-firmware-builder)
 - [xsp1989/zigbeeFirmware](https://github.com/xsp1989/zigbeeFirmware)
+- [SONOFF Dongle Flasher](https://dongle.sonoff.tech/sonoff-dongle-flasher/)
 
 
 ## 🗂 Directory Structure
