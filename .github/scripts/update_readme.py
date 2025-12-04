@@ -32,6 +32,8 @@ def get_ti_repos():
     return repo_counts
 
 def get_sl_repos():
+    """Gets repos from sl/manifest.json - these are indexed (linked) sources.
+    Excludes own repository (xyzroe/XZG-MT) as those are downloaded files."""
     manifest_path = os.path.join("sl", "manifest.json")
     repo_counts = Counter()
     if os.path.exists(manifest_path):
@@ -42,10 +44,33 @@ def get_sl_repos():
                     for board in manifest[category][chip]:
                         for filename, info in manifest[category][chip][board].items():
                             if "link" in info:
-                                repo = get_repo_url(info["link"])
+                                link = info["link"]
+                                # Skip own repository (downloaded files)
+                                if "xyzroe/XZG-MT" in link:
+                                    continue
+                                repo = get_repo_url(link)
                                 if repo:
                                     repo_counts[repo] += 1
     return repo_counts
+
+def get_sl_downloaded_sources():
+    """Gets downloaded sources from sl/task.json - sources with 'json' key."""
+    task_path = os.path.join("sl", "task.json")
+    sources = Counter()
+    if os.path.exists(task_path):
+        with open(task_path, "r") as f:
+            task_data = json.load(f)
+            for chip_family, boards in task_data.items():
+                for board_name, config_list in boards.items():
+                    for config in config_list:
+                        if "json" in config:
+                            json_url = config["json"]
+                            # Convert to display URL
+                            if "dongle.sonoff.tech" in json_url:
+                                sources["https://dongle.sonoff.tech/sonoff-dongle-flasher/"] += 1
+                            else:
+                                sources[json_url] += 1
+    return sources
 
 def count_ti_files(manifest, category):
     count = 0
@@ -62,7 +87,7 @@ def count_sl_files(manifest, category):
                 count += len(manifest[category][chip][board])
     return count
 
-def update_section(content, section_name, counts, repo_counts, repo_header):
+def update_section(content, section_name, counts, repo_counts, repo_header, downloaded_sources=None):
     section_start = content.find(f"## {section_name}")
     if section_start == -1:
         return content
@@ -97,6 +122,17 @@ def update_section(content, section_name, counts, repo_counts, repo_header):
                 match = re.match(r"https://github\.com/([^/]+/[^/]+)", repo_url)
                 repo_name = match.group(1) if match else repo_url
                 repo_list += f"- [{repo_name}]({repo_url})\n"
+        
+        # Add downloaded sources section if provided
+        if downloaded_sources:
+            repo_list += "\nDownloaded from:\n\n"
+            sorted_downloaded = sorted(downloaded_sources.items(), key=lambda item: item[1], reverse=True)
+            for source_url, count in sorted_downloaded:
+                if "dongle.sonoff.tech" in source_url:
+                    repo_list += f"- [SONOFF Dongle Flasher]({source_url})\n"
+                else:
+                    repo_list += f"- [{source_url}]({source_url})\n"
+        
         repo_list += "\n"
         
         section_content = pre_repo + repo_list
@@ -140,7 +176,8 @@ def update_readme():
             "Multi_PAN": count_sl_files(sl_manifest, "multipan")
         }
         sl_repos = get_sl_repos()
-        content = update_section(content, "💚 Sl", sl_counts, sl_repos, "Indexed from:")
+        sl_downloaded = get_sl_downloaded_sources()
+        content = update_section(content, "💚 Sl", sl_counts, sl_repos, "Indexed from:", sl_downloaded)
         print(f"Sl Counts: {sl_counts}")
 
     with open(readme_path, "w") as f:
