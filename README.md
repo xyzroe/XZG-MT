@@ -27,7 +27,7 @@ Downloaded from:
 ## 💚 Sl 
 <div align="center">
 
-![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-2_files-brightgreen?style=for-the-badge) ![Zigbee NCP](https://img.shields.io/badge/Zigbee_NCP-96_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread RCP](https://img.shields.io/badge/OpenThread-64_files-brightgreen?style=for-the-badge&color=0000ff) ![Multi PAN](https://img.shields.io/badge/Multi_PAN-65_files-brightgreen?style=for-the-badge&color=ffff00)
+![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-5_files-brightgreen?style=for-the-badge) ![Zigbee NCP](https://img.shields.io/badge/Zigbee_NCP-101_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread RCP](https://img.shields.io/badge/OpenThread-65_files-brightgreen?style=for-the-badge&color=0000ff) ![Multi PAN](https://img.shields.io/badge/Multi_PAN-66_files-brightgreen?style=for-the-badge&color=ffff00)
 
 </div>
 

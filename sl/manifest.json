@@ -261,6 +261,36 @@
           "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ncp-uart-hw-v7.4.5.0-zbdonglee-230400.gbl",
           "baud": "230400",
           "signed": false
+        },
+        "donglee_mg21_zigbee_stable_6.10.3_115200.gbl": {
+          "ver": "6.10.3",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_6.10.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbee_stable_7.4.1_115200.gbl": {
+          "ver": "7.4.1",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.1_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbee_stable_7.4.3_115200.gbl": {
+          "ver": "7.4.3",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbee_stable_7.4.4_115200.gbl": {
+          "ver": "7.4.4",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.4_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbee_stable_8.0.2_115200.gbl": {
+          "ver": "8.0.2",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_8.0.2_115200.gbl",
+          "baud": "115200",
+          "signed": false
         }
       },
       "ZB-GW04 v1.1 - NO flow control": {
@@ -602,6 +632,26 @@
           "baud": "115200",
           "signed": false
         }
+      },
+      "Sonoff ZBDongle-E": {
+        "donglee_mg21_zigbeerouter_stable_6.10.3_115200.gbl": {
+          "ver": "6.10.3",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_6.10.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbeerouter_stable_7.4.3_115200.gbl": {
+          "ver": "7.4.3",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_7.4.3_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        },
+        "donglee_mg21_zigbeerouter_stable_8.0.2_115200.gbl": {
+          "ver": "8.0.2",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_8.0.2_115200.gbl",
+          "baud": "115200",
+          "signed": false
+        }
       }
     }
   },
@@ -788,6 +838,12 @@
           "ver": "4.4.5",
           "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/rcp-uart-802154-v4.4.5-zbdonglee-460800.gbl",
           "baud": "460800",
+          "signed": false
+        },
+        "donglee_mg21_multipan_beta_4.6.0_115200.gbl": {
+          "ver": "4.6.0",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_multipan_beta_4.6.0_115200.gbl",
+          "baud": "115200",
           "signed": false
         }
       },
@@ -1181,6 +1237,12 @@
         "ot-rcp-v2.4.5.0-zbdonglee-460800.gbl": {
           "ver": "2.4.5.0",
           "link": "https://raw.githubusercontent.com/darkxst/silabs-firmware-builder/main/firmware_builds/zbdonglee/ot-rcp-v2.4.5.0-zbdonglee-460800.gbl",
+          "baud": "460800",
+          "signed": false
+        },
+        "donglee_mg21_openthread_stable_2.4.4_460800.gbl": {
+          "ver": "2.4.4",
+          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_openthread_stable_2.4.4_460800.gbl",
           "baud": "460800",
           "signed": false
         }
