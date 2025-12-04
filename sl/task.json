@@ -39,6 +39,23 @@
         "openthread_rcp": {
           "mask": "ot-rcp"
         }
+      },
+      {
+        "json": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/FIRMWARE_LIST.json",
+        "dongleType": "ZBDongle-E",
+        "signed": false,
+        "zigbee_ncp": {
+          "firmwareType": "Zigbee"
+        },
+        "multipan": {
+          "firmwareType": "MultiPAN"
+        },
+        "openthread_rcp": {
+          "firmwareType": "OpenThread"
+        },
+        "zb_router": {
+          "firmwareType": "Zigbee Router"
+        }
       }
     ],
     "ZB-GW04 v1.1 - NO flow control": [
