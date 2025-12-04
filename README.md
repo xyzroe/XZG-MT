@@ -35,7 +35,10 @@ Indexed from:
 
 - [darkxst/silabs-firmware-builder](https://github.com/darkxst/silabs-firmware-builder)
 - [xsp1989/zigbeeFirmware](https://github.com/xsp1989/zigbeeFirmware)
-- [xyzroe/XZG-MT](https://github.com/xyzroe/XZG-MT)
+
+Downloaded from:
+
+- [SONOFF Dongle Flasher](https://dongle.sonoff.tech/sonoff-dongle-flasher/)
 
 
 ## 🗂 Directory Structure
