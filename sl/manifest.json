@@ -264,31 +264,31 @@
         },
         "donglee_mg21_zigbee_stable_6.10.3_115200.gbl": {
           "ver": "6.10.3",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_6.10.3_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff ZBDongle-E/donglee_mg21_zigbee_stable_6.10.3_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbee_stable_7.4.1_115200.gbl": {
           "ver": "7.4.1",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.1_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff ZBDongle-E/donglee_mg21_zigbee_stable_7.4.1_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbee_stable_7.4.3_115200.gbl": {
           "ver": "7.4.3",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.3_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff ZBDongle-E/donglee_mg21_zigbee_stable_7.4.3_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbee_stable_7.4.4_115200.gbl": {
           "ver": "7.4.4",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_7.4.4_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff ZBDongle-E/donglee_mg21_zigbee_stable_7.4.4_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbee_stable_8.0.2_115200.gbl": {
           "ver": "8.0.2",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbee_stable_8.0.2_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff ZBDongle-E/donglee_mg21_zigbee_stable_8.0.2_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -618,19 +618,19 @@
       "Sonoff Dongle-LMG21": {
         "donglelmg21_mg21_zigbee_stable_7.4.5_115200.gbl": {
           "ver": "7.4.5",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_zigbee_stable_7.4.5_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff Dongle-LMG21/donglelmg21_mg21_zigbee_stable_7.4.5_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglelmg21_mg21_zigbee_stable_7.5.0_115200.gbl": {
           "ver": "7.5.0",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_zigbee_stable_7.5.0_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff Dongle-LMG21/donglelmg21_mg21_zigbee_stable_7.5.0_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglelmg21_mg21_zigbee_stable_8.0.2_115200.gbl": {
           "ver": "8.0.2",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_zigbee_stable_8.0.2_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zigbee_ncp/Sonoff Dongle-LMG21/donglelmg21_mg21_zigbee_stable_8.0.2_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -656,19 +656,19 @@
       "Sonoff ZBDongle-E": {
         "donglee_mg21_zigbeerouter_stable_6.10.3_115200.gbl": {
           "ver": "6.10.3",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_6.10.3_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zb_router/Sonoff ZBDongle-E/donglee_mg21_zigbeerouter_stable_6.10.3_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbeerouter_stable_7.4.3_115200.gbl": {
           "ver": "7.4.3",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_7.4.3_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zb_router/Sonoff ZBDongle-E/donglee_mg21_zigbeerouter_stable_7.4.3_115200.gbl",
           "baud": "115200",
           "signed": false
         },
         "donglee_mg21_zigbeerouter_stable_8.0.2_115200.gbl": {
           "ver": "8.0.2",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_zigbeerouter_stable_8.0.2_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zb_router/Sonoff ZBDongle-E/donglee_mg21_zigbeerouter_stable_8.0.2_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -676,7 +676,7 @@
       "Sonoff Dongle-LMG21": {
         "donglelmg21_mg21_zigbeerouter_stable_7.5.0_115200.gbl": {
           "ver": "7.5.0",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_zigbeerouter_stable_7.5.0_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/zb_router/Sonoff Dongle-LMG21/donglelmg21_mg21_zigbeerouter_stable_7.5.0_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -870,7 +870,7 @@
         },
         "donglee_mg21_multipan_beta_4.6.0_115200.gbl": {
           "ver": "4.6.0",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_multipan_beta_4.6.0_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/multipan/Sonoff ZBDongle-E/donglee_mg21_multipan_beta_4.6.0_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -1092,7 +1092,7 @@
       "Sonoff Dongle-LMG21": {
         "donglelmg21_mg21_multipan_stable_4.6.0_115200.gbl": {
           "ver": "4.6.0",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_multipan_stable_4.6.0_115200.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/multipan/Sonoff Dongle-LMG21/donglelmg21_mg21_multipan_stable_4.6.0_115200.gbl",
           "baud": "115200",
           "signed": false
         }
@@ -1278,7 +1278,7 @@
         },
         "donglee_mg21_openthread_stable_2.4.4_460800.gbl": {
           "ver": "2.4.4",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglee_mg21_openthread_stable_2.4.4_460800.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/openthread_rcp/Sonoff ZBDongle-E/donglee_mg21_openthread_stable_2.4.4_460800.gbl",
           "baud": "460800",
           "signed": false
         }
@@ -1500,7 +1500,7 @@
       "Sonoff Dongle-LMG21": {
         "donglelmg21_mg21_openthread_stable_2.4.4_460800.gbl": {
           "ver": "2.4.4",
-          "link": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/donglelmg21_mg21_openthread_stable_2.4.4_460800.gbl",
+          "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/sl/openthread_rcp/Sonoff Dongle-LMG21/donglelmg21_mg21_openthread_stable_2.4.4_460800.gbl",
           "baud": "460800",
           "signed": false
         }
