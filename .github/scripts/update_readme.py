@@ -4,6 +4,10 @@ import re
 from collections import Counter
 
 def get_repo_url(url):
+    # Check for Sonoff dongle flasher URLs
+    if "dongle.sonoff.tech" in url:
+        return "https://dongle.sonoff.tech/sonoff-dongle-flasher/"
+    
     match = re.match(r"(https://github\.com/[^/]+/[^/]+)", url)
     if match:
         return match.group(1)
@@ -85,10 +89,14 @@ def update_section(content, section_name, counts, repo_counts, repo_header):
         
         repo_list = "\n\n"
         for repo_url, count in sorted_repos:
-            # Extract owner/repo from url
-            match = re.match(r"https://github\.com/([^/]+/[^/]+)", repo_url)
-            repo_name = match.group(1) if match else repo_url
-            repo_list += f"- [{repo_name}]({repo_url})\n"
+            # Check for Sonoff dongle flasher
+            if "dongle.sonoff.tech" in repo_url:
+                repo_list += f"- [SONOFF Dongle Flasher]({repo_url})\n"
+            else:
+                # Extract owner/repo from url
+                match = re.match(r"https://github\.com/([^/]+/[^/]+)", repo_url)
+                repo_name = match.group(1) if match else repo_url
+                repo_list += f"- [{repo_name}]({repo_url})\n"
         repo_list += "\n"
         
         section_content = pre_repo + repo_list
