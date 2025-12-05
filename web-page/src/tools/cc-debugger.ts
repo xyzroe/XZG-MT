@@ -1409,7 +1409,6 @@ export class CCDebugger {
     try {
       // Read flash data in chunks to avoid timeout
       const VERIFY_CHUNK_SIZE = 4096; // 4KB chunks
-      let allMatch = true;
       let currentPercent = 0;
 
       for (let offset = 0; offset < verifySize; offset += VERIFY_CHUNK_SIZE) {

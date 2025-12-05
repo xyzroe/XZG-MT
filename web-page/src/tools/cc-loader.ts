@@ -2,20 +2,7 @@ import { sleep } from "../utils/index";
 import { parseIntelHex } from "../utils/intelhex";
 import { saveToFile } from "../utils/http";
 
-import {
-  //log,
-  optErase,
-  optWrite,
-  optVerify,
-  verifyMethodSelect,
-  writeMethodSelect,
-  localFile,
-  targetIdEl,
-  targetIeeeEl,
-  debugFwVersionEl,
-  debugModelEl,
-  debugManufEl,
-} from "../ui";
+import { optWrite, optVerify, localFile, targetIdEl, targetIeeeEl, debugModelEl, debugManufEl } from "../ui";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
@@ -87,6 +74,7 @@ export class CCLoader {
 
   private logger: (msg: string) => void = () => {};
   private progressCallback: (percent: number, msg: string) => void = () => {};
+  private setLinesHandler: (rstLevel: boolean, bslLevel: boolean) => void = () => {};
 
   public setLogger(logger: (msg: string) => void) {
     this.logger = logger;
@@ -94,6 +82,17 @@ export class CCLoader {
 
   public setProgressCallback(cb: (percent: number, msg: string) => void) {
     this.progressCallback = cb;
+  }
+
+  public setSetLinesHandler(handler: (rstLevel: boolean, bslLevel: boolean) => void) {
+    this.setLinesHandler = handler;
+  }
+
+  private async setLines(rstLevel: boolean, bslLevel: boolean): Promise<void> {
+    if (!this.setLinesHandler) {
+      throw new Error("setLinesHandler not set");
+    }
+    this.setLinesHandler(rstLevel, bslLevel);
   }
 
   private ensureListener() {
@@ -629,16 +628,16 @@ export class CCLoader {
     this.logger(`CC Loader reset: device type ${deviceType}`);
 
     // Import setLines from flasher
-    const { setLines } = await import("../flasher");
+    //const { setLines } = await import("../flasher");
 
     if (deviceType === 0) {
       // Default (UNO): DTR off, RTS off
       this.logger("Setting DTR=off, RTS=off for UNO-like device");
-      await setLines(false, false);
+      await this.setLines(false, false);
     } else {
       // Leonardo: DTR on, RTS off
       this.logger("Setting DTR=on, RTS=off for Leonardo-like device");
-      await setLines(true, false);
+      await this.setLines(true, false);
     }
 
     await sleep(1000);

@@ -41,11 +41,11 @@ import {
   btnNvErase,
   enterBslBtn,
   resetBtn,
-  btnPing,
-  btnVersion,
+  pingBtn,
+  getVersionBtn,
   firmwareVersionEl,
   bootloaderVersionEl,
-  btnGetModel,
+  getModelBtn,
   btnNvWrite,
   btnFlash,
   bslUrlSelect,
@@ -90,6 +90,7 @@ import {
   deviceDetectBusy,
   updateConnectionUI,
   debuggerOptionWrap,
+  portInfoEl,
 } from "./ui";
 
 // Global state variables and UI elements
@@ -397,8 +398,8 @@ resetBtn?.addEventListener("click", async () => {
   });
 });
 
-btnPing?.addEventListener("click", async () => {
-  await withButtonStatus(btnPing!, async () => {
+pingBtn?.addEventListener("click", async () => {
+  await withButtonStatus(pingBtn!, async () => {
     const family = getSelectedFamily();
     if (family === "esp") {
       log("Ping not supported for ESP");
@@ -416,8 +417,8 @@ btnPing?.addEventListener("click", async () => {
   });
 });
 
-btnVersion?.addEventListener("click", async () => {
-  await withButtonStatus(btnVersion!, async () => {
+getVersionBtn?.addEventListener("click", async () => {
+  await withButtonStatus(getVersionBtn!, async () => {
     log("Checking firmware version...");
     const family = getSelectedFamily();
     if (family === "esp") {
@@ -425,31 +426,45 @@ btnVersion?.addEventListener("click", async () => {
     }
     if (family === "ti") {
       if (!ti_tools) throw new Error("TiTools not initialized");
-      const info = await ti_tools.getFwVersion();
-      const ok = !!info;
-      if (info && firmwareVersionEl) {
-        firmwareVersionEl.value = String(info.fwRev);
-        log(`FW version: ${info.fwRev}`);
+
+      // Try Zigbee first
+      const info = await ti_tools.getFwVersion().catch(() => null);
+      if (info) {
+        if (firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+        log(`Zigbee FW version: ${info.fwRev}`);
+        return;
       }
-      if (!ok) throw new Error("Version not available");
+
+      // Fallback to OpenThread RCP (460800 baud)
+      log("FW version request: timed out or no response");
+      // TI with OpenThread RCP  support only 460800 baud
+      await changeBaud(460800);
+      await performReset();
+      await sleep(1000);
+      const rcpInfo = await ti_tools.detectOpenThreadRcp().catch(() => null);
+      if (rcpInfo) {
+        if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+        log(`OpenThread RCP version: ${rcpInfo.version}`);
+        return;
+      }
+
+      throw new Error("Version not available");
     }
     if (family === "sl") {
       if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
-      const ezspVersion = await sl_tools.getApplicationVersion();
-      if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-      if (ezspVersion && firmwareVersionEl) {
-        firmwareVersionEl.value = String(ezspVersion || "");
-        log(`FW version: ${ezspVersion || "unknown"}`);
-      } else {
-        throw new Error("Version not available");
-      }
+      const result = await sl_tools.probe(
+        "auto",
+        findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+        implyGateToggle?.checked ?? true
+      );
+      if (firmwareVersionEl) firmwareVersionEl.value = result.version;
     }
   });
 });
 
 // Get Model action: detect chip and memory without flashing
-btnGetModel?.addEventListener("click", async () => {
-  await withButtonStatus(btnGetModel!, async () => {
+getModelBtn?.addEventListener("click", async () => {
+  await withButtonStatus(getModelBtn!, async () => {
     if (getSelectedFamily() === "ti_old") {
       if (ccDebugger) {
         await ccDebugger?.refreshInfo();
@@ -594,6 +609,7 @@ btnFlash.addEventListener("click", async () => {
 
         if (family == "ti") {
           //log("Pinging device...");
+          await sleep(1000);
           try {
             const ok = await pingWithBaudRetries();
             if (!ok) log("Ping: timed out or no response");
@@ -605,24 +621,35 @@ btnFlash.addEventListener("click", async () => {
         log("Checking firmware version...");
         if (family == "sl") {
           // After flash, re-read device info
-          await sleep(5000);
+          await sleep(1000);
 
           if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
-          const ezspVersion = await sl_tools.getApplicationVersion();
-          if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-          log(`EZSP app version: ${ezspVersion}`);
+          const result = await sl_tools.probe(
+            "auto",
+            findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+            implyGateToggle?.checked ?? true
+          );
+          if (firmwareVersionEl) firmwareVersionEl.value = result.version;
         }
         if (family == "ti") {
-          try {
-            // use local wrapper to log and update UI
-            if (!ti_tools) throw new Error("TiTools not initialized");
-            const info = await ti_tools.getFwVersion();
-            if (info && firmwareVersionEl) {
-              firmwareVersionEl.value = String(info.fwRev);
-              log(`FW version: ${info.fwRev}`);
+          // use local wrapper to log and update UI
+          if (!ti_tools) throw new Error("TiTools not initialized");
+          const info = await ti_tools.getFwVersion();
+          if (info) {
+            if (firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+            log(`Zigbee FW version: ${info.fwRev}`);
+          }
+          if (!info) {
+            log("FW version request: timed out or no response");
+            // TI with OpenThread RCP  support only 460800 baud
+            await changeBaud(460800);
+            await performReset();
+            await sleep(1000);
+            const rcpInfo = await ti_tools.detectOpenThreadRcp();
+            if (rcpInfo) {
+              if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+              log(`OpenThread RCP version: ${rcpInfo.version}`);
             }
-          } catch (e: any) {
-            log("Version read error: " + (e?.message || String(e)));
           }
         }
         return true;
@@ -742,30 +769,12 @@ btnReadFlash?.addEventListener("click", async () => {
       // Use CC Debugger
       await ccDebugger?.dumpFlash();
     } else if (ti_tools) {
-      try {
-        if (activeConnection === "serial") {
-          await (serial as any)?.reopenWithBaudrate?.(500000);
-          log("Serial: switched baud to 500000");
-        } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-          await changeBaudOverTcp(460800);
-          log("TCP: switched baud to 460800");
-        }
-      } catch {
-        log("Serial: failed to switch baud");
-      }
+      await changeBaud(500000, 460800);
+
       await ti_tools?.dumpFlash();
+
       const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
-      try {
-        if (activeConnection === "serial") {
-          await (serial as any)?.reopenWithBaudrate?.(originalBaudRate);
-          log(`Serial: switched baud to ${originalBaudRate}`);
-        } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-          await changeBaudOverTcp(originalBaudRate);
-          log(`TCP: switched baud to ${originalBaudRate}`);
-        }
-      } catch {
-        log("Serial: failed to switch baud");
-      }
+      await changeBaud(originalBaudRate);
     }
 
     setTimeout(() => flashWarning?.classList.add("d-none"), 500);
@@ -862,6 +871,7 @@ connectLoaderBtn?.addEventListener("click", async () => {
       ccLoader.setProgressCallback((percent: number, msg: string) => {
         fwProgress(percent, msg);
       });
+      ccLoader.setSetLinesHandler(setLines);
 
       if (connectLoaderBtn) {
         connectLoaderBtn.classList.replace("btn-warning", "btn-danger");
@@ -1052,11 +1062,22 @@ function loadCtrlSettings() {
   try {
     const mode = localStorage.getItem("pinModeSelect");
     if (pinModeSelect && mode !== null) pinModeSelect.checked = mode === "1";
-    if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value; // || "cmdZigBSL";
-    if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value; // || "cmdZigRST";
-    if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value; // || "";
-    if (invertLevel) invertLevel.checked = localStorage.getItem("invertLevel") === "1";
-    if (implyGateToggle) implyGateToggle.checked = localStorage.getItem("implyGate") === "1";
+
+    if (bslUrlInput) bslUrlInput.value = localStorage.getItem("bslUrlInput") || bslUrlInput.value;
+    if (rstUrlInput) rstUrlInput.value = localStorage.getItem("rstUrlInput") || rstUrlInput.value;
+    if (baudUrlInput) baudUrlInput.value = localStorage.getItem("baudUrlInput") || baudUrlInput.value;
+
+    const invertLevelValue = localStorage.getItem("invertLevel");
+    if (invertLevel && invertLevelValue !== null) invertLevel.checked = invertLevelValue === "1";
+
+    const implyGateValue = localStorage.getItem("implyGate");
+    if (implyGateToggle && implyGateValue !== null) implyGateToggle.checked = implyGateValue === "1";
+
+    const findBaudValue = localStorage.getItem("findBaud");
+    if (findBaudToggle && findBaudValue !== null) findBaudToggle.checked = findBaudValue === "1";
+
+    if (bitrateInput) bitrateInput.value = localStorage.getItem("bitrateInput") || bitrateInput.value;
+
     const savedFamily = localStorage.getItem("chip_family");
     if (savedFamily) {
       const radio = document.querySelector(`input[name="chip_family"][value="${savedFamily}"]`) as HTMLInputElement;
@@ -1078,6 +1099,8 @@ export function saveCtrlSettings() {
     if (baudUrlInput) localStorage.setItem("baudUrlInput", baudUrlInput.value.trim());
     if (invertLevel) localStorage.setItem("invertLevel", invertLevel.checked ? "1" : "0");
     if (implyGateToggle) localStorage.setItem("implyGate", implyGateToggle.checked ? "1" : "0");
+    if (findBaudToggle) localStorage.setItem("findBaud", findBaudToggle.checked ? "1" : "0");
+    if (bitrateInput) localStorage.setItem("bitrateInput", bitrateInput.value.trim());
     localStorage.setItem("chip_family", getSelectedFamily());
   } catch {
     // ignore
@@ -1362,6 +1385,8 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       detectedFamily = null;
       // Silabs stub path for now
       if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
+      // Silabs bootloader requires 115200 baud
+      await changeBaud(115200);
       const info = await sl_tools.getChipInfo();
       if (chipModelEl) chipModelEl.value = info.chipName;
       if (bootloaderVersionEl) bootloaderVersionEl.value = info.bootloaderVersion || "";
@@ -1381,9 +1406,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
   return detectedFamily;
 }
 
-async function pingWithBaudRetries(
-  baudCandidates: number[] = [9600, 19200, 38400, 57600, 115200, 230400, 460800]
-): Promise<boolean> {
+async function pingWithBaudRetries(baudCandidates: number[] = [115200, 460800, 230400]): Promise<boolean> {
   // Try a normal ping first
   const findBaud = !!findBaudToggle?.checked;
   if (!ti_tools) return false;
@@ -1394,7 +1417,7 @@ async function pingWithBaudRetries(
       (findBaud && activeConnection === "serial") ||
       (findBaud && activeConnection === "tcp" && (baudUrlInput?.value ?? "").trim() !== "")
     ) {
-      log(baudUrlInput?.value || "NULL");
+      //log(baudUrlInput?.value || "NULL");
       // If findBaud is enabled, we need to check for baud rate changes
       if (ok0) return true;
     } else {
@@ -1411,7 +1434,7 @@ async function pingWithBaudRetries(
 
   const originalBaud = parseInt(bitrateInput.value, 10) || 115200;
   // ensure unique sorted list and make sure original baud is present
-  const bauds = Array.from(new Set(baudCandidates.concat([originalBaud]))).sort((a, b) => a - b);
+  const bauds = Array.from(new Set(baudCandidates.concat([originalBaud])));
 
   // If there's only one candidate (the original), nothing to try
   if (bauds.length <= 1) return false;
@@ -1422,36 +1445,17 @@ async function pingWithBaudRetries(
 
   for (; idx !== startIdx; idx = (idx + 1) % bauds.length) {
     const b = bauds[idx];
-    try {
-      // if active serial connection
-      if (activeConnection === "serial") {
-        await (serial as any)?.reopenWithBaudrate?.(b);
-        log(`Serial: switched baud to ${b} for ping retry`);
-      } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-        await changeBaudOverTcp(b);
 
-        log(`TCP: requested baud change to ${b} for ping retry`);
-      }
-    } catch (e: any) {
-      log(`Serial: failed to switch baud to ${b}: ${e?.message || String(e)}`);
-      continue;
-    }
+    await changeBaud(b);
 
     // give device/bridge a moment; perform a reset to let device re-sync at new baud
-    await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
-    await sleep(500);
+    await performReset();
+    await sleep(1000);
 
     try {
       log("Pinging application...");
       const ok = await ti_tools.pingApp();
       if (ok) {
-        // keep new baud in UI
-        try {
-          bitrateInput.value = String(b);
-          updateConnectionUI();
-        } catch {
-          // ignore
-        }
         log(`Ping succeeded at ${b}bps`);
         return true;
       } else {
@@ -1463,23 +1467,8 @@ async function pingWithBaudRetries(
   }
 
   // restore original baud if cycling failed
-  try {
-    if (activeConnection === "serial") {
-      await (serial as any)?.reopenWithBaudrate?.(originalBaud);
-      log(`Serial: restored baud to ${originalBaud}`);
-    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-      await changeBaudOverTcp(originalBaud);
-      log(`TCP: restored baud to ${originalBaud}`);
-    }
 
-    try {
-      bitrateInput.value = String(originalBaud);
-    } catch {
-      // ignore
-    }
-  } catch {
-    // ignore
-  }
+  await changeBaud(originalBaud);
 
   return false;
 }
@@ -1490,13 +1479,11 @@ async function runConnectSequence(): Promise<void> {
   deviceDetectBusy(true);
   try {
     // When using local-serial over TCP bridge, give the bridge a moment to accept TCP and open serial
-    try {
-      if (getCtrlMode() === "bridge-sc") {
-        await sleep(250);
-      }
-    } catch {
-      // ignore
+
+    if (getCtrlMode() === "bridge-sc") {
+      await sleep(250);
     }
+
     const family = getSelectedFamily();
     if (family === "ti") {
       // Initialize TiTools if needed
@@ -1506,9 +1493,70 @@ async function runConnectSequence(): Promise<void> {
         fwProgress(percent, msg);
       });
       ti_tools.setSetLinesHandler(setLines);
+    } else if (family === "sl") {
+      // Silabs path: enter bootloader, read BL version, then reset back to app
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
+      sl_tools.setLogger((msg: string) => log(msg));
+      sl_tools.setProgressCallback((percent: number, msg: string) => {
+        fwProgress(percent, msg);
+      });
+      sl_tools.setSetLinesHandler(setLines);
+    }
 
-      await enterBsl();
-      await readChipInfo(false);
+    // Try to read chip model with automatic parameter switching on failure
+    // Strategy: try different combinations of invertLevel and implyGate
+    const originalInvertLevel = invertLevel?.checked ?? false;
+    const originalImplyGate = implyGateToggle?.checked ?? false;
+
+    const combinations = [
+      // First try with current settings
+      { invert: originalInvertLevel, implyGate: originalImplyGate },
+      // Then try toggling invertLevel
+      { invert: !originalInvertLevel, implyGate: originalImplyGate },
+      // Then try toggling implyGate
+      { invert: originalInvertLevel, implyGate: !originalImplyGate },
+      // Finally try both toggled
+      { invert: !originalInvertLevel, implyGate: !originalImplyGate },
+    ];
+
+    let chipReadSuccess = false;
+
+    for (let i = 0; i < combinations.length; i++) {
+      const combo = combinations[i];
+
+      // Apply settings for this attempt
+      if (invertLevel) invertLevel.checked = combo.invert;
+      if (implyGateToggle) implyGateToggle.checked = combo.implyGate;
+
+      if (i > 0) {
+        log(`Retrying with invertLevel=${combo.invert}, implyGate=${combo.implyGate}`);
+      }
+
+      try {
+        await enterBsl();
+        await readChipInfo(false);
+
+        // If we get here without error, success!
+        chipReadSuccess = true;
+        if (i > 0) {
+          log(`Successfully read chip model with invertLevel=${combo.invert}, implyGate=${combo.implyGate}`);
+          saveCtrlSettings(); // Save working settings
+        }
+        break;
+      } catch (e: any) {
+        log(`BSL/chip read error (attempt ${i + 1}/${combinations.length}): ${e?.message || String(e)}`);
+        // Continue to next combination
+      }
+    }
+
+    if (!chipReadSuccess) {
+      // Restore original settings if all attempts failed
+      if (invertLevel) invertLevel.checked = originalInvertLevel;
+      if (implyGateToggle) implyGateToggle.checked = originalImplyGate;
+      log("Failed to read chip model after all attempts. Check connection and settings.");
+    }
+
+    if (family == "ti") {
       await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
       await sleep(1000);
       try {
@@ -1525,49 +1573,36 @@ async function runConnectSequence(): Promise<void> {
         if (!ti_tools) throw new Error("TiTools not initialized");
         log("Checking firmware version...");
         const info = await ti_tools.getFwVersion();
+        if (info) {
+          if (firmwareVersionEl) firmwareVersionEl.value = String(info.fwRev);
+          log(`Zigbee FW version: ${info.fwRev}`);
+        }
         if (!info) {
           log("FW version request: timed out or no response");
-        } else if (firmwareVersionEl) {
-          firmwareVersionEl.value = String(info.fwRev);
-          log(`FW version: ${info.fwRev}`);
+          // TI with OpenThread RCP  support only 460800 baud
+          await changeBaud(460800);
+          await performReset();
+          await sleep(1000);
+          const rcpInfo = await ti_tools.detectOpenThreadRcp();
+          if (rcpInfo) {
+            if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+            log(`OpenThread RCP version: ${rcpInfo.version}`);
+          }
         }
       } catch {
         log("FW version check skipped");
       }
     } else if (family === "sl") {
-      // Silabs path: enter bootloader, read BL version, then reset back to app
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
-      sl_tools.setLogger((msg: string) => log(msg));
-      sl_tools.setProgressCallback((percent: number, msg: string) => {
-        fwProgress(percent, msg);
-      });
       try {
-        // // Enter Gecko Bootloader
-        // await enterBsl();
-        // // Give BL a brief moment, then query menu/version
-        // await sleep(200);
-        // const blv = await sl_tools.getBootloaderVersion();
-        // log(`Silabs bootloader: v${blv}`);
-        // if (bootloaderVersionEl) bootloaderVersionEl.value = `${blv}`;
-        // if (chipModelEl && !chipModelEl.value) chipModelEl.value = "EFR32";
-        await readChipInfo(false);
+        if (!sl_tools) throw "SilabsTools not initialized";
+        const result = await sl_tools.probe(
+          "auto",
+          findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+          implyGateToggle?.checked ?? true
+        );
+        if (firmwareVersionEl) firmwareVersionEl.value = result.version;
       } catch (e: any) {
-        log("Silabs bootloader check failed: " + (e?.message || String(e)));
-      }
-      try {
-        await performReset();
-      } catch (e: any) {
-        log("Reset failed: " + (e?.message || String(e)));
-      }
-      // Read application firmware version via EZSP
-      await sleep(1000); // Give more time for application to start
-      try {
-        if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
-        const ezspVersion = await sl_tools.getApplicationVersion();
-        if (firmwareVersionEl) firmwareVersionEl.value = ezspVersion;
-        log(`EZSP app version: ${ezspVersion}`);
-      } catch (e: any) {
-        log("EZSP app version check failed: " + (e?.message || String(e)));
+        log("Silabs probe failed: " + (e?.message || String(e)));
       }
     }
   } finally {
@@ -1599,18 +1634,12 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   if (!hexImage) throw new Error("Load HEX first");
 
   if (getSelectedFamily() === "ti") {
-    // If using Web Serial, bump baud to 500000 for faster flashing
-    try {
-      if (activeConnection === "serial") {
-        await (serial as any)?.reopenWithBaudrate?.(500000);
-        log("Serial: switched baud to 500000");
-      } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-        await changeBaudOverTcp(460800);
-        log("TCP: switched baud to 460800");
-      }
-    } catch {
-      log("Serial: failed to switch baud");
-    }
+    // If possible to use high baud, switch to it before flashing
+    await changeBaud(500000, 460800);
+  }
+  if (getSelectedFamily() === "sl") {
+    // SL bootloader needs 115200 for flashing
+    await changeBaud(115200);
   }
   // BSL packet length is 1 byte; with header+cmd, safe payload per packet is <= 248 bytes
   const userChunk = 248;
@@ -1806,56 +1835,12 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log(ok ? "Verify OK" : "Verify FAILED");
   }
 
-  // If using Web Serial, bump baud back to original that was set in ui
+  // bump baud back to original that was set in ui
   const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
-  try {
-    if (activeConnection === "serial") {
-      await (serial as any)?.reopenWithBaudrate?.(originalBaudRate);
-      log(`Serial: switched baud to ${originalBaudRate}`);
-    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
-      await changeBaudOverTcp(originalBaudRate);
-      log(`TCP: switched baud to ${originalBaudRate}`);
-    }
-  } catch {
-    log("Serial: failed to switch baud");
-  }
+  await changeBaud(originalBaudRate);
 
   setTimeout(() => flashWarning?.classList.add("d-none"), 500);
 }
-
-// async function bslUseLines() {
-//   if (implyGateToggle?.checked != true) {
-//     await setLines(true, true);
-//     await sleep(250);
-//     await setLines(true, false);
-//     await sleep(250);
-//     await setLines(false, false);
-//     await sleep(250);
-//     await setLines(true, false);
-//     await sleep(500);
-//     await setLines(true, true);
-//     await sleep(500);
-//   } else {
-//     await setLines(true, true);
-//     await sleep(250);
-//     await setLines(true, false);
-//     await sleep(250);
-//     await setLines(false, true);
-//     await sleep(450);
-//     await setLines(false, false);
-//     await sleep(250);
-//   }
-// }
-
-// // Reset the device out of BSL and back into application
-// async function resetUseLines() {
-//   await setLines(true, true);
-//   await sleep(500);
-//   await setLines(false, true);
-//   await sleep(500);
-//   await setLines(true, true);
-//   await sleep(1000);
-// }
 
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
@@ -1889,17 +1874,17 @@ async function nvramWriteAll(obj: any): Promise<void> {
 // DTR = BSL(FLASH), RTS = RESET; (active low);
 // without NPN - rts=0 reset=0, dtr=0 bsl=0
 // with NPN invert - rts=0 reset=1, dtr=0 bsl=1
-export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
+const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
   const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
   // just for simplicity
   const bsl = bslLevelEff;
   const rst = rstLevelEff;
   if (activeConnection === "serial") {
-    log(`CTRL(serial): RTS(RST)=${rst ? "1" : "0"} DTR(BSL)=${bsl ? "1" : "0"}`);
+    // log(`CTRL(serial): RTS(RST)=${rst ? "1" : "0"} DTR(BSL)=${bsl ? "1" : "0"}`);
     const p: any = serial as any;
     if (!p || typeof p.setSignals !== "function") {
-      log("Warning: Web Serial setSignals() not supported in this browser; cannot toggle DTR/RTS");
+      // log("Warning: Web Serial setSignals() not supported in this browser; cannot toggle DTR/RTS");
       throw new Error("setSignals unsupported");
     }
     await p.setSignals({ dataTerminalReady: bsl, requestToSend: rst });
@@ -1914,7 +1899,7 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
     const rstHasSet = /\{SET\}/.test(rstTpl);
 
     const bridgeSelected = /\{BRIDGE\}/.test(bslTpl) && /\{BRIDGE\}/.test(rstTpl);
-    log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} BSL=${bsl ? "1" : "0"} `);
+    // log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} BSL=${bsl ? "1" : "0"} `);
     //check if templates has same beginning before "&" - make one request if so
     if (bridgeSelected && bslHasSet && rstHasSet && bslTpl.split("&")[0] === rstTpl.split("&")[0]) {
       const combinedTpl = bslTpl.split("&")[0];
@@ -1953,13 +1938,28 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   }
 };
 
+export async function changeBaud(local: number, remote: number = local): Promise<void> {
+  try {
+    if (activeConnection === "serial") {
+      await (serial as any)?.reopenWithBaudrate?.(local);
+      log(`Serial: switched baud to ${local}`);
+      if (portInfoEl) portInfoEl.value = `serial @ ${local}bps`;
+    } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
+      await changeBaudOverTcp(remote);
+      log(`TCP: switched baud to ${remote}`);
+    }
+  } catch (e: any) {
+    log("Serial: failed to switch baud " + (e?.message || String(e)));
+  }
+}
+
 async function changeBaudOverTcp(baud: number): Promise<void> {
   if (activeConnection !== "tcp" || !tcp) throw new Error("No TCP connection");
   const tpl = (baudUrlInput?.value || "").trim();
   // const rstTpl = (rstUrlInput?.value || DEFAULT_CONTROL.rstPath).trim();
   const hasSet = /\{SET\}/.test(tpl);
   // const hasRstSet = /\{SET\}/.test(rstTpl);
-  log(`CTRL(tcp): changing baud -> ${baud} using template ${tpl}`);
+  // log(`CTRL(tcp): changing baud -> ${baud} using template ${tpl}`);
   // send control URL (may be opaque/no-cors)
   await sendCtrlUrl(tpl, hasSet ? baud : undefined).catch((e: any) => {
     log("Baud change failed: " + (e?.message || String(e)));

@@ -3,8 +3,11 @@ import { sleep } from "../utils/index";
 import { padToMultiple } from "../utils/crc";
 import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
-import { setLines } from "../flasher";
-import { implyGateToggle } from "../ui";
+import { changeBaud } from "../flasher";
+import { SpinelClient } from "./spinel";
+
+// Re-export SpinelClient for backwards compatibility
+export { SpinelClient } from "./spinel";
 
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
@@ -22,6 +25,7 @@ export class SilabsTools {
   private version: string | null = null;
   private uploadStatus: string | null = null;
   private ezspClient: EzspAshClient | null = null;
+  private spinelClient: SpinelClient | null = null;
 
   // XMODEM state
   private xmodemFirmware: Uint8Array | null = null;
@@ -47,6 +51,7 @@ export class SilabsTools {
 
   private logger: (msg: string) => void = () => {};
   private progressCallback: (percent: number, msg: string) => void = () => {};
+  private setLinesHandler: (rstLevel: boolean, bslLevel: boolean) => void = () => {};
 
   public setLogger(logger: (msg: string) => void) {
     this.logger = logger;
@@ -54,6 +59,17 @@ export class SilabsTools {
 
   public setProgressCallback(cb: (percent: number, msg: string) => void) {
     this.progressCallback = cb;
+  }
+
+  public setSetLinesHandler(handler: (rstLevel: boolean, bslLevel: boolean) => void) {
+    this.setLinesHandler = handler;
+  }
+
+  private async setLines(rstLevel: boolean, bslLevel: boolean): Promise<void> {
+    if (!this.setLinesHandler) {
+      throw new Error("setLinesHandler not set");
+    }
+    this.setLinesHandler(rstLevel, bslLevel);
   }
 
   constructor(link: Link) {
@@ -128,7 +144,7 @@ export class SilabsTools {
           break;
         }
 
-        console.log("XMODEM ready, starting transfer");
+        // console.log("XMODEM ready, starting transfer");
         this.buffer = new Uint8Array(0);
         this.state = State.XMODEM_UPLOADING;
         this.xmodemSendChunkOrEOT();
@@ -141,7 +157,7 @@ export class SilabsTools {
         }
 
         this.uploadStatus = match[1];
-        console.log(`Upload status: ${this.uploadStatus}`);
+        // console.log(`Upload status: ${this.uploadStatus}`);
 
         this.buffer = new Uint8Array(0);
         this.state = State.UPLOAD_DONE;
@@ -165,9 +181,6 @@ export class SilabsTools {
   }
 
   public async getChipInfo() {
-    await this.enterBootloader(implyGateToggle?.checked ?? false);
-    // Give BL a brief moment, then query menu/version
-    await sleep(200);
     // Query bootloader version first
     const blVersion = await this.getBootloaderVersion();
 
@@ -214,7 +227,7 @@ export class SilabsTools {
               clearInterval(checkMenu);
               clearTimeout(timeout);
               resolve(this.version);
-              console.log(`Bootloader version detected: v${this.version}`);
+              this.logger(`SL Bootloader: v${this.version}`);
               return;
             }
             if (attempts >= maxAttempts) {
@@ -249,7 +262,7 @@ export class SilabsTools {
   private xmodemSendChunkOrEOT(): void {
     if (this.xmodemChunkIndex >= this.xmodemTotalChunks) {
       // Send EOT (End of Transmission)
-      console.log("Sending EOT");
+      // console.log("Sending EOT");
       this.write(new Uint8Array([XModemPacketType.EOT]));
     } else {
       // Send next chunk
@@ -266,7 +279,7 @@ export class SilabsTools {
 
     // Set timeout for response (2 seconds)
     this.xmodemTimeout = setTimeout(() => {
-      console.warn("XMODEM timeout, retrying");
+      // console.warn("XMODEM timeout, retrying");
       this.xmodemRetryChunk();
     }, 2000);
   }
@@ -278,7 +291,7 @@ export class SilabsTools {
     }
 
     this.xmodemRetries++;
-    console.log(`Retry attempt ${this.xmodemRetries} for chunk ${this.xmodemChunkIndex}`);
+    // console.log(`Retry attempt ${this.xmodemRetries} for chunk ${this.xmodemChunkIndex}`);
     this.xmodemSendChunkOrEOT();
   }
 
@@ -312,7 +325,7 @@ export class SilabsTools {
     if (response === XModemPacketType.ACK) {
       if (this.xmodemChunkIndex >= this.xmodemTotalChunks) {
         // EOT was ACKed, transfer complete
-        console.log("XMODEM transfer complete");
+        // console.log("XMODEM transfer complete");
         this.state = State.WAITING_UPLOAD_DONE;
 
         // Progress callback: 100%
@@ -348,12 +361,12 @@ export class SilabsTools {
       this.xmodemRetries = 0;
       this.xmodemSendChunkOrEOT();
     } else if (response === XModemPacketType.NAK) {
-      console.warn("Got NAK, retrying chunk");
+      // console.warn("Got NAK, retrying chunk");
       this.xmodemRetryChunk();
     } else if (response === XModemPacketType.CAN) {
       this.xmodemAbort(new Error("Transfer cancelled by receiver"));
     } else {
-      console.warn(`Invalid XMODEM response: 0x${response.toString(16)}`);
+      // console.warn(`Invalid XMODEM response: 0x${response.toString(16)}`);
       this.xmodemRetryChunk();
     }
   }
@@ -364,7 +377,7 @@ export class SilabsTools {
         try {
           // Pad firmware to XMODEM block size
           const paddedFirmware = padToMultiple(firmware, XMODEM_BLOCK_SIZE, 0xff);
-          console.log(`Flashing ${paddedFirmware.length} bytes (original: ${firmware.length})`);
+          // console.log(`Flashing ${paddedFirmware.length} bytes (original: ${firmware.length})`);
 
           // First, query bootloader info
           await this.getBootloaderVersion();
@@ -390,7 +403,7 @@ export class SilabsTools {
           // Initial progress
           onProgress(0, paddedFirmware.length);
 
-          console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
+          //console.log(`Starting XMODEM upload: ${this.xmodemTotalChunks} chunks`);
           // Select upload option (option 1)
           this.state = State.WAITING_XMODEM_READY;
           await this.writeString("1");
@@ -407,18 +420,243 @@ export class SilabsTools {
     });
   }
 
-  public async getApplicationVersion(): Promise<string> {
+  public async getApplicationVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
     // Re-register handler to ensure we are listening
     this.ensureListener();
+
+    // Reset the device to trigger automatic CPC frame
+    if (doReset) {
+      await this.reset(implyGate);
+      await sleep(1000); // Wait for device to boot and send CPC frame
+    }
 
     this.ezspClient = new EzspAshClient(this.link);
     try {
       const info = await this.ezspClient.readVersion();
+      this.logger(`Application version: ${info}`);
       return info;
     } finally {
       this.ezspClient.dispose();
       this.ezspClient = null;
     }
+  }
+
+  public async getSpinelVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
+    this.spinelClient = new SpinelClient(this.link);
+    const spinelHandler = (data: Uint8Array) => this.spinelClient?.handleData(data);
+    this.link.offData?.(this.boundDataHandler);
+    this.link.onData(spinelHandler);
+
+    // Reset the device
+    if (doReset) {
+      await this.reset(implyGate);
+      await sleep(1000); // Router needs more time to boot
+    }
+
+    try {
+      const info = await this.spinelClient.getOpenThreadInfo();
+      if (!info || !info.version) {
+        throw new Error("Failed to get Spinel info");
+      }
+      this.logger(`Spinel version: ${info.version} `);
+      return info.version;
+    } finally {
+      this.link.offData?.(spinelHandler);
+      this.link.onData(this.boundDataHandler);
+      this.spinelClient?.dispose();
+      this.spinelClient = null;
+    }
+  }
+
+  public async getCpcVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
+    const cpcClient = new CpcSpinelClient(this.link);
+    const cpcHandler = (data: Uint8Array) => {
+      cpcClient.handleData(data);
+    };
+
+    // Switch handler BEFORE reset so we can capture the automatic CPC frame
+    this.link.offData?.(this.boundDataHandler);
+    this.link.onData(cpcHandler);
+
+    try {
+      // Reset the device to trigger automatic CPC frame
+      if (doReset) {
+        await this.reset(implyGate);
+        await sleep(1000); // Wait for device to boot and send CPC frame
+      }
+
+      await cpcClient.init();
+
+      // Try multiple times with increasing delays
+      for (let attempt = 0; attempt < 10; attempt++) {
+        try {
+          const version = await cpcClient.getVersion();
+          this.logger(`CPC version: ${version}`);
+          return version;
+        } catch {
+          // Wait a bit more for data
+          await sleep(100);
+        }
+      }
+
+      throw new Error("No CPC data received");
+    } finally {
+      this.link.offData?.(cpcHandler);
+      this.link.onData(this.boundDataHandler);
+      cpcClient.dispose();
+    }
+  }
+
+  /**
+   * Get version from Router CLI firmware
+   * Router firmware uses a text CLI interface with "version" command
+   * Response format: "stack ver. [X.X.X]"
+   */
+  public async getRouterVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
+    const routerClient = new RouterClient(this.link);
+    const routerHandler = (data: Uint8Array) => {
+      routerClient.handleData(data);
+    };
+
+    // Switch handler
+    this.link.offData?.(this.boundDataHandler);
+    this.link.onData(routerHandler);
+
+    try {
+      // Reset the device
+      if (doReset) {
+        await this.reset(implyGate);
+        await sleep(1000); // Router needs more time to boot
+      }
+
+      // Try to activate CLI prompt
+      const hasPrompt = await routerClient.activatePrompt(3000);
+      if (!hasPrompt) {
+        throw new Error("No Router CLI prompt detected");
+      }
+
+      routerClient.clearBuffer();
+
+      // Get version
+      const version = await routerClient.getVersion(2000);
+      this.logger(`Router version: ${version}`);
+      return `${version}`;
+    } finally {
+      this.link.offData?.(routerHandler);
+      this.link.onData(this.boundDataHandler);
+      routerClient.dispose();
+    }
+  }
+
+  /**
+   * Try to detect RCP firmware type and get version
+   * Tries: OT-RCP (Spinel) -> MultiPAN (CPC)
+   */
+  public async getRcpVersion(): Promise<string> {
+    // Try pure Spinel first (OT-RCP)
+    try {
+      const version = await this.getSpinelVersion();
+      return `OT-RCP: ${version}`;
+    } catch (e) {
+      console.log("Spinel failed, trying CPC:", e);
+    }
+
+    // Try CPC (MultiPAN RCP)
+    try {
+      const version = await this.getCpcVersion();
+      return version;
+    } catch (e) {
+      console.log("CPC failed:", e);
+    }
+
+    throw new Error("Failed to detect RCP firmware version");
+  }
+
+  /**
+   * Firmware type for Silicon Labs devices
+   */
+  public static readonly FirmwareType = {
+    AUTO: "auto",
+    EZSP: "ezsp", // NCP - Zigbee coordinator/router with EZSP protocol
+    CPC: "cpc", // MultiPAN RCP - Co-Processor Communication protocol
+    SPINEL: "spinel", // OT-RCP - OpenThread RCP with Spinel protocol
+    ROUTER: "router", // Zigbee Router with CLI interface
+  } as const;
+
+  /**
+   * Universal firmware detection and version probe
+   *
+   * @param firmwareType - Type of firmware to probe: "auto", "ezsp", "cpc", "spinel", "router"
+   * @param baudrate - Baudrate to use: number or "auto" to try common baudrates
+   * @param doReset - Whether to perform reset before probing
+   * @param implyGate - Whether to use transistor gate scheme for reset
+   * @param baudrateCandidates - List of baudrates to try in auto mode
+   * @returns Object with detected firmware type, version, and working baudrate
+   */
+  public async probe(
+    firmwareType: "auto" | "ezsp" | "cpc" | "spinel" | "router" = "auto",
+    baudrate: number | "auto" = "auto",
+    doReset: boolean = true,
+    implyGate: boolean = true,
+    baudrateCandidates: number[] = [115200, 460800, 230400]
+  ): Promise<{ firmwareType: string; version: string; baudrate: number }> {
+    const tryBaudrates = baudrate === "auto" ? baudrateCandidates : [baudrate];
+
+    // Define probe order based on firmware type
+    const probeOrder: Array<"ezsp" | "cpc" | "spinel" | "router"> =
+      firmwareType === "auto" ? ["ezsp", "cpc", "spinel", "router"] : [firmwareType];
+
+    const errors: string[] = [];
+
+    for (const br of tryBaudrates) {
+      this.logger(`Probing at ${br} baud...`);
+
+      // Change baudrate if link supports it
+      await changeBaud(br);
+      // if ((this.link as any).setBaudrate) {
+      //   try {
+      //     await (this.link as any).setBaudrate(br);
+      //     await sleep(100);
+      //   } catch (e: any) {
+      //     this.logger(`Failed to set baudrate ${br}: ${e?.message || String(e)}`);
+      //     continue;
+      //   }
+      // }
+
+      for (const fwType of probeOrder) {
+        try {
+          let version: string;
+
+          switch (fwType) {
+            case "ezsp":
+              this.logger(`Trying EZSP (NCP)...`);
+              version = await this.getApplicationVersion(doReset, implyGate);
+              return { firmwareType: "ezsp", version: version + " (ZB Coordinator)", baudrate: br };
+
+            case "cpc":
+              this.logger(`Trying CPC (MultiPAN RCP)...`);
+              version = await this.getCpcVersion(doReset, implyGate);
+              return { firmwareType: "cpc", version: version + " (MultiPAN)", baudrate: br };
+
+            case "spinel":
+              this.logger(`Trying Spinel (OT-RCP)...`);
+              version = await this.getSpinelVersion(doReset, implyGate);
+              return { firmwareType: "spinel", version: version + " (OpenThread)", baudrate: br };
+
+            case "router":
+              this.logger(`Trying Router CLI...`);
+              version = await this.getRouterVersion(doReset, implyGate);
+              return { firmwareType: "router", version: version + " (ZB Router)", baudrate: br };
+          }
+        } catch (e: any) {
+          const errMsg = `${fwType}@${br}: ${e?.message || String(e)}`;
+          errors.push(errMsg);
+          this.logger(`${fwType} probe failed: ${e?.message || String(e)}`);
+        }
+      }
+    }
+
+    throw new Error(`Failed to detect firmware.`);
   }
 
   public async enterBootloader(implyGate: boolean): Promise<void> {
@@ -441,29 +679,29 @@ export class SilabsTools {
     if (!implyGate) {
       // Step 0: Make sure everything is at high level (VCC), chip is running
       // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(100);
 
       // Step 1: Press RESET (RTS -> Low/GND)
       // Don't touch DTR yet (or keep High)
       // RTS=1 (Low/GND), DTR=0 (High/3.3V)
-      await setLines(true, false);
+      await this.setLines(true, false);
       await sleep(100);
 
       // Step 2: Press BOOT (DTR -> Low/GND), while RESET is still pressed
       // RTS=1 (Low/GND), DTR=1 (Low/GND)
-      await setLines(true, true);
+      await this.setLines(true, true);
       await sleep(100);
 
       // Step 3: Release RESET (RTS -> High/3.3V), but keep BOOT pressed!
       // Chip wakes up, sees pressed BOOT and enters bootloader.
       // RTS=0 (High/3.3V), DTR=1 (Low/GND)
-      await setLines(false, true);
+      await this.setLines(false, true);
       await sleep(200); // Give time for bootloader to initialize
 
       // Step 4: Release BOOT (DTR -> High/3.3V)
       // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(100);
     }
 
@@ -476,23 +714,23 @@ export class SilabsTools {
     // DTR=1, RTS=1 -> Idle  (VCC, VCC) -> Protection from simultaneous pressing
     if (implyGate) {
       // 1. Initial state (Idle)
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(100);
 
       // 2. Press RESET (RTS=True, DTR=False)
       // Chip stops
-      await setLines(true, false);
+      await this.setLines(true, false);
       await sleep(100);
 
       // 3. Switch to BOOT mode (RTS=False, DTR=True)
       // At this moment Reset is released (becomes High), and Boot is pressed to ground (Low).
       // Chip starts, sees low level on Boot pin and enters bootloader.
-      await setLines(false, true);
+      await this.setLines(false, true);
       await sleep(250); // Give time for bootloader to initialize
 
       // 4. Release everything (Idle)
       // Boot pin returns to VCC
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(100);
     }
   }
@@ -502,26 +740,26 @@ export class SilabsTools {
     await sleep(1000);
     if (!implyGate) {
       // Just pull Reset
-      await setLines(false, false); // Release Reset
+      await this.setLines(false, false); // Release Reset
       await sleep(500);
-      await setLines(true, false); // Press Reset
+      await this.setLines(true, false); // Press Reset
       await sleep(200);
-      await setLines(false, false); // Release Reset
+      await this.setLines(false, false); // Release Reset
       await sleep(500);
     }
 
     if (implyGate) {
       // Simple reset for transistor scheme
       // 1. Idle
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(50);
 
       // 2. Reset (RTS=True, DTR=False)
-      await setLines(true, false);
+      await this.setLines(true, false);
       await sleep(200);
 
       // 3. Back to Idle
-      await setLines(false, false);
+      await this.setLines(false, false);
       await sleep(300);
     }
   }
@@ -830,7 +1068,7 @@ class EzspAshClient {
           const parsed = this.parseFrame(this.unstuff(new Uint8Array(frameBytes)));
           this.handleFrame(parsed);
         } catch (err) {
-          console.warn("ASH frame parse error", err);
+          // console.warn("ASH frame parse error", err);
           this.sendNak();
         }
         continue;
@@ -979,5 +1217,613 @@ class EzspAshClient {
     out.set(stuffed, prefix.length);
     out[out.length - 1] = ASH_FLAG;
     await this.link.write(out);
+  }
+}
+
+// =====================================================
+// CPC (Co-Processor Communication) Client for MultiPAN RCP
+// Silicon Labs proprietary protocol used in multipan firmware
+// =====================================================
+
+// CPC Frame format (CPC v5):
+// | FLAG (0x14) | Header (4 bytes) | HCS (2 bytes) | [Payload] | [FCS (2 bytes)] |
+// Note: FLAG at end is optional, frame length is determined by header
+
+const CPC_FLAG = 0x14;
+
+// CPC Endpoint IDs
+const CPC_ENDPOINT_SYSTEM = 0; // System endpoint for queries
+
+// CPC Frame Types (bits 6-7 of control byte)
+const CPC_FRAME_TYPE_UNNUMBERED = 3; // U-frame
+
+// CPC UnnumberedFrameType (bits 0-5 of control byte)
+// POLL_FINAL = 0x04 (from cpc_types.py)
+const CPC_UFRAME_POLL_FINAL = 0x04;
+
+// CPC Commands (System endpoint)
+const CPC_CMD_SYSTEM_PROP_VALUE_GET = 0x02;
+const CPC_CMD_SYSTEM_PROP_VALUE_IS = 0x06;
+
+// CPC System Properties (4-byte property IDs, but only low byte used for common ones)
+const CPC_PROP_LAST_STATUS = 0x00;
+const CPC_PROP_PROTOCOL_VERSION = 0x01;
+const CPC_PROP_CAPABILITIES = 0x02;
+const CPC_PROP_SECONDARY_CPC_VERSION = 0x03; // Returns 3 x uint32_t (major, minor, patch)
+const CPC_PROP_SECONDARY_APP_VERSION = 0x04; // Returns version string
+const CPC_PROP_RX_CAPABILITY = 0x20;
+
+// CPC CRC16-CCITT calculation (non-reflected, init=0x0000)
+// Different from HDLC CRC16-Kermit!
+// Parameters: width=16, poly=0x1021, init=0x0000, final_xor=0x0000, no reflection
+function cpcCrc16(data: Uint8Array): number {
+  let crc = 0x0000; // init = 0
+  for (const byte of data) {
+    crc ^= byte << 8; // XOR byte into high byte
+    for (let i = 0; i < 8; i++) {
+      if (crc & 0x8000) {
+        crc = ((crc << 1) ^ 0x1021) & 0xffff;
+      } else {
+        crc = (crc << 1) & 0xffff;
+      }
+    }
+  }
+  return crc; // no final XOR
+}
+
+class CpcClient {
+  private link: Link;
+  private buffer: number[] = [];
+  private disposed = false;
+  private lastReceivedPayload: Uint8Array | null = null;
+  private commandSeq = 0;
+  private pendingResponse: {
+    resolve: (payload: Uint8Array) => void;
+    reject: (err: Error) => void;
+    timer: number;
+  } | null = null;
+
+  constructor(link: Link) {
+    this.link = link;
+  }
+
+  public dispose() {
+    this.disposed = true;
+    if (this.pendingResponse) {
+      window.clearTimeout(this.pendingResponse.timer);
+      this.pendingResponse.reject(new Error("CPC client disposed"));
+      this.pendingResponse = null;
+    }
+  }
+
+  /**
+   * Build a CPC frame
+   * Frame format: FLAG(1) + endpoint(1) + length(2) + control(1) + HCS(2) + [payload] + [FCS(2)]
+   */
+  private buildFrame(endpoint: number, payload: Uint8Array, controlByte?: number): Uint8Array {
+    const payloadLen = payload.length > 0 ? payload.length + 2 : 0; // +2 for FCS if payload exists
+    const control = controlByte ?? CPC_FRAME_TYPE_UNNUMBERED << 6; // Default: Unnumbered frame
+
+    // Header for CRC: FLAG(1) + endpoint(1) + length(2) + control(1) = 5 bytes
+    // HCS is calculated over FLAG + endpoint + length + control (5 bytes total)
+    const headerForHcs = new Uint8Array([
+      CPC_FLAG,
+      endpoint & 0x0f,
+      payloadLen & 0xff,
+      (payloadLen >> 8) & 0xff,
+      control,
+    ]);
+
+    // Calculate HCS over 5 bytes (FLAG + header)
+    const hcs = cpcCrc16(headerForHcs);
+
+    if (payload.length === 0) {
+      // Frame without payload (e.g., ACK)
+      const frame = new Uint8Array(1 + 4 + 2);
+      let offset = 0;
+      frame[offset++] = CPC_FLAG;
+      frame[offset++] = endpoint & 0x0f;
+      frame[offset++] = payloadLen & 0xff;
+      frame[offset++] = (payloadLen >> 8) & 0xff;
+      frame[offset++] = control;
+      frame[offset++] = hcs & 0xff;
+      frame[offset++] = (hcs >> 8) & 0xff;
+      return frame;
+    }
+
+    // Calculate FCS over payload only
+    const fcs = cpcCrc16(payload);
+
+    // Build complete frame with payload
+    const frame = new Uint8Array(1 + 4 + 2 + payload.length + 2);
+    let offset = 0;
+
+    frame[offset++] = CPC_FLAG;
+    frame[offset++] = endpoint & 0x0f;
+    frame[offset++] = payloadLen & 0xff;
+    frame[offset++] = (payloadLen >> 8) & 0xff;
+    frame[offset++] = control;
+    frame[offset++] = hcs & 0xff;
+    frame[offset++] = (hcs >> 8) & 0xff;
+    frame.set(payload, offset);
+    offset += payload.length;
+    frame[offset++] = fcs & 0xff;
+    frame[offset++] = (fcs >> 8) & 0xff;
+
+    return frame;
+  }
+
+  /**
+   * Build an UnnumberedFrame payload for CPC System endpoint
+   * Format: command_id(1) + command_seq(1) + length(2 LE) + property_payload
+   * Property payload: property_id(4 LE) + value
+   */
+  private buildUnnumberedPayload(
+    commandId: number,
+    propertyId: number,
+    value: Uint8Array = new Uint8Array(0)
+  ): Uint8Array {
+    // Property payload: property_id (4 bytes LE) + value
+    const propertyPayload = new Uint8Array(4 + value.length);
+    propertyPayload[0] = propertyId & 0xff;
+    propertyPayload[1] = (propertyId >> 8) & 0xff;
+    propertyPayload[2] = (propertyId >> 16) & 0xff;
+    propertyPayload[3] = (propertyId >> 24) & 0xff;
+    propertyPayload.set(value, 4);
+
+    // UnnumberedFrame: command_id(1) + command_seq(1) + length(2 LE) + property_payload
+    const unnumberedFrame = new Uint8Array(4 + propertyPayload.length);
+    unnumberedFrame[0] = commandId;
+    unnumberedFrame[1] = this.commandSeq;
+    unnumberedFrame[2] = propertyPayload.length & 0xff;
+    unnumberedFrame[3] = (propertyPayload.length >> 8) & 0xff;
+    unnumberedFrame.set(propertyPayload, 4);
+
+    this.commandSeq = (this.commandSeq + 1) & 0xff;
+
+    return unnumberedFrame;
+  }
+
+  /**
+   * Send a CPC unnumbered frame with POLL_FINAL control
+   * Control byte: (UNNUMBERED << 6) | POLL_FINAL = 0xC0 | 0x04 = 0xC4
+   */
+  public async sendUnnumberedCommand(
+    propertyId: number,
+    value: Uint8Array = new Uint8Array(0),
+    timeout = 1000
+  ): Promise<Uint8Array> {
+    const unnumberedPayload = this.buildUnnumberedPayload(CPC_CMD_SYSTEM_PROP_VALUE_GET, propertyId, value);
+
+    // Control byte: U-frame (0xC0) + POLL_FINAL (0x04) = 0xC4
+    const control = (CPC_FRAME_TYPE_UNNUMBERED << 6) | CPC_UFRAME_POLL_FINAL;
+    const frame = this.buildFrame(CPC_ENDPOINT_SYSTEM, unnumberedPayload, control);
+
+    // console.log(
+    //   `CPC TX: ${Array.from(frame)
+    //     .map((b) => b.toString(16).padStart(2, "0"))
+    //     .join(" ")}`
+    // );
+
+    return new Promise((resolve, reject) => {
+      this.pendingResponse = {
+        resolve,
+        reject,
+        timer: window.setTimeout(() => {
+          this.pendingResponse = null;
+          reject(new Error("CPC response timeout"));
+        }, timeout),
+      };
+
+      this.link.write(frame);
+    });
+  }
+
+  /**
+   * Request CPC version from device (like Python universal-silabs-flasher)
+   * Uses proper UnnumberedFrame format: command_id + command_seq + length + property_payload
+   */
+  public async requestVersion(): Promise<string | null> {
+    // Try SECONDARY_CPC_VERSION first (returns 3 x uint32_t) - like get_cpc_version() in Python
+    try {
+      const response = await this.sendUnnumberedCommand(CPC_PROP_SECONDARY_CPC_VERSION, new Uint8Array(0), 1000);
+
+      // console.log(
+      //   `CPC version response: ${Array.from(response)
+      //     .map((b) => b.toString(16).padStart(2, "0"))
+      //     .join(" ")}`
+      // );
+
+      // Parse UnnumberedFrame response: cmd(1) + seq(1) + len(2) + prop_payload
+      // prop_payload: property_id(4) + 3 x uint32(12)
+      if (response.length >= 8 && response[0] === CPC_CMD_SYSTEM_PROP_VALUE_IS) {
+        const payloadLen = response[2] | (response[3] << 8);
+        // CPC version: property_id(4) + 3 x uint32(12) = 16 bytes
+        if (payloadLen >= 16 && response.length >= 20) {
+          const propId = response[4] | (response[5] << 8) | (response[6] << 16) | (response[7] << 24);
+          if (propId === CPC_PROP_SECONDARY_CPC_VERSION) {
+            // 3 x uint32 little-endian starting at offset 8
+            const major = response[8] | (response[9] << 8) | (response[10] << 16) | (response[11] << 24);
+            const minor = response[12] | (response[13] << 8) | (response[14] << 16) | (response[15] << 24);
+            const patch = response[16] | (response[17] << 8) | (response[18] << 16) | (response[19] << 24);
+            return `${major}.${minor}.${patch}`;
+          }
+        }
+      }
+    } catch {
+      // Continue to try APP version
+    }
+
+    // Try SECONDARY_APP_VERSION (returns string like "4.4.0") - like get_secondary_version() in Python
+    try {
+      const response = await this.sendUnnumberedCommand(CPC_PROP_SECONDARY_APP_VERSION, new Uint8Array(0), 1000);
+
+      // console.log(
+      //   `CPC app version response: ${Array.from(response)
+      //     .map((b) => b.toString(16).padStart(2, "0"))
+      //     .join(" ")}`
+      // );
+
+      if (response.length >= 8 && response[0] === CPC_CMD_SYSTEM_PROP_VALUE_IS) {
+        const payloadLen = response[2] | (response[3] << 8);
+        if (payloadLen >= 4 && response.length >= 4 + payloadLen) {
+          const propId = response[4] | (response[5] << 8) | (response[6] << 16) | (response[7] << 24);
+          if (propId === CPC_PROP_SECONDARY_APP_VERSION) {
+            // Value starts at offset 8
+            const versionBytes = response.slice(8, 4 + payloadLen);
+            const version = new TextDecoder().decode(versionBytes).replace(/\0/g, "").trim();
+            if (version && version !== "UNDEFINED") return version;
+          }
+        }
+      }
+    } catch {
+      // No response from system endpoint
+    }
+
+    return null;
+  }
+
+  public handleData(chunk: Uint8Array): void {
+    if (this.disposed) return;
+    // console.log(
+    //   `CPC handleData: ${chunk.length} bytes:`,
+    //   Array.from(chunk)
+    //     .map((b) => b.toString(16).padStart(2, "0"))
+    //     .join(" ")
+    // );
+    for (const byte of chunk) {
+      this.buffer.push(byte);
+    }
+    this.processBuffer();
+  }
+
+  private processBuffer() {
+    while (this.buffer.length > 0) {
+      // Look for CPC frame start flag
+      const startIdx = this.buffer.indexOf(CPC_FLAG);
+      if (startIdx === -1) {
+        this.buffer = [];
+        return;
+      }
+
+      if (startIdx > 0) {
+        this.buffer = this.buffer.slice(startIdx);
+      }
+
+      // CPC v5 frame format:
+      // Byte 0: FLAG (0x14)
+      // Byte 1: endpoint ID
+      // Byte 2-3: length (little-endian)
+      // Byte 4: control
+      // Byte 5-6: HCS (Header Check Sequence)
+      // Byte 7+: payload (length bytes)
+      // Last 2 bytes of payload area: FCS (if present)
+
+      // Need at least FLAG(1) + header(4) + HCS(2) = 7 bytes
+      if (this.buffer.length < 7) return;
+
+      const endpoint = this.buffer[1] & 0x0f;
+      const payloadLen = this.buffer[2] | (this.buffer[3] << 8);
+      const control = this.buffer[4];
+      // HCS is at bytes 5-6
+
+      // Total frame size: FLAG(1) + header(4) + HCS(2) + payload
+      const frameSize = 7 + payloadLen;
+
+      // Check if we have enough data
+      if (this.buffer.length < frameSize) return;
+
+      // Extract frame data
+      const frameData = new Uint8Array(this.buffer.slice(0, frameSize));
+      this.buffer = this.buffer.slice(frameSize);
+
+      // Skip trailing FLAG if present
+      if (this.buffer.length > 0 && this.buffer[0] === CPC_FLAG) {
+        this.buffer = this.buffer.slice(1);
+      }
+
+      const frameType = (control >> 6) & 0x03;
+      const unnumberedType = control & 0x3f;
+
+      // console.log(
+      //   `CPC frame: endpoint=${endpoint}, type=${frameType}, ctrl=0x${control.toString(
+      //     16
+      //   )}, utype=0x${unnumberedType.toString(16)}, payloadLen=${payloadLen}`
+      // );
+      // console.log(
+      //   `CPC raw: ${Array.from(frameData)
+      //     .map((b) => b.toString(16).padStart(2, "0"))
+      //     .join(" ")}`
+      // );
+
+      // Extract payload (starts at offset 7)
+      if (payloadLen > 0) {
+        const payload = frameData.slice(7, 7 + payloadLen);
+        this.lastReceivedPayload = payload;
+
+        // console.log(
+        //   `CPC payload: ${Array.from(payload)
+        //     .map((b) => b.toString(16).padStart(2, "0"))
+        //     .join(" ")}`
+        // );
+
+        // If we have a pending response, resolve it
+        if (this.pendingResponse) {
+          window.clearTimeout(this.pendingResponse.timer);
+          this.pendingResponse.resolve(payload);
+          this.pendingResponse = null;
+        }
+      }
+    }
+  }
+
+  public getLastPayload(): Uint8Array | null {
+    return this.lastReceivedPayload;
+  }
+
+  /**
+   * Try to parse version info from the initial CPC frame that MultiPAN sends on reset
+   * The initial frame is typically a reset notification, not version info.
+   * Format: cmd(1) + prop_id(1) + data + FCS(2)
+   *
+   * CPC System endpoint commands:
+   * 0x01 = CMD_PROP_VALUE_GET
+   * 0x02 = CMD_PROP_VALUE_SET
+   * 0x06 = CMD_PROP_VALUE_IS (response/notification)
+   *
+   * System properties:
+   * 0x00 = PROP_LAST_STATUS
+   * 0x01 = PROP_PROTOCOL_VERSION
+   * 0x02 = PROP_CAPABILITIES
+   * 0x03 = PROP_SECONDARY_CPC_VERSION (3 x uint32)
+   * 0x04 = PROP_SECONDARY_APP_VERSION (string)
+   */
+  public parseVersionFromPayload(payload: Uint8Array): string | null {
+    if (!payload || payload.length < 2) return null;
+
+    const cmd = payload[0];
+
+    // console.log(`CPC parseVersion: cmd=0x${cmd.toString(16)}, len=${payload.length}`);
+    // console.log(
+    //   `CPC payload hex: ${Array.from(payload)
+    //     .map((b) => b.toString(16).padStart(2, "0"))
+    //     .join(" ")}`
+    // );
+
+    // Command 0x06 = CMD_PROP_VALUE_IS (property notification/response)
+    if (cmd === CPC_CMD_SYSTEM_PROP_VALUE_IS) {
+      // Property ID can be 1 byte (old) or 4 bytes (new CPC)
+      // For reset notification the second byte is 0x00
+      const propIdByte1 = payload[1];
+
+      // Property 0x00 = PROP_LAST_STATUS (reset notification)
+      if (propIdByte1 === CPC_PROP_LAST_STATUS) {
+        // Reset notification - CPC is running
+        // console.log(`CPC reset notification received, payload len=${payload.length}`);
+        return "detected"; // Confirmed CPC/MultiPAN is running
+      }
+
+      // Check for 4-byte property ID format
+      if (payload.length >= 5) {
+        const propId = payload[1] | (payload[2] << 8) | (payload[3] << 16) | (payload[4] << 24);
+
+        // Property 0x03 = PROP_SECONDARY_CPC_VERSION (3 x uint32_t)
+        if (propId === CPC_PROP_SECONDARY_CPC_VERSION && payload.length >= 17) {
+          const major = payload[5] | (payload[6] << 8) | (payload[7] << 16) | (payload[8] << 24);
+          const minor = payload[9] | (payload[10] << 8) | (payload[11] << 16) | (payload[12] << 24);
+          const patch = payload[13] | (payload[14] << 8) | (payload[15] << 16) | (payload[16] << 24);
+          return `${major}.${minor}.${patch}`;
+        }
+
+        // Property 0x04 = PROP_SECONDARY_APP_VERSION (string)
+        if (propId === CPC_PROP_SECONDARY_APP_VERSION && payload.length > 7) {
+          const versionBytes = payload.slice(5, -2); // Skip CMD+PropID, exclude FCS
+          const version = new TextDecoder().decode(versionBytes).replace(/\0/g, "").trim();
+          if (version) return version;
+        }
+      }
+    }
+
+    // Try ASCII for other responses
+    try {
+      const text = new TextDecoder().decode(payload);
+      const versionMatch = text.match(/(\d+\.\d+\.\d+)/);
+      if (versionMatch) {
+        return versionMatch[1];
+      }
+      if (/^[\x20-\x7e]+$/.test(text)) {
+        return text.trim();
+      }
+    } catch {
+      // Not valid UTF-8
+    }
+
+    // Return hex dump for debugging
+    const hexStr = Array.from(payload.slice(0, Math.min(8, payload.length)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    return `raw:${hexStr}`;
+  }
+}
+
+class CpcSpinelClient {
+  private link: Link;
+  private cpc: CpcClient;
+
+  constructor(link: Link) {
+    this.link = link;
+    this.cpc = new CpcClient(link);
+  }
+
+  public dispose() {
+    this.cpc.dispose();
+  }
+
+  public handleData(chunk: Uint8Array): void {
+    this.cpc.handleData(chunk);
+  }
+
+  public async init(): Promise<void> {
+    // Wait a bit for any automatic frames from the device
+    await sleep(200);
+  }
+
+  public async getVersion(): Promise<string> {
+    // First check if we already received the reset notification (confirms CPC is running)
+    const payload = this.cpc.getLastPayload();
+    if (!payload) {
+      throw new Error("No CPC data received - device may not be MultiPAN RCP");
+    }
+
+    // Confirm it's CPC by parsing the initial frame
+    const initialParse = this.cpc.parseVersionFromPayload(payload);
+    if (!initialParse) {
+      throw new Error("Invalid CPC data received");
+    }
+
+    // Try to get CPC version first
+    const cpcVersion = await this.cpc.requestVersion();
+
+    // If we got CPC version, try to also get app version
+    if (cpcVersion) {
+      return `${cpcVersion} (MultiPAN RCP)`;
+    }
+
+    // Fallback - we detected CPC but couldn't get version
+    return "? (MultiPAN RCP)";
+  }
+}
+
+// ===================== Router CLI Client =====================
+// For Zigbee Router firmware with CLI interface
+// Sends "version\r\n" command and parses "stack ver. [X.X.X]" response
+
+const ROUTER_VERSION_REGEX = /stack ver\. \[([^\]]+)\]/;
+
+class RouterClient {
+  private link: Link;
+  private buffer: string = "";
+  private disposed = false;
+  private pendingResponse: {
+    resolve: (value: string) => void;
+    reject: (error: Error) => void;
+    timer: number;
+  } | null = null;
+
+  constructor(link: Link) {
+    this.link = link;
+  }
+
+  public dispose() {
+    this.disposed = true;
+    if (this.pendingResponse) {
+      window.clearTimeout(this.pendingResponse.timer);
+      this.pendingResponse.reject(new Error("Router client disposed"));
+      this.pendingResponse = null;
+    }
+  }
+
+  public handleData(chunk: Uint8Array): void {
+    if (this.disposed) return;
+
+    // Convert to string and append to buffer
+    const text = new TextDecoder().decode(chunk);
+    this.buffer += text;
+
+    // console.log(`Router RX: ${JSON.stringify(text)}`);
+    // console.log(`Router buffer: ${JSON.stringify(this.buffer)}`);
+
+    // Check for prompt (ready state)
+    if (this.buffer.includes(">")) {
+      // Check for version response
+      const match = ROUTER_VERSION_REGEX.exec(this.buffer);
+      if (match && this.pendingResponse) {
+        const version = match[1];
+        // console.log(`Router detected version: ${version}`);
+        window.clearTimeout(this.pendingResponse.timer);
+        this.pendingResponse.resolve(version);
+        this.pendingResponse = null;
+        this.buffer = "";
+        return;
+      }
+    }
+  }
+
+  public hasPrompt(): boolean {
+    return this.buffer.includes(">");
+  }
+
+  public clearBuffer(): void {
+    this.buffer = "";
+  }
+
+  /**
+   * Activate CLI prompt by sending Enter
+   */
+  public async activatePrompt(timeout = 2000): Promise<boolean> {
+    this.buffer = "";
+
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        resolve(false);
+      }, timeout);
+
+      const checkPrompt = () => {
+        if (this.hasPrompt()) {
+          window.clearTimeout(timer);
+          resolve(true);
+        } else {
+          setTimeout(checkPrompt, 50);
+        }
+      };
+
+      // Send \r\n to activate prompt
+      // console.log("Router: Sending \\r\\n to activate prompt");
+      this.link.write(new Uint8Array([0x0d, 0x0a]));
+      checkPrompt();
+    });
+  }
+
+  /**
+   * Send version command and wait for response
+   */
+  public async getVersion(timeout = 2000): Promise<string> {
+    this.buffer = "";
+
+    return new Promise((resolve, reject) => {
+      this.pendingResponse = {
+        resolve,
+        reject,
+        timer: window.setTimeout(() => {
+          this.pendingResponse = null;
+          reject(new Error("Router version timeout"));
+        }, timeout),
+      };
+
+      // Send "version\r\n" command
+      // console.log("Router: Sending version command");
+      const cmd = new TextEncoder().encode("version\r\n");
+      this.link.write(cmd);
+    });
   }
 }
