@@ -1,3 +1,20 @@
+## v0.3.0
+
+## 🚀 Features
+- feat: retry connect with different option if chip id read error (TI & SL) (#83) by @xyzroe
+- feat: version detect for MultiPAN (CPC), OpenThred (Spinel) and Router firmwares (SL) (#83) by @xyzroe
+- feat: verison detect for OpenThread firmwares (TI) (#83) by @xyzroe
+- feat: auto find baud rate (SL) (#83) by @xyzroe
+- feat: save and load find baud rate toggle in cookies (#83) by @xyzroe
+- feat: save baud rate value in cookies (#83) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: improve auto find baud rate (TI) (#83) by @xyzroe
+- fix: setLinesHandler instead of direct import (SL & CCLoader) (#83) by @xyzroe
+- fix: some code cleanup (#83) by @xyzroe
+- fix: implement saveToFile utility for unify file downloads (#83) by @xyzroe
+- 
+
 ## v0.2.24
 
 ## 🚀 Features
