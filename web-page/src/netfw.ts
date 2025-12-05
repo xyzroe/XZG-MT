@@ -154,7 +154,8 @@ export function filterFwByChipSL(man: SlZwManifest, chip: string) {
         }
       }
     }
-    if (result[cat]) result[cat]!.sort((a, b) => getVerNum(b.ver) - getVerNum(a.ver));
+    // Sort by semantic version (newest first)
+    if (result[cat]) result[cat]!.sort((a, b) => compareSemanticVersions(b.ver, a.ver));
   }
   return result;
 }
@@ -227,7 +228,7 @@ export function filterFwByChipESP(man: EspManifest, chip: string) {
   return result;
 }
 
-// Helper to extract date/number for sorting
+// Helper to extract date/number for sorting (TI firmwares with YYYYMMDD dates)
 const getVerNum = (v: string | number) => {
   const s = String(v);
   const m = s.match(/(20\d{6})/); // Match YYYYMMDD (e.g. 20221102)
@@ -235,6 +236,28 @@ const getVerNum = (v: string | number) => {
   // Fallback: try to parse just digits
   const n = parseInt(s.replace(/\D/g, ""), 10);
   return isNaN(n) ? 0 : n;
+};
+
+// Helper to compare semantic versions like "6.10.7.3" or "7.5.4"
+// Returns: >0 if a > b, <0 if a < b, 0 if equal
+const compareSemanticVersions = (a: string | number, b: string | number): number => {
+  const parseVersion = (v: string | number): number[] => {
+    const s = String(v);
+    // Extract version numbers (e.g., "6.10.7.3" -> [6, 10, 7, 3])
+    const parts = s.split(".").map((p) => parseInt(p, 10) || 0);
+    return parts;
+  };
+
+  const pa = parseVersion(a);
+  const pb = parseVersion(b);
+  const maxLen = Math.max(pa.length, pb.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const na = pa[i] || 0;
+    const nb = pb[i] || 0;
+    if (na !== nb) return na - nb;
+  }
+  return 0;
 };
 
 export function isLikelyIntelHexPreview(txt: string): boolean {
@@ -387,20 +410,45 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
     window.netFwSelect = netFwSelect;
 
     if (family === "sl") {
-      // Group by board
+      // Group by board only, type shown in brackets at start of each option
       const groups: Record<string, typeof items> = {};
       for (const it of items) {
         const b = it.board || "Generic";
         (groups[b] ||= []).push(it);
       }
+
+      // Category display names and order
+      const categoryOrder = ["zigbee_ncp", "zb_router", "openthread_rcp", "multipan"];
+      const categoryNames: Record<string, string> = {
+        zigbee_ncp: "ZB Coordinator",
+        zb_router: "ZB Router",
+        openthread_rcp: "OpenThread",
+        multipan: "MultiPAN",
+      };
+
+      // Sort boards alphabetically
       const sortedBoards = Object.keys(groups).sort();
+
       for (const board of sortedBoards) {
+        const boardItems = groups[board];
+
+        // Sort: first by category order, then by version (newest first) within each category
+        boardItems.sort((a, b) => {
+          const catOrderA = categoryOrder.indexOf(a.category);
+          const catOrderB = categoryOrder.indexOf(b.category);
+          if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+          // Same category - sort by version descending
+          return compareSemanticVersions(b.ver, a.ver);
+        });
+
         const g = document.createElement("optgroup");
         g.label = board;
-        for (const it of groups[board]) {
+
+        for (const it of boardItems) {
           const o = document.createElement("option");
           o.value = it.key;
-          o.textContent = it.label;
+          const typeStr = categoryNames[it.category] || it.category;
+          o.textContent = `[${typeStr}] ${it.ver} — ${it.key.split("|")[1]}`;
           o.setAttribute("data-link", it.link);
           g.appendChild(o);
         }

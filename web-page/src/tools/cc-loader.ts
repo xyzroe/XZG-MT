@@ -1,20 +1,8 @@
 import { sleep } from "../utils/index";
 import { parseIntelHex } from "../utils/intelhex";
+import { saveToFile } from "../utils/http";
 
-import {
-  //log,
-  optErase,
-  optWrite,
-  optVerify,
-  verifyMethodSelect,
-  writeMethodSelect,
-  localFile,
-  targetIdEl,
-  targetIeeeEl,
-  debugFwVersionEl,
-  debugModelEl,
-  debugManufEl,
-} from "../ui";
+import { optWrite, optVerify, localFile, targetIdEl, targetIeeeEl, debugModelEl, debugManufEl } from "../ui";
 
 export type Link = {
   write: (d: Uint8Array) => Promise<void>;
@@ -86,6 +74,7 @@ export class CCLoader {
 
   private logger: (msg: string) => void = () => {};
   private progressCallback: (percent: number, msg: string) => void = () => {};
+  private setLinesHandler: (rstLevel: boolean, bslLevel: boolean) => void = () => {};
 
   public setLogger(logger: (msg: string) => void) {
     this.logger = logger;
@@ -93,6 +82,17 @@ export class CCLoader {
 
   public setProgressCallback(cb: (percent: number, msg: string) => void) {
     this.progressCallback = cb;
+  }
+
+  public setSetLinesHandler(handler: (rstLevel: boolean, bslLevel: boolean) => void) {
+    this.setLinesHandler = handler;
+  }
+
+  private async setLines(rstLevel: boolean, bslLevel: boolean): Promise<void> {
+    if (!this.setLinesHandler) {
+      throw new Error("setLinesHandler not set");
+    }
+    this.setLinesHandler(rstLevel, bslLevel);
   }
 
   private ensureListener() {
@@ -576,7 +576,7 @@ export class CCLoader {
   public async dumpFlash(): Promise<void> {
     // Read flash using CC Loader
     try {
-      this.logger("Reading flash from CC2530...");
+      this.logger("Reading flash memory...");
       this.progressCallback(0, "Reading flash...");
 
       // Read 512 blocks (256KB - full flash of CC2530)
@@ -585,25 +585,16 @@ export class CCLoader {
       this.logger(`Flash read complete: ${flashData.length} bytes`);
       this.progressCallback(100, "Done");
 
-      // Download the file
-      // Ensure we pass a standard ArrayBufferView (backed by ArrayBuffer) to Blob so TypeScript accepts it.
-      const copy = new Uint8Array(flashData);
-      const blob = new Blob([copy], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const now = new Date();
-      const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
+      const filename = saveToFile(
+        flashData,
+        "application/octet-stream",
+        "bin",
+        "dump",
+        targetIdEl?.value,
+        targetIeeeEl?.value
+      );
 
-      const targetId = targetIdEl?.value || "unknown";
-      const targetIeee = targetIeeeEl?.value || "unknown";
-      a.href = url;
-      a.download = `dump_${targetId}_${targetIeee}_${timestamp}.bin`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-      this.logger(`Flash dump saved to ${a.download}`);
+      this.logger(`Flash dump saved to ${filename}`);
     } catch (e: any) {
       this.logger("Flash read error: " + (e?.message || String(e)));
       throw e;
@@ -637,16 +628,16 @@ export class CCLoader {
     this.logger(`CC Loader reset: device type ${deviceType}`);
 
     // Import setLines from flasher
-    const { setLines } = await import("../flasher");
+    //const { setLines } = await import("../flasher");
 
     if (deviceType === 0) {
       // Default (UNO): DTR off, RTS off
       this.logger("Setting DTR=off, RTS=off for UNO-like device");
-      await setLines(false, false);
+      await this.setLines(false, false);
     } else {
       // Leonardo: DTR on, RTS off
       this.logger("Setting DTR=on, RTS=off for Leonardo-like device");
-      await setLines(true, false);
+      await this.setLines(true, false);
     }
 
     await sleep(1000);

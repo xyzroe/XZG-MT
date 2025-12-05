@@ -51,9 +51,9 @@ export const autoBslToggle = document.getElementById("autoBslToggle") as HTMLInp
 export const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
 // mapping selector removed; we’ll try both wiring assumptions automatically
 export const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
-export const btnPing = document.getElementById("btn-ping") as HTMLButtonElement | null;
-export const btnVersion = document.getElementById("btn-version") as HTMLButtonElement | null;
-export const btnGetModel = document.getElementById("btn-get-model") as HTMLButtonElement | null;
+export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement | null;
+export const getVersionBtn = document.getElementById("getVersionBtn") as HTMLButtonElement | null;
+export const getModelBtn = document.getElementById("getModelBtn") as HTMLButtonElement | null;
 
 export const pinModeSelect = document.getElementById("pinModeSelect") as HTMLInputElement | null;
 export const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | null;
@@ -158,6 +158,8 @@ invertLevel?.addEventListener("change", saveCtrlSettings);
 implyGateToggle?.addEventListener("change", saveCtrlSettings);
 bridgeHostInput?.addEventListener("input", scheduleBridgeRefresh);
 bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
+findBaudToggle?.addEventListener("change", saveCtrlSettings);
+bitrateInput?.addEventListener("change", saveCtrlSettings);
 
 familyRadios.forEach((r) => {
   r.addEventListener("change", () => {
@@ -251,9 +253,9 @@ export function updateUIForFamily() {
     if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    if (btnGetModel) btnGetModel.classList.remove("d-none");
-    if (btnVersion) btnVersion.classList.remove("d-none");
-    if (btnPing) btnPing.classList.remove("d-none");
+    if (getModelBtn) getModelBtn.classList.remove("d-none");
+    if (getVersionBtn) getVersionBtn.classList.remove("d-none");
+    if (pingBtn) pingBtn.classList.remove("d-none");
   }
   if (family === "sl") {
     // Sections
@@ -292,15 +294,15 @@ export function updateUIForFamily() {
     }
     // Toggles
     if (autoBslWrap) autoBslWrap.classList.remove("d-none");
-    if (findBaudWrap) findBaudWrap.classList.add("d-none");
+    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
     // Buttons
     if (btnReadFlash) btnReadFlash.classList.add("d-none");
     if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    // if (btnGetModel) btnGetModel.classList.add("d-none");
-    if (btnVersion) btnVersion.classList.remove("d-none");
-    if (btnPing) btnPing.classList.add("d-none");
+    // if (getModelBtn) getModelBtn.classList.add("d-none");
+    if (getVersionBtn) getVersionBtn.classList.remove("d-none");
+    if (pingBtn) pingBtn.classList.add("d-none");
   }
   if (family === "esp") {
     // Sections
@@ -345,9 +347,9 @@ export function updateUIForFamily() {
     if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.add("d-none");
-    if (btnGetModel) btnGetModel.classList.add("d-none");
-    if (btnVersion) btnVersion.classList.add("d-none");
-    if (btnPing) btnPing.classList.add("d-none");
+    if (getModelBtn) getModelBtn.classList.add("d-none");
+    if (getVersionBtn) getVersionBtn.classList.add("d-none");
+    if (pingBtn) pingBtn.classList.add("d-none");
   }
   if (family === "ti_old") {
     // Sections
@@ -374,11 +376,11 @@ export function updateUIForFamily() {
     //Buttons
     if (btnReadFlash) btnReadFlash.classList.remove("d-none");
     if (resetDebugBtn) resetDebugBtn.classList.remove("d-none");
-    if (btnGetModel) btnGetModel.classList.remove("d-none");
+    if (getModelBtn) getModelBtn.classList.remove("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.add("d-none");
-    if (btnVersion) btnVersion.classList.add("d-none");
-    if (btnPing) btnPing.classList.add("d-none");
+    if (getVersionBtn) getVersionBtn.classList.add("d-none");
+    if (pingBtn) pingBtn.classList.add("d-none");
   }
 }
 

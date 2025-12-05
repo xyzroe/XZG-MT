@@ -1,7 +1,12 @@
 import { Link } from "../types/index";
 import { sleep, toHex } from "../utils/index";
+import { saveToFile } from "../utils/http";
+import { SpinelClient, OpenThreadRcpInfo } from "./spinel";
 
 export type TiChipFamily = "cc26xx" | "cc2538";
+
+// Re-export for backwards compatibility
+export type { OpenThreadRcpInfo } from "./spinel";
 
 interface NvramBundle {
   LEGACY?: Record<string, string>;
@@ -482,13 +487,15 @@ export class TiTools {
 
   // BSL protocol state
   private rxBuf: number[] = [];
+  private rxDataHandler: (d: Uint8Array) => void;
 
   // NVRAM helper
   public nvram: NVRAM;
 
   constructor(link: Link) {
     this.link = link;
-    this.link.onData((d) => this.rxBuf.push(...d));
+    this.rxDataHandler = (d: Uint8Array) => this.rxBuf.push(...d);
+    this.link.onData(this.rxDataHandler);
     this.nvram = new NVRAM(link);
   }
 
@@ -869,7 +876,7 @@ export class TiTools {
     major: number;
     minor: number;
     maint: number;
-    fwRev: number;
+    fwRev: String;
     payload: Uint8Array;
   } | null> {
     const resp = await this.sendMtAndWait(0x21, 0x02, [], 3000);
@@ -882,7 +889,7 @@ export class TiTools {
       const minor = p[3];
       const maint = p[4];
       const fwRev = (p[5] | (p[6] << 8) | (p[7] << 16) | (p[8] << 24)) >>> 0;
-      return { transportrev, product, major, minor, maint, fwRev, payload: p };
+      return { transportrev, product, major, minor, maint, fwRev: String(fwRev + " (Zigbee)"), payload: p };
     }
     return null;
   }
@@ -932,7 +939,7 @@ export class TiTools {
         const flashSz = await this.memRead32(FLASH_SIZE);
         if (flashSz && flashSz.length >= 4) {
           const pages = flashSz[0];
-          let size = pages * 8192;
+          const size = pages * 8192;
           //if (size >= 64 * 1024) size -= 8192;
           this.logger(`Flash size estimate: ${size} bytes`);
           info.flashSizeBytes = size;
@@ -1043,7 +1050,7 @@ export class TiTools {
   }
 
   public async reset(implyGate: boolean): Promise<void> {
-    this.logger(`TI reset`);
+    this.logger(`TI reset, implyGate=${implyGate}`);
     await this.setLines(true, true);
     await sleep(500);
     await this.setLines(false, true);
@@ -1190,23 +1197,74 @@ export class TiTools {
     this.progressCallback(100, "Read complete");
     this.logger(`Flash read complete: ${flashData.length} bytes`);
 
-    // Save to file
-    const blob = new Blob([flashData], { type: "application/octet-stream" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
+    const filename = saveToFile(
+      flashData,
+      "application/octet-stream",
+      "bin",
+      "dump",
+      deviceInfo.chipModel,
+      deviceInfo.ieeeMac?.replace(/:/g, "")
+    );
 
-    const chipModel = deviceInfo.chipModel || "unknown";
-    const ieeeMac = deviceInfo.ieeeMac?.replace(/:/g, "") || "unknown";
+    this.logger(`Flash dump saved to ${filename}`);
+  }
 
-    a.href = url;
-    a.download = `dump_${chipModel}_${ieeeMac}_${timestamp}.bin`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // ============== OpenThread RCP Detection Methods ==============
 
-    this.logger(`Flash dump saved to ${a.download}`);
+  /**
+   * Detect if the device is running OpenThread RCP firmware
+   * OpenThread RCP uses Spinel protocol over HDLC-Lite at 460800 baud
+   * @returns OpenThread RCP info if detected, null otherwise
+   */
+  public async detectOpenThreadRcp(): Promise<OpenThreadRcpInfo | null> {
+    this.logger("Checking for OpenThread RCP firmware...");
+
+    // Create a temporary Spinel client
+    const spinelClient = new SpinelClient(this.link);
+    spinelClient.setLogger(this.logger);
+
+    // Temporarily redirect data to Spinel client
+    const originalRxBuf = this.rxBuf;
+    this.rxBuf = [];
+
+    // Remove our standard handler before adding Spinel handler
+    if (this.link.offData) {
+      this.link.offData(this.rxDataHandler);
+    }
+
+    // Set up data handler for Spinel
+    const dataHandler = (chunk: Uint8Array) => {
+      spinelClient.handleData(chunk);
+    };
+    this.link.onData(dataHandler);
+
+    try {
+      // Try to get version directly (ping is essentially the same command)
+      const info = await spinelClient.getOpenThreadInfo();
+      if (info) {
+        // this.logger(`OpenThread RCP detected: ${info.version}`);
+        info.version = info.version + " (OpenThread)";
+        return info;
+      }
+
+      this.logger("No OpenThread RCP response");
+      return null;
+    } catch (e) {
+      this.logger(`OpenThread RCP detection failed: ${e}`);
+      return null;
+    } finally {
+      // Dispose spinel client first
+      spinelClient.dispose();
+
+      // Remove the temporary Spinel data handler
+      if (this.link.offData) {
+        this.link.offData(dataHandler);
+      }
+
+      // Restore original state
+      this.rxBuf = originalRxBuf;
+      // Re-register original handler
+      this.link.onData(this.rxDataHandler);
+    }
   }
 }
