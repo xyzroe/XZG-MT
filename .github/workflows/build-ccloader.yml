@@ -166,11 +166,15 @@ jobs:
               --output-dir "$BUILD_DIR" \
               "$TEMP_SKETCH_DIR"
             
-            # Form the output file name
-            OUT_NAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            # Form the output file name based on chip type
+            if [[ "$CHIP" == "ESP32"* ]] || [[ "$CHIP" == "ESP8266" ]]; then
+              OUT_NAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
+            else
+              OUT_NAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.hex"
+            fi
             
-            # Process the binary depending on the board type
-            if [[ "$BOARD" == esp32* ]]; then
+            # Process the binary depending on the chip type
+            if [[ "$CHIP" == "ESP32"* ]]; then
               # ESP32: merge all parts
               APP_BIN=$(find "$BUILD_DIR" -name '*.ino.bin' -print -quit)
               BOOTLOADER=$(find "$BUILD_DIR" -name '*bootloader*.bin' -print -quit)
@@ -209,7 +213,7 @@ jobs:
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
               fi
-            elif [[ "$BOARD" == esp8266* ]]; then
+            elif [[ "$CHIP" == "ESP8266" ]]; then
               # ESP8266: copy the ready BIN
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
