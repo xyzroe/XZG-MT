@@ -38,6 +38,11 @@ jobs:
           CORES_TO_INSTALL=""
           for board in $BOARDS; do
             case "$board" in
+              arduino_uno|arduino_nano|arduino_mega|arduino_micro)
+                if [[ ! "$CORES_TO_INSTALL" =~ "arduino:avr" ]]; then
+                  CORES_TO_INSTALL="$CORES_TO_INSTALL arduino:avr"
+                fi
+                ;;
               d1_mini|nodemcu|esp8266_generic)
                 if [[ ! "$CORES_TO_INSTALL" =~ "esp8266:esp8266" ]]; then
                   CORES_TO_INSTALL="$CORES_TO_INSTALL esp8266:esp8266"
@@ -83,6 +88,21 @@ jobs:
             
             # Determine FQBN, board name, and chip
             case "$BOARD" in
+             arduino_uno)
+                FQBN="arduino:avr:uno"
+                BOARD_NAME="arduino_uno"
+                CHIP="ATmega328P"
+                ;;
+              arduino_nano)
+                FQBN="arduino:avr:nano"
+                BOARD_NAME="arduino_nano"
+                CHIP="ATmega328P"
+                ;;
+              arduino_pro_mini)
+                FQBN="arduino:avr:pro"
+                BOARD_NAME="arduino_pro_mini"
+                CHIP="ATmega328P"
+                ;;
               d1_mini)
                 FQBN="esp8266:esp8266:d1_mini"
                 BOARD_NAME="d1_mini"
@@ -188,7 +208,7 @@ jobs:
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
               fi
-            else
+            if [[ "$BOARD" == esp8266* ]]; then
               # ESP8266: copy the ready BIN
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
@@ -197,6 +217,15 @@ jobs:
                 continue
               fi
               cp "$BIN_SRC" "bins/$OUT_NAME"
+            else
+              # Arduino: copy the ready HEX
+              HEX_SRC=$(find "$BUILD_DIR" -name '*.hex' -print -quit)
+              if [ -z "$HEX_SRC" ]; then
+                echo "Error: No HEX file produced"
+                rm -rf "$TEMP_SKETCH_DIR" "$BUILD_DIR"
+                continue
+              fi
+              cp "$HEX_SRC" "bins/$OUT_NAME"
             fi
             
             echo "✓ Created: $OUT_NAME ($(stat -c%s "bins/$OUT_NAME" 2>/dev/null || stat -f%z "bins/$OUT_NAME") bytes)"
@@ -234,6 +263,18 @@ jobs:
             
             # Determine the file name and chip
             case "$BOARD" in
+              arduino_uno)
+                BOARD_NAME="arduino_uno"
+                CHIP="ATmega328P"
+                ;;
+              arduino_nano)
+                BOARD_NAME="arduino_nano"
+                CHIP="ATmega328P"
+                ;;
+              arduino_pro_mini)
+                BOARD_NAME="arduino_pro_mini"
+                CHIP="ATmega328P"
+                ;;
               d1_mini)
                 BOARD_NAME="d1_mini"
                 CHIP="ESP8266"
@@ -262,10 +303,13 @@ jobs:
             
             FILENAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.bin"
             
-            # Check that the file exists
+            # Check that the file exists (try .bin first, then .hex)
             if [ ! -f "bins/$FILENAME" ]; then
-              echo "Warning: $FILENAME not found, skipping"
-              continue
+              FILENAME="CCLoader_${BOARD_NAME}_dd-${DD_PIN}_dc-${DC_PIN}_reset-${RESET_PIN}_led-${LED_PIN}.hex"
+              if [ ! -f "bins/$FILENAME" ]; then
+                echo "Warning: Binary file not found (neither .bin nor .hex), skipping"
+                continue
+              fi
             fi
             
             # Add an entry to the manifest
