@@ -2,7 +2,7 @@
 
 Welcome to the **cc_loader** branch of the XZG Multi Tool repository!
 
-This branch contains firmware for programming TI CC2530 chips using ESP8266/ESP32 boards as a flash programmer. All binary files are automatically generated using GitHub Workflow.
+This branch contains firmware for programming TI CC2530 chips using Arduino/ESP8266/ESP32 boards as a flash programmer. All binary files are automatically generated using GitHub Workflow.
 
 ## 🗂 Directory Structure
 
@@ -10,7 +10,7 @@ This branch contains firmware for programming TI CC2530 chips using ESP8266/ESP3
 - `task.json` - Build/task configuration
 - `Arduino/` - Arduino implementation
   - `CCLoader` - Arduino sketch folder
-    - `CCLoader.ino` - Arduino sketch for ESP8266/ESP32
+    - `CCLoader.ino` - Arduino sketch for Arduino/ESP8266/ESP32
 - `bins/` - Pre-compiled firmware binaries
   - `manifest.json` - Firmware manifest file
 - `src/` - Source code for host applications
@@ -29,11 +29,12 @@ To build the host application from source code:
 
 ## 📋 Supported Hardware
 
+- **Arduino**: Uno, Nano, Pro Mini, and compatible boards
 - **ESP8266**: D1 Mini, NodeMCU, and compatible boards
 - **ESP32**: ESP32 Dev, ESP32-C3, ESP32-C6, ESP32-S3
 
 > [!IMPORTANT]
-> Only boards with **CH340** or **CP2102** USB-TTL converters are supported. Boards with other converters or native USB connections will not work.
+> Only boards with **CH340** or **CP2102** USB-TTL converters are supported. Boards with other converters or native USB connections could not work properly.
 
 ## 🔌 Pin Configuration
 
