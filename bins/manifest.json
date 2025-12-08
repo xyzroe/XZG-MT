@@ -83,6 +83,18 @@
         "reset": "2",
         "led": "1"
       }
+    },
+    {
+      "filename": "CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.bin",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.bin",
+      "board": "arduino_nano",
+      "chip": "ATmega328P",
+      "pins": {
+        "dd": "6",
+        "dc": "5",
+        "reset": "4",
+        "led": "13"
+      }
     }
   ]
 }
