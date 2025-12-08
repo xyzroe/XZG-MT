@@ -10,6 +10,7 @@ on:
     paths:
       - 'task.json'
       - 'Arduino/CCLoader/CCLoader.ino'
+      - '.github/workflows/build-ccloader.yml'
   workflow_dispatch:
 
 jobs:
@@ -38,7 +39,7 @@ jobs:
           CORES_TO_INSTALL=""
           for board in $BOARDS; do
             case "$board" in
-              arduino_uno|arduino_nano|arduino_mega|arduino_micro)
+              arduino_uno|arduino_nano|arduino_pro_mini)
                 if [[ ! "$CORES_TO_INSTALL" =~ "arduino:avr" ]]; then
                   CORES_TO_INSTALL="$CORES_TO_INSTALL arduino:avr"
                 fi
@@ -208,7 +209,7 @@ jobs:
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
               fi
-            if [[ "$BOARD" == esp8266* ]]; then
+            else if [[ "$BOARD" == esp8266* ]]; then
               # ESP8266: copy the ready BIN
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
