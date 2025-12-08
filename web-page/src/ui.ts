@@ -583,7 +583,7 @@ if (netFwNotesBtnEl) {
 // Load marked.js if missing
 if (!window.marked) {
   const script = document.createElement("script");
-  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+  script.src = "js/marked.min.js";
   script.async = true;
   document.head.appendChild(script);
 }
