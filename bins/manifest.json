@@ -85,9 +85,33 @@
       }
     },
     {
-      "filename": "CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.bin",
-      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.bin",
+      "filename": "CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.hex",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_arduino_nano_dd-6_dc-5_reset-4_led-13.hex",
       "board": "arduino_nano",
+      "chip": "ATmega328P",
+      "pins": {
+        "dd": "6",
+        "dc": "5",
+        "reset": "4",
+        "led": "13"
+      }
+    },
+    {
+      "filename": "CCLoader_arduino_uno_dd-5_dc-6_reset-7_led-13.hex",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_arduino_uno_dd-5_dc-6_reset-7_led-13.hex",
+      "board": "arduino_uno",
+      "chip": "ATmega328P",
+      "pins": {
+        "dd": "5",
+        "dc": "6",
+        "reset": "7",
+        "led": "13"
+      }
+    },
+    {
+      "filename": "CCLoader_arduino_pro_mini_dd-6_dc-5_reset-4_led-13.hex",
+      "url": "https://raw.githubusercontent.com/xyzroe/XZG-MT/cc_loader/bins/CCLoader_arduino_pro_mini_dd-6_dc-5_reset-4_led-13.hex",
+      "board": "arduino_pro_mini",
       "chip": "ATmega328P",
       "pins": {
         "dd": "6",
