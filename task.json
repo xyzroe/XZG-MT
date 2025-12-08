@@ -62,6 +62,20 @@
       "dc_pin": "5",
       "reset_pin": "4",
       "led_pin": "13"
+    },
+    {
+      "board": "arduino_uno",
+      "dd_pin": "5",
+      "dc_pin": "6",
+      "reset_pin": "7",
+      "led_pin": "13"
+    },
+    {
+      "board": "arduino_pro_mini",
+      "dd_pin": "6",
+      "dc_pin": "5",
+      "reset_pin": "4",
+      "led_pin": "13"
     }
   ]
 }
