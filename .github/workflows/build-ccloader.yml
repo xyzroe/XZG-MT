@@ -209,7 +209,7 @@ jobs:
                   0x8000 "$PARTITIONS" \
                   0x10000 "$APP_BIN"
               fi
-            else if [[ "$BOARD" == esp8266* ]]; then
+            elif [[ "$BOARD" == esp8266* ]]; then
               # ESP8266: copy the ready BIN
               BIN_SRC=$(find "$BUILD_DIR" -name '*.bin' -print -quit)
               if [ -z "$BIN_SRC" ]; then
