@@ -1,121 +1,111 @@
 // UI Elements
-export const consoleWrapEl = document.getElementById("consoleWrap") as HTMLDivElement | null;
-export const logEl = document.getElementById("log") as HTMLDivElement;
-export const autoScrollEl = document.getElementById("autoScroll") as HTMLInputElement | null;
-export const showIoEl = document.getElementById("showIo") as HTMLInputElement | null;
-export const chipModelEl = document.getElementById("chipModel") as HTMLInputElement | null;
-export const flashSizeEl = document.getElementById("flashSize") as HTMLInputElement | null;
-export const ieeeMacEl = document.getElementById("ieeeMac") as HTMLInputElement | null;
-export const firmwareVersionEl = document.getElementById("firmwareVersion") as HTMLInputElement | null;
-export const bootloaderVersionEl = document.getElementById("bootloaderVersion") as HTMLInputElement | null;
-export const netFwSelect = document.getElementById("netFwSelect") as HTMLSelectElement | null;
-export const netFwRefreshBtn = document.getElementById("netFwRefresh") as HTMLButtonElement | null;
+
+// Family section
+export const familySection = document.getElementById("familySection") as HTMLElement | null;
+export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
+
+// General section
+export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
+export const generalSection = document.getElementById("generalSection") as HTMLElement | null;
+export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
+export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
+export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
+export const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
+
+// Serial section
+export const serialSection = document.getElementById("serialSection") as HTMLElement | null;
+const serialControlsWrap = document.getElementById("serialControlsWrap");
+const serialHttpMsg = document.getElementById("serialHttpMsg");
 export const bitrateInput = document.getElementById("bitrateInput") as HTMLInputElement;
+export const autoBslToggle = document.getElementById("autoBslToggle") as HTMLInputElement | null;
 export const autoBslWrap = document.getElementById("autoBslWrap") as HTMLDivElement | null;
 export const chooseSerialBtn = document.getElementById("chooseSerial") as HTMLButtonElement;
-export const disconnectBtn = document.getElementById("disconnectBtn") as HTMLButtonElement;
-export const hostInput = document.getElementById("hostInput") as HTMLInputElement;
-export const portInput = document.getElementById("portInput") as HTMLInputElement;
-export const mdnsSelect = document.getElementById("mdnsSelect") as HTMLSelectElement | null;
-export const mdnsRefreshBtn = document.getElementById("mdnsRefresh") as HTMLButtonElement | null;
-export const tcpSettingsBtn = document.getElementById("tcpSettingsBtn") as HTMLButtonElement | null;
-export const tcpLinksBtn = document.getElementById("tcpLinksBtn") as HTMLButtonElement | null;
+
+// TCP section
+export const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
+const tcpControlsWrap = document.getElementById("tcpControlsWrap");
+const tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
+export const bridgeStatusIcon = document.getElementById("bridgeStatusIcon") as HTMLSpanElement | null;
+
 export const tcpSettingsPanel = document.getElementById("tcpSettingsPanel") as HTMLDivElement | null;
-export const tcpLinksPanel = document.getElementById("tcpLinksPanel") as HTMLDivElement | null;
 export const bridgeHostInput = document.getElementById("bridgeHostInput") as HTMLInputElement | null;
 export const bridgePortInput = document.getElementById("bridgePortInput") as HTMLInputElement | null;
 export const tcpInfoBtn = document.getElementById("tcpInfoBtn") as HTMLButtonElement | null;
-export const bridgeStatusIcon = document.getElementById("bridgeStatusIcon") as HTMLSpanElement | null;
 export const bridgeInfoModal = document.getElementById("bridgeInfoModal") as HTMLDivElement | null;
 export const bridgeInfoClose = document.getElementById("bridgeInfoClose") as HTMLButtonElement | null;
 export const bridgeInfoCloseX = document.getElementById("bridgeInfoCloseX") as HTMLButtonElement | null;
 export const bridgeLink = document.getElementById("bridgeLink") as HTMLAnchorElement | null;
-export const connectTcpBtn = document.getElementById("connectTcp") as HTMLButtonElement;
-export const deviceDetectSpinner = document.getElementById("deviceDetectSpinner") as HTMLSpanElement | null;
-export const portInfoEl = document.getElementById("portInfo") as HTMLInputElement | null;
-export const localFile = document.getElementById("localFile") as HTMLInputElement;
-export const optErase = document.getElementById("optErase") as HTMLInputElement;
-export const optWrite = document.getElementById("optWrite") as HTMLInputElement;
-export const optVerify = document.getElementById("optVerify") as HTMLInputElement;
-export const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
-export const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
-export const progressEl = document.getElementById("progress") as HTMLDivElement;
-export const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElement | null;
-export const firmwareSection = document.getElementById("firmwareSection") as HTMLDivElement | null;
-export const nvramSection = document.getElementById("nvramSection") as HTMLDivElement | null;
-export const actionsSection = document.getElementById("actionsSection") as HTMLDivElement | null;
-export const btnNvRead = document.getElementById("btnNvRead") as HTMLButtonElement | null;
-export const btnNvErase = document.getElementById("btnNvErase") as HTMLButtonElement | null;
-export const btnNvWrite = document.getElementById("btnNvWrite") as HTMLButtonElement | null;
-export const autoBslToggle = document.getElementById("autoBslToggle") as HTMLInputElement | null;
-export const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
-// mapping selector removed; we’ll try both wiring assumptions automatically
-export const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
-export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement | null;
-export const getVersionBtn = document.getElementById("getVersionBtn") as HTMLButtonElement | null;
-export const getModelBtn = document.getElementById("getModelBtn") as HTMLButtonElement | null;
 
+export const hostInput = document.getElementById("hostInput") as HTMLInputElement;
+export const portInput = document.getElementById("portInput") as HTMLInputElement;
+
+export const mdnsSelect = document.getElementById("mdnsSelect") as HTMLSelectElement | null;
+export const mdnsRefreshBtn = document.getElementById("mdnsRefresh") as HTMLButtonElement | null;
+export const tcpSettingsBtn = document.getElementById("tcpSettingsBtn") as HTMLButtonElement | null;
+export const tcpLinksBtn = document.getElementById("tcpLinksBtn") as HTMLButtonElement | null;
+
+// TCP Links Panel
+export const tcpLinksPanel = document.getElementById("tcpLinksPanel") as HTMLDivElement | null;
 export const pinModeSelect = document.getElementById("pinModeSelect") as HTMLInputElement | null;
 export const ctrlUrlRow = document.getElementById("ctrlUrlRow") as HTMLDivElement | null;
-export const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
-export const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
-export const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
 export const bslUrlSelect = document.getElementById("bslUrlSelect") as HTMLSelectElement | null;
 export const rstUrlSelect = document.getElementById("rstUrlSelect") as HTMLSelectElement | null;
 export const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElement | null;
-export const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
-export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
-export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
-export const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
-export const generalSection = document.getElementById("generalSection") as HTMLElement | null;
-export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
-export const deviceSection = document.getElementById("deviceSection") as HTMLElement | null;
-export const familySection = document.getElementById("familySection") as HTMLElement | null;
-export const serialSection = document.getElementById("serialSection") as HTMLElement | null;
-export const logSection = document.getElementById("logSection") as HTMLElement | null;
-export const developmentSection = document.getElementById("developmentSection") as HTMLElement | null;
-export const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
-export const espFirmwareSection = document.getElementById("espFirmwareSection") as HTMLDivElement | null;
-export const localFirmwareSection = document.getElementById("localFirmwareSection") as HTMLDivElement | null;
-export const cloudFirmwareSection = document.getElementById("cloudFirmwareSection") as HTMLDivElement | null;
-export const espFilesContainer = document.getElementById("espFilesContainer") as HTMLDivElement | null;
-export const btnAddEspFile = document.getElementById("btnAddEspFile") as HTMLButtonElement | null;
+export const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
+export const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
+export const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
 
+export const connectTcpBtn = document.getElementById("connectTcp") as HTMLButtonElement;
+
+// Device section
+const deviceSection = document.getElementById("deviceSection") as HTMLElement | null;
+export const deviceDetectSpinner = document.getElementById("deviceDetectSpinner") as HTMLSpanElement | null;
+export const portInfoEl = document.getElementById("portInfo") as HTMLInputElement | null;
+export const chipModelEl = document.getElementById("chipModel") as HTMLInputElement | null;
+export const flashSizeEl = document.getElementById("flashSize") as HTMLInputElement | null;
 export const flashSizeWrap = document.getElementById("flashSizeWrap") as HTMLElement | null;
+export const ieeeMacEl = document.getElementById("ieeeMac") as HTMLInputElement | null;
 export const ieeeMacWrap = document.getElementById("ieeeMacWrap") as HTMLElement | null;
+export const firmwareVersionEl = document.getElementById("firmwareVersion") as HTMLInputElement | null;
 export const firmwareVersionWrap = document.getElementById("firmwareVersionWrap") as HTMLElement | null;
+export const bootloaderVersionEl = document.getElementById("bootloaderVersion") as HTMLInputElement | null;
 export const bootloaderVersionWrap = document.getElementById("bootloaderVersionWrap") as HTMLElement | null;
-export const flashOptionsWrap = document.getElementById("flashOptionsWrap") as HTMLElement | null;
-export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
 
-export const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonElement | null;
-export const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
+export const disconnectBtn = document.getElementById("disconnectBtn") as HTMLButtonElement;
 
-// CC Debugger elements
+// CC2530 section
+const debuggerSection = document.getElementById("debuggerSection") as HTMLElement | null;
+const debuggerControls = document.getElementById("debugger-controls") as HTMLElement | null;
+const usbHttpMsg = document.getElementById("usbHttpMsg");
+export const debuggerDetectSpinner = document.getElementById("debuggerDetectSpinner") as HTMLSpanElement | null;
 export const connectDebuggerBtn = document.getElementById("connectDebugger") as HTMLButtonElement | null;
 export const debuggerConnectWrap = document.getElementById("debuggerConnectWrap") as HTMLElement | null;
 export const connectLoaderBtn = document.getElementById("connectLoader") as HTMLButtonElement | null;
 export const loaderConnectWrap = document.getElementById("loaderConnectWrap") as HTMLElement | null;
-export const debuggerSection = document.getElementById("debuggerSection") as HTMLElement | null;
-export const resetDebugBtn = document.getElementById("resetDebugBtn") as HTMLButtonElement | null;
-export const btnReadFlash = document.getElementById("btnReadFlash") as HTMLButtonElement;
+
 export const debugModelEl = document.getElementById("debugModel") as HTMLInputElement | null;
 export const debugManufEl = document.getElementById("debugManuf") as HTMLInputElement | null;
 export const debugSerialEl = document.getElementById("debugSerial") as HTMLInputElement | null;
 export const debugFwVersionEl = document.getElementById("debugFwVersion") as HTMLInputElement | null;
 export const targetIdEl = document.getElementById("targetId") as HTMLInputElement | null;
 export const targetIeeeEl = document.getElementById("targetIeee") as HTMLInputElement | null;
-export const debuggerDetectSpinner = document.getElementById("debuggerDetectSpinner") as HTMLSpanElement | null;
-export const debuggerOptionWrap = document.getElementById("debuggerOptionWrap") as HTMLDivElement | null;
-export const verifyMethodWrap = document.getElementById("verifyMethod") as HTMLSelectElement | null;
-export const writeMethodWrap = document.getElementById("writeMethod") as HTMLSelectElement | null;
-export const verifyMethodSelect = verifyMethodWrap?.value as VerifyMethod;
-export const writeMethodSelect = writeMethodWrap?.value as WriteMethod;
 
-export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
+// Firmware section
+const firmwareSection = document.getElementById("firmwareSection") as HTMLDivElement | null;
+
+// Local file section
+const localFirmwareSection = document.getElementById("localFirmwareSection") as HTMLDivElement | null;
+export const localFile = document.getElementById("localFile") as HTMLInputElement;
 const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
 
+// Cloud firmware section
+const cloudFirmwareSection = document.getElementById("cloudFirmwareSection") as HTMLDivElement | null;
+export const netFwSelect = document.getElementById("netFwSelect") as HTMLSelectElement | null;
+export const netFwNotesBtn = document.getElementById("netFwNotesBtn") as HTMLButtonElement | null;
+export const netFwRefreshBtn = document.getElementById("netFwRefresh") as HTMLButtonElement | null;
+
 const netFwSourceEl = document.getElementById("netFwSource") as HTMLAnchorElement | null;
+
 // Firmware Notes Logic
 const netFwNotesBtnEl = document.getElementById("netFwNotesBtn");
 const fwNotesModalEl = document.getElementById("fwNotesModal");
@@ -123,16 +113,63 @@ const fwNotesContentEl = document.getElementById("fwNotesContent");
 const fwNotesCloseEl = document.getElementById("fwNotesClose");
 const fwNotesCloseXEl = document.getElementById("fwNotesCloseX");
 
-const serialControlsWrap = document.getElementById("serialControlsWrap");
-const serialHttpMsg = document.getElementById("serialHttpMsg");
+// ESP firmware section
+const espFirmwareSection = document.getElementById("espFirmwareSection") as HTMLDivElement | null;
+export const espFilesContainer = document.getElementById("espFilesContainer") as HTMLDivElement | null;
+export const btnAddEspFile = document.getElementById("btnAddEspFile") as HTMLButtonElement | null;
 
-const debuggerControls = document.getElementById("debugger-controls") as HTMLElement | null;
-const usbHttpMsg = document.getElementById("usbHttpMsg");
+// Flash options
+const flashOptionsWrap = document.getElementById("flashOptionsWrap") as HTMLElement | null;
+export const optErase = document.getElementById("optErase") as HTMLInputElement;
+export const optWrite = document.getElementById("optWrite") as HTMLInputElement;
+export const optVerify = document.getElementById("optVerify") as HTMLInputElement;
 
-const tcpControlsWrap = document.getElementById("tcpControlsWrap");
-const tcpHttpsMsg = document.getElementById("tcpHttpsMsg");
+// CC Debugger options
+export const debuggerOptionWrap = document.getElementById("debuggerOptionWrap") as HTMLDivElement | null;
+export const verifyMethodWrap = document.getElementById("verifyMethod") as HTMLSelectElement | null;
+export const writeMethodWrap = document.getElementById("writeMethod") as HTMLSelectElement | null;
+export const verifyMethodSelect = verifyMethodWrap?.value as VerifyMethod;
+export const writeMethodSelect = writeMethodWrap?.value as WriteMethod;
 
-const consoleWrap = document.getElementById("consoleWrap") as HTMLElement | null;
+export const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
+export const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
+export const progressEl = document.getElementById("progress") as HTMLDivElement;
+
+// IEEE secondary address section
+const ieeeSection = document.getElementById("ieeeSection") as HTMLDivElement | null;
+export const currentIeee = document.getElementById("currentIeee") as HTMLInputElement | null;
+export const btnIeeeRead = document.getElementById("btnIeeeRead") as HTMLButtonElement | null;
+export const newIeee = document.getElementById("newIeee") as HTMLInputElement | null;
+export const btnIeeeWrite = document.getElementById("btnIeeeWrite") as HTMLButtonElement | null;
+
+// NVRAM section
+const nvramSection = document.getElementById("nvramSection") as HTMLDivElement | null;
+export const btnNvRead = document.getElementById("btnNvRead") as HTMLButtonElement | null;
+export const btnNvErase = document.getElementById("btnNvErase") as HTMLButtonElement | null;
+export const btnNvWrite = document.getElementById("btnNvWrite") as HTMLButtonElement | null;
+export const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElement | null;
+
+// Actions section
+const actionsSection = document.getElementById("actionsSection") as HTMLDivElement | null;
+export const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
+export const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
+export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement | null;
+export const getVersionBtn = document.getElementById("getVersionBtn") as HTMLButtonElement | null;
+export const getModelBtn = document.getElementById("getModelBtn") as HTMLButtonElement | null;
+export const resetDebugBtn = document.getElementById("resetDebugBtn") as HTMLButtonElement | null;
+export const btnReadFlash = document.getElementById("btnReadFlash") as HTMLButtonElement;
+
+// Logs section
+const logSection = document.getElementById("logSection") as HTMLElement | null;
+const consoleWrapEl = document.getElementById("consoleWrap") as HTMLDivElement | null;
+export const logEl = document.getElementById("log") as HTMLDivElement;
+export const autoScrollEl = document.getElementById("autoScroll") as HTMLInputElement | null;
+export const showIoEl = document.getElementById("showIo") as HTMLInputElement | null;
+export const btnClearLog = document.getElementById("btnClearLog") as HTMLButtonElement | null;
+export const btnCopyLog = document.getElementById("btnCopyLog") as HTMLButtonElement | null;
+
+// Mist
+export const developmentSection = document.getElementById("developmentSection") as HTMLElement | null;
 
 import {
   saveCtrlSettings,
@@ -216,6 +253,7 @@ export function updateUIForFamily() {
     }
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
+    if (ieeeSection) ieeeSection.classList.remove("d-none");
     if (nvramSection) nvramSection.classList.remove("d-none");
     // Fields
     if (flashSizeWrap) {
@@ -271,6 +309,7 @@ export function updateUIForFamily() {
     }
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
+    if (ieeeSection) ieeeSection.classList.remove("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
     if (flashSizeWrap) flashSizeWrap.classList.add("d-none");
@@ -318,7 +357,7 @@ export function updateUIForFamily() {
     if (espFirmwareSection) espFirmwareSection.classList.remove("d-none");
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     // espFilesContainer?.classList.replace("col-md-12", "col-md-6");
-
+    if (ieeeSection) ieeeSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
     if (flashSizeWrap) {
@@ -363,6 +402,7 @@ export function updateUIForFamily() {
       localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
     }
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
+    if (ieeeSection) ieeeSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
@@ -453,10 +493,10 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function applyLogVisibility() {
-  if (!consoleWrap || !showIoEl) return;
+  if (!consoleWrapEl || !showIoEl) return;
   const hideAll = !showIoEl.checked;
-  consoleWrap.classList.toggle("hide-rx", hideAll);
-  consoleWrap.classList.toggle("hide-tx", hideAll);
+  consoleWrapEl.classList.toggle("hide-rx", hideAll);
+  consoleWrapEl.classList.toggle("hide-tx", hideAll);
 }
 
 // Theme Toggle
@@ -583,7 +623,7 @@ if (netFwNotesBtnEl) {
 // Load marked.js if missing
 if (!window.marked) {
   const script = document.createElement("script");
-  script.src = "https://cdn.jsdelivr.net/npm/marked/marked.min.js";
+  script.src = "js/marked.min.js";
   script.async = true;
   document.head.appendChild(script);
 }
@@ -724,6 +764,7 @@ export function updateConnectionUI() {
     if (ieeeMacEl) ieeeMacEl.value = "";
     if (firmwareVersionEl) firmwareVersionEl.value = "";
     if (bootloaderVersionEl) bootloaderVersionEl.value = "";
+    if (currentIeee) currentIeee.value = "";
   }
 
   // Gate entire Actions section like Firmware/NVRAM
@@ -741,6 +782,10 @@ export function updateConnectionUI() {
   if (nvramSection) {
     nvramSection.classList.toggle("opacity-50", !anyActive);
     nvramSection.classList.toggle("pe-none", !anyActive);
+  }
+  if (ieeeSection) {
+    ieeeSection.classList.toggle("opacity-50", !anyActive);
+    ieeeSection.classList.toggle("pe-none", !anyActive);
   }
   // Cloud controls reflect connection state
   if (netFwSelect) netFwSelect.disabled = !anyActive;
