@@ -95,6 +95,7 @@ import {
   updateConnectionUI,
   debuggerOptionWrap,
   portInfoEl,
+  forceWrite,
 } from "./ui";
 
 // Global state variables and UI elements
@@ -464,6 +465,10 @@ getVersionBtn?.addEventListener("click", async () => {
         implyGateToggle?.checked ?? true
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
+      if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+      await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
+        log("Network FW list fetch failed: " + (e?.message || String(e)))
+      );
     }
   });
 });
@@ -583,13 +588,15 @@ btnNvWrite?.addEventListener("click", async () => {
 btnIeeeRead?.addEventListener("click", async () => {
   await withButtonStatus(btnIeeeRead!, async () => {
     try {
-      await enterBsl();
-      await readChipInfo();
       const ieee = await ieeeReadSecondary();
       if (currentIeee) {
         currentIeee.value = ieee;
       }
-      log(`Secondary IEEE address: ${ieee}`);
+      if (getSelectedFamily() === "ti") {
+        log(`Secondary IEEE address: ${ieee}`);
+      } else {
+        log(`Primary IEEE address: ${ieee}`);
+      }
       return true;
     } catch (e: any) {
       log("IEEE read error: " + (e?.message || String(e)));
@@ -608,7 +615,11 @@ btnIeeeWrite?.addEventListener("click", async () => {
         throw err;
       }
       await ieeeWriteSecondary(addr);
-      log(`Secondary IEEE address written: ${addr}`);
+      if (getSelectedFamily() === "ti") {
+        log(`Secondary IEEE address written: ${addr}`);
+      } else {
+        log(`Primary IEEE address written: ${addr}`);
+      }
       log("Resetting device...");
       try {
         await performReset();
@@ -684,6 +695,10 @@ btnFlash.addEventListener("click", async () => {
             implyGateToggle?.checked ?? true
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
+          if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+          await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
+            log("Network FW list fetch failed: " + (e?.message || String(e)))
+          );
         }
         if (family == "ti") {
           // use local wrapper to log and update UI
@@ -1659,6 +1674,10 @@ async function runConnectSequence(): Promise<void> {
           implyGateToggle?.checked ?? true
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
+        if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+        await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
+          log("Network FW list fetch failed: " + (e?.message || String(e)))
+        );
       } catch (e: any) {
         log("Silabs probe failed: " + (e?.message || String(e)));
       }
@@ -1931,27 +1950,96 @@ async function nvramWriteAll(obj: any): Promise<void> {
 
 // IEEE secondary address functions
 async function ieeeReadSecondary(): Promise<string> {
-  if (!ti_tools) throw new Error("TiTools not initialized");
-  if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+  const family = getSelectedFamily();
 
-  // Read the secondary IEEE address
-  const ieeeBytes = await ti_tools.readSecondaryIeeeAddress(detectedTiChipFamily);
+  if (family === "ti") {
+    if (!ti_tools) throw new Error("TiTools not initialized");
+    await enterBsl();
+    await readChipInfo();
+    if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
 
-  // Format as colon-separated string
-  const ieeeStr = Array.from(ieeeBytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join(":")
-    .toUpperCase();
+    // Read the secondary IEEE address from TI chip
+    const ieeeBytes = await ti_tools.readSecondaryIeeeAddress(detectedTiChipFamily);
 
-  return ieeeStr;
+    // Format as colon-separated string
+    const ieeeStr = Array.from(ieeeBytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(":")
+      .toUpperCase();
+
+    return ieeeStr;
+  } else if (family === "sl") {
+    if (!sl_tools) throw new Error("SilabsTools not initialized");
+
+    await performReset();
+    await sleep(1000);
+
+    // Ensure Silabs tool is ready
+    // Read the secondary IEEE address from SiLabs chip
+    const ieeeBytes = await sl_tools.readSecondaryIeeeAddress();
+
+    // Format as colon-separated string (SiLabs EUI64 is little-endian, reverse for display)
+    const ieeeStr = Array.from(ieeeBytes)
+      .reverse()
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(":")
+      .toUpperCase();
+
+    return ieeeStr;
+  } else {
+    throw new Error("IEEE address read/write is only supported for TI and SiLabs chips");
+  }
 }
 
 async function ieeeWriteSecondary(address: string): Promise<void> {
-  if (!ti_tools) throw new Error("TiTools not initialized");
-  if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+  const family = getSelectedFamily();
 
-  // Write the secondary IEEE address
-  await ti_tools.writeSecondaryIeeeAddress(address, detectedTiChipFamily);
+  if (family === "ti") {
+    if (!ti_tools) throw new Error("TiTools not initialized");
+    if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+
+    // Write the secondary IEEE address to TI chip
+    await ti_tools.writeSecondaryIeeeAddress(address, detectedTiChipFamily);
+  } else if (family === "sl") {
+    if (!sl_tools) throw new Error("SilabsTools not initialized");
+
+    // Parse the address string manually (supports colon/dash/hex formats)
+    let addr = address.trim();
+    let bytes: string[];
+
+    if (addr.includes(":")) {
+      bytes = addr.split(":");
+    } else if (addr.includes("-")) {
+      bytes = addr.split("-");
+    } else {
+      addr = addr.replace(/^0x/i, "");
+      if (addr.length !== 16) {
+        throw new Error("IEEE address hex string must be exactly 16 characters");
+      }
+      bytes = addr.match(/.{1,2}/g) || [];
+    }
+
+    if (bytes.length !== 8) {
+      throw new Error("IEEE address must contain exactly 8 bytes");
+    }
+
+    const parsed = new Uint8Array(8);
+    for (let i = 0; i < 8; i++) {
+      const val = parseInt(bytes[i], 16);
+      if (isNaN(val) || val < 0 || val > 255) {
+        throw new Error(`Invalid byte value in IEEE address: ${bytes[i]}`);
+      }
+      parsed[i] = val;
+    }
+
+    // Reverse bytes for SiLabs (display is big-endian, chip expects little-endian)
+    const reversedBytes = new Uint8Array(parsed).reverse();
+
+    // Write the secondary IEEE address to SiLabs chip
+    await sl_tools.writeSecondaryIeeeAddress(reversedBytes, forceWrite?.checked ?? false);
+  } else {
+    throw new Error("IEEE address read/write is only supported for TI and SiLabs chips");
+  }
 }
 
 // DTR = BSL(FLASH), RTS = RESET; (active low);

@@ -43,6 +43,9 @@ export class SilabsTools {
   private menuRegex =
     /(?:^|[\r\n])(?:Gecko|\w+\s*Serial)\s+Bootloader v([0-9.]+)[\r\n]+1\. upload (?:gbl|ebl)[\r\n]+2\. run[\r\n]+3\. (?:ebl|gbl) info[\r\n]+(?:\d+\. .*?[\r\n]+)*BL ?>/i;
 
+  // Simple version-only regex (fallback if full menu doesn't match)
+  private versionOnlyRegex = /(?:Gecko|\w+\s*Serial)\s+Bootloader\s+v([0-9.]+)/i;
+
   // eslint-disable-next-line no-control-regex
   private uploadCompleteRegex = /\r\nSerial upload (complete|aborted)\r\n(.*?)\x00?/s;
   private promptRegex = /(?:^|[\r\n])BL ?> ?/i;
@@ -90,6 +93,8 @@ export class SilabsTools {
   }
 
   private dataReceived(data: Uint8Array): void {
+    //console.log(`[dataReceived] received ${data.length} bytes, current state=${this.state}, ezspClient=${!!this.ezspClient}`);
+
     if (this.ezspClient) {
       this.ezspClient.handleData(data);
       return;
@@ -112,30 +117,38 @@ export class SilabsTools {
 
       if (currentState === State.WAITING_FOR_MENU) {
         const text = new TextDecoder().decode(this.buffer);
-        const match = text.match(this.menuRegex);
 
+        // Try full menu regex first
+        const match = text.match(this.menuRegex);
         if (match) {
           this.version = match[1];
-          console.log(`Detected Gecko Bootloader v${this.version}`);
+          console.log(`Detected Gecko Bootloader v${this.version} (full menu)`);
           this.buffer = new Uint8Array(0);
           this.state = State.IN_MENU;
-        } else if (this.promptRegex.test(text)) {
-          // If we see "Bootloader" or "Gecko", it might be an incomplete menu. Do not clear buffer.
-          if (/(?:Gecko|Bootloader)/i.test(text)) {
+          continue;
+        }
+
+        // Try version-only regex (works even without full menu)
+        const versionMatch = text.match(this.versionOnlyRegex);
+        if (versionMatch) {
+          this.version = versionMatch[1];
+          console.log(`Detected Gecko Bootloader v${this.version} (version-only)`);
+
+          // Wait for prompt before marking as IN_MENU
+          if (this.promptRegex.test(text)) {
+            console.log(`Prompt detected, entering IN_MENU state`);
+            this.buffer = new Uint8Array(0);
+            this.state = State.IN_MENU;
+            continue;
+          } else {
+            console.log(`Version found, waiting for prompt... (breaking to wait for more data)`);
+            // Exit loop, wait for more data (prompt) to arrive
             break;
           }
-
-          // Prompt seen but no version header yet; still in menu
-          console.log("Detected Gecko Bootloader prompt (no header)");
-          this.buffer = new Uint8Array(0);
-          if (this.version) {
-            this.state = State.IN_MENU;
-          } else {
-            console.log("Version not detected yet, staying in WAITING_FOR_MENU");
-          }
-        } else {
-          break; // Need more data
         }
+
+        // No version yet, need more data
+        break;
       } else if (currentState === State.WAITING_XMODEM_READY) {
         // Wait for 'C' character indicating XMODEM-CRC mode (may appear repeatedly)
         // Check presence anywhere in buffer to be resilient to framing
@@ -198,60 +211,39 @@ export class SilabsTools {
   //   // The actual implementation is in flasher.ts with setLines()
   // }
 
-  public async getBootloaderVersion(timeoutMs: number = 2000): Promise<string> {
+  public async getBootloaderVersion(timeoutMs: number = 2000, forceQuery: boolean = false): Promise<string> {
     this.ensureListener();
+
+    // Reset state BEFORE creating promise (synchronously) if needed
+    const needsQuery = forceQuery || !(this.state === State.IN_MENU && this.version);
+
+    if (needsQuery) {
+      this.state = State.WAITING_FOR_MENU;
+      this.version = null;
+    }
 
     return new Promise((resolve, reject) => {
       (async () => {
         try {
-          // Reset state machine and request EBL info exactly like USF
-          this.state = State.WAITING_FOR_MENU;
-          this.version = null;
-          // Clear buffer to ensure we don't parse old garbage data from previous sessions
-          this.buffer = new Uint8Array(0);
+          if (needsQuery) {
+            // Request bootloader info (option 3)
+            await this.writeString("\n3\n");
+          }
 
-          // Ember bootloader requires a newline before option
-          await this.writeString("\n");
-          await this.writeString("3");
-
-          // Wait for menu to appear (with timeout)
+          // Wait for dataReceived() to process the response
           const timeout = setTimeout(() => {
-            reject(new Error("Timeout waiting for bootloader menu"));
-          }, Math.max(500, timeoutMs));
+            reject(new Error("Timeout waiting for bootloader version"));
+          }, timeoutMs);
 
-          let attempts = 0;
-          const maxAttempts = 20;
-          const checkMenu = setInterval(() => {
-            attempts++;
+          // Simple polling: just wait for dataReceived() to set version
+          const checkInterval = setInterval(() => {
             if (this.state === State.IN_MENU && this.version) {
-              clearInterval(checkMenu);
+              clearInterval(checkInterval);
               clearTimeout(timeout);
-              resolve(this.version);
               this.logger(`SL Bootloader: v${this.version}`);
-              return;
+              resolve(this.version);
             }
-            if (attempts >= maxAttempts) {
-              clearInterval(checkMenu);
-              clearTimeout(timeout);
-              reject(new Error("Failed to detect bootloader menu after 20 attempts"));
-              return;
-            }
-            try {
-              const t = new TextDecoder().decode(this.buffer);
-              console.log(`Checking for menu:\n${t}`);
-              const mm = t.match(this.menuRegex);
-              if (mm) {
-                this.version = mm[1];
-                this.buffer = new Uint8Array(0);
-                this.state = State.IN_MENU;
-                clearInterval(checkMenu);
-                clearTimeout(timeout);
-                resolve(this.version);
-              }
-            } catch {
-              // ignore
-            }
-          }, 100);
+          }, 50);
         } catch (error) {
           reject(error);
         }
@@ -375,12 +367,18 @@ export class SilabsTools {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
+          // Clear EZSP client to ensure bootloader data is processed correctly
+          this.ezspClient = null;
+
           // Pad firmware to XMODEM block size
           const paddedFirmware = padToMultiple(firmware, XMODEM_BLOCK_SIZE, 0xff);
           // console.log(`Flashing ${paddedFirmware.length} bytes (original: ${firmware.length})`);
 
-          // First, query bootloader info
-          await this.getBootloaderVersion();
+          // First, query bootloader info (force fresh query to reset state machine)
+          await this.getBootloaderVersion(2000, true);
+
+          // Give time for any buffered menu responses to be processed
+          await sleep(200);
 
           // Initialize XMODEM state
           this.xmodemFirmware = paddedFirmware;
@@ -420,7 +418,10 @@ export class SilabsTools {
     });
   }
 
-  public async getApplicationVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
+  public async getApplicationVersion(
+    doReset: boolean = false,
+    implyGate: boolean = false
+  ): Promise<{ version: string; deviceModel?: string }> {
     // Re-register handler to ensure we are listening
     this.ensureListener();
 
@@ -430,14 +431,78 @@ export class SilabsTools {
       await sleep(1000); // Wait for device to boot and send CPC frame
     }
 
-    this.ezspClient = new EzspAshClient(this.link);
+    if (!this.ezspClient) {
+      this.ezspClient = new EzspAshClient(this.link, this.logger);
+    }
+
+    // Initialize EZSP and get version
+    const { version, mfgString, boardName } = await this.ezspClient.readVersion();
+
+    // Log all information
+    this.logger(`Application version: ${version}`);
+    // if (mfgString) {
+    this.logger(`MFG_STRING: ${mfgString}`);
+    // }
+    // if (boardName) {
+    this.logger(`MFG_BOARD_NAME: ${boardName}`);
+    // }
+
+    if (mfgString && boardName) {
+      return { version, deviceModel: `${mfgString} ${boardName}` };
+    }
+
+    return { version };
+  }
+
+  /**
+   * Read the secondary IEEE address (EUI64) from SiLabs chip
+   * @returns 8-byte IEEE address as Uint8Array
+   */
+  public async readSecondaryIeeeAddress(): Promise<Uint8Array> {
+    this.ensureListener();
+
+    if (!this.ezspClient) {
+      this.ezspClient = new EzspAshClient(this.link, this.logger);
+    }
+
     try {
-      const info = await this.ezspClient.readVersion();
-      this.logger(`Application version: ${info}`);
-      return info;
-    } finally {
-      this.ezspClient.dispose();
-      this.ezspClient = null;
+      const ieeeAddress = await this.ezspClient.readSecondaryIeeeAddress();
+      // this.logger(
+      //   `Read IEEE address: ${Array.from(ieeeAddress)
+      //     .map((b) => b.toString(16).padStart(2, "0"))
+      //     .join(":")}`
+      // );
+      return ieeeAddress;
+    } catch (error) {
+      this.logger(`Failed to read IEEE address: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Write the secondary IEEE address (EUI64) to SiLabs chip
+   * @param ieeeAddress - 8-byte IEEE address as Uint8Array
+   */
+  public async writeSecondaryIeeeAddress(ieeeAddress: Uint8Array, force: boolean): Promise<void> {
+    if (ieeeAddress.length !== 8) {
+      throw new Error("IEEE address must be 8 bytes");
+    }
+
+    this.ensureListener();
+
+    if (!this.ezspClient) {
+      this.ezspClient = new EzspAshClient(this.link, this.logger);
+    }
+
+    if (force) {
+      this.logger("Warning! Force writing IEEE address!");
+      await sleep(1000);
+    }
+
+    try {
+      await this.ezspClient.writeSecondaryIeeeAddress(ieeeAddress, force);
+    } catch (error) {
+      throw error;
     }
   }
 
@@ -599,7 +664,7 @@ export class SilabsTools {
     doReset: boolean = true,
     implyGate: boolean = true,
     baudrateCandidates: number[] = [115200, 460800, 230400]
-  ): Promise<{ firmwareType: string; version: string; baudrate: number }> {
+  ): Promise<{ firmwareType: string; version: string; baudrate: number; deviceModel?: string }> {
     const tryBaudrates = baudrate === "auto" ? baudrateCandidates : [baudrate];
 
     // Define probe order based on firmware type
@@ -630,8 +695,13 @@ export class SilabsTools {
           switch (fwType) {
             case "ezsp":
               this.logger(`Trying EZSP (NCP)...`);
-              version = await this.getApplicationVersion(doReset, implyGate);
-              return { firmwareType: "ezsp", version: version + " (ZB Coordinator)", baudrate: br };
+              let result = await this.getApplicationVersion(doReset, implyGate);
+              return {
+                firmwareType: "ezsp",
+                version: result.version + " (ZB Coordinator)",
+                baudrate: br,
+                deviceModel: result.deviceModel,
+              };
 
             case "cpc":
               this.logger(`Trying CPC (MultiPAN RCP)...`);
@@ -815,9 +885,11 @@ class EzspAshClient {
   private readyReject: ((err: Error) => void) | null = null;
   private initialized = false;
   private disposed = false;
+  private logger: (msg: string) => void;
 
-  constructor(link: Link) {
+  constructor(link: Link, logger: (msg: string) => void) {
     this.link = link;
+    this.logger = logger;
   }
 
   public dispose() {
@@ -847,19 +919,99 @@ class EzspAshClient {
     this.processBuffer();
   }
 
-  public async readVersion(): Promise<string> {
-    await this.ensureReady();
-    const desiredProtocolVersion = 4;
+  public async reset(): Promise<void> {
+    const cancelPrefix = new Uint8Array(32).fill(ASH_CANCEL);
+    const rstControl = 0xc0;
+    const rstBody = new Uint8Array([rstControl]);
+    const crc = crc16(rstBody, 0xffff);
+    const rstFrame = new Uint8Array([ASH_FLAG, rstControl, crc & 0xff, (crc >> 8) & 0xff, ASH_FLAG]);
+
+    const fullReset = new Uint8Array(cancelPrefix.length + rstFrame.length);
+    fullReset.set(cancelPrefix, 0);
+    fullReset.set(rstFrame, cancelPrefix.length);
+
+    await this.link.write(fullReset);
+
+    this.rxSeq = 0;
+    this.txSeq = 0;
+    this.ezspSeq = 0;
+
+    await sleep(500);
+  }
+
+  public async initialize(): Promise<{ version: number; stackType: number; stackVersion: number }> {
+    // Only reset if not already initialized
+    if (!this.initialized) {
+      await this.reset();
+    }
+
     const frameId = 0x00;
-    const payload = new Uint8Array([desiredProtocolVersion]);
-    const response = await this.sendEzspCommand(frameId, payload, 4000);
-    console.log("Response bytes:", response);
-    if (response.length < 4) {
+    const response1 = await this.sendEzspCommand(frameId, new Uint8Array([4]), 4000);
+
+    if (response1.length < 4) {
       throw new Error("Invalid EZSP version response");
     }
-    const protocolVersion = response[0];
-    const stackType = response[1];
-    const stackVersion = response[2] | (response[3] << 8);
+
+    const actualVersion = response1[0];
+    const stackType = response1[1];
+    const stackVersion = response1[2] | (response1[3] << 8);
+
+    if (actualVersion !== 4) {
+      const response2 = await this.sendEzspCommand(frameId, new Uint8Array([actualVersion]), 4000);
+      if (response2.length < 4 || response2[0] !== actualVersion) {
+        throw new Error("EZSP version negotiation failed");
+      }
+    }
+
+    this.initialized = true;
+    return { version: actualVersion, stackType, stackVersion };
+  }
+
+  private async readMfgToken(tokenId: number): Promise<string | undefined> {
+    try {
+      const getMfgTokenFrameId = 0x000b;
+      const payload = new Uint8Array([tokenId]);
+      const response = await this.sendEzspCommand(getMfgTokenFrameId, payload, 4000);
+
+      // Response format: [length, ...token_data]
+      // First byte is the length, actual data starts from byte 1
+      if (response.length > 1) {
+        const tokenLength = response[0];
+        const tokenData = response.slice(1, 1 + tokenLength);
+
+        // Check if all bytes are 0xFF (empty/unprogrammed token)
+        const isEmpty = tokenData.every((byte) => byte === 0xff);
+        if (isEmpty) {
+          return undefined;
+        }
+
+        // Find null terminator or use full token length
+        let endIdx = tokenData.indexOf(0);
+        if (endIdx === -1) endIdx = tokenData.length;
+
+        const stringData = tokenData.slice(0, endIdx);
+
+        // Check if token data contains only printable ASCII characters
+        const isPrintable = stringData.every((byte) => byte >= 0x20 && byte <= 0x7e);
+        if (!isPrintable) {
+          return undefined;
+        }
+
+        return new TextDecoder().decode(stringData);
+      }
+    } catch (error) {
+      console.warn(`Failed to get MFG token 0x${tokenId.toString(16)}:`, error);
+    }
+    return undefined;
+  }
+
+  public async readVersion(): Promise<{ version: string; mfgString?: string; boardName?: string }> {
+    await this.ensureReady();
+
+    // Initialize EZSP protocol first
+    const { version: protocolVersion, stackType, stackVersion } = await this.initialize();
+
+    // Parse stack version into readable format
     const digits = [
       (stackVersion >> 12) & 0xf,
       (stackVersion >> 8) & 0xf,
@@ -869,31 +1021,328 @@ class EzspAshClient {
     console.log(`EZSP Stack Version Digits: ${digits.join(".")}`);
     const versionParts = digits.map((digit) => digit.toString(10));
     const versionText = versionParts.join(".");
+
+    // Try to get build number from additional version info
     let buildNumber: number | null = null;
-    if (response.length >= 6) {
-      buildNumber = response[4] | (response[5] << 8);
+    try {
+      // getValue with VALUE_VERSION_INFO (0x11)
+      const getValueFrameId = 0x00aa;
+      const valueId = 0x11; // VALUE_VERSION_INFO
+      const getValuePayload = new Uint8Array([valueId]);
+      const getValueResponse = await this.sendEzspCommand(getValueFrameId, getValuePayload, 4000);
+
+      // Response: [status, length, ...value_bytes]
+      if (getValueResponse.length >= 2 && getValueResponse[0] === 0x00) {
+        const valueLength = getValueResponse[1];
+        if (valueLength >= 7 && getValueResponse.length >= 2 + valueLength) {
+          // VALUE_VERSION_INFO format: [build, major, minor, patch, special, type, ...]
+          buildNumber = getValueResponse[2] | (getValueResponse[3] << 8);
+          console.log(`EZSP: Got build number from VALUE_VERSION_INFO: ${buildNumber}`);
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to get VALUE_VERSION_INFO:", error);
     }
 
-    // // If buildNumber was not obtained from version, request from mfglibGetVersion
-    // if (buildNumber === null || buildNumber === 0) {
-    //   try {
-    //     const mfglibFrameId = 0x0c; // mfglibGetVersion
-    //     const mfglibPayload = new Uint8Array([]);
-    //     const mfglibResponse = await this.sendEzspCommand(mfglibFrameId, mfglibPayload, 4000);
-    //     console.log("mfglibGetVersion Response bytes:", mfglibResponse);
-    //     if (mfglibResponse.length >= 3 && mfglibResponse[0] === 0) {
-    //       // status OK
-    //       buildNumber = mfglibResponse[1] | (mfglibResponse[2] << 8);
-    //     }
-    //   } catch (error) {
-    //     console.warn("Failed to get build number from mfglibGetVersion:", error);
-    //   }
-    // }
+    // Read MFG tokens
+    const mfgString = await this.readMfgToken(0x01);
+    const boardName = await this.readMfgToken(0x02);
+
+    console.log(`EZSP: MFG_STRING = ${mfgString ? `"${mfgString}"` : "(empty)"}`);
+    console.log(`EZSP: MFG_BOARD_NAME = ${boardName ? `"${boardName}"` : "(empty)"}`);
 
     const machineVersion = buildNumber !== null ? `${versionText}.${buildNumber}` : versionText;
     const summary = buildNumber !== null ? `${versionText} build ${buildNumber}` : versionText;
     const details = [`EZSP v${protocolVersion}`, `stack type ${stackType}`, machineVersion];
-    return `${summary} (${details.join(", ")})`;
+    const version = `${summary} (${details.join(", ")})`;
+
+    return { version, mfgString, boardName };
+  }
+
+  /**
+   * Read the EUI64 (IEEE address) from the SiLabs chip
+   * Uses getEui64 command (0x0026) after proper EZSP initialization
+   * @returns 8-byte IEEE address as Uint8Array
+   */
+  public async readSecondaryIeeeAddress(): Promise<Uint8Array> {
+    await this.ensureReady();
+    await this.initialize();
+
+    const response = await this.sendEzspCommand(0x0026, new Uint8Array([]), 4000);
+
+    if (response.length >= 8) {
+      return response.slice(0, 8);
+    }
+
+    throw new Error(`Failed to read EUI64: invalid response length ${response.length}`);
+  }
+
+  /**
+   * Write the EUI64 (IEEE address) to the SiLabs chip
+   * Follows bellows implementation strategy:
+   * 1. Try NV3 tokens (rewritable)
+   * 2. Fallback to MFG_CUSTOM_EUI_64 (one-time write) if explicitly allowed
+   * @param ieeeAddress - 8-byte IEEE address as Uint8Array
+   * @param burnIntoUserdata - Allow ONE-TIME write to MFG_CUSTOM_EUI_64 (permanent!)
+   */
+  public async writeSecondaryIeeeAddress(ieeeAddress: Uint8Array, burnIntoUserdata: boolean = false): Promise<void> {
+    if (ieeeAddress.length !== 8) {
+      throw new Error("IEEE address must be 8 bytes");
+    }
+
+    await this.ensureReady();
+    await this.initialize();
+
+    // Check if current EUI64 is already the target
+    const currentEui64 = await this.readSecondaryIeeeAddress();
+    if (this.arraysEqual(currentEui64, ieeeAddress)) {
+      this.logger("EUI64 already matches target, skipping write");
+      return;
+    }
+
+    // Try to find writable NV3 token (CREATOR or NVM3KEY variant)
+    const nv3TokenId = await this.getNv3RestoredEui64Key();
+
+    if (nv3TokenId !== null) {
+      // NV3 token exists - use it (rewritable)
+      try {
+        this.logger(`Using NV3 token 0x${nv3TokenId.toString(16).padStart(8, "0")}`);
+        await this.setTokenData(nv3TokenId, 0, ieeeAddress);
+        this.logger("✓ EUI64 written to NV3 storage (rewritable)");
+        return;
+      } catch (error) {
+        this.logger(`Failed to write NV3 token: ${error}`);
+      }
+    }
+
+    // NV3 not available, check MFG_CUSTOM_EUI_64
+    const mfgCustomEui64 = await this.getMfgCustomEui64();
+
+    if (mfgCustomEui64 === null && burnIntoUserdata) {
+      // MFG token is empty and user explicitly allowed burning
+      this.logger("Using MFG_CUSTOM_EUI_64 token (ONE-TIME write, permanent!)");
+      await this.setMfgToken(0x0c, ieeeAddress); // MFG_CUSTOM_EUI_64 = 0x0C
+      this.logger("✓ EUI64 written to MFG_CUSTOM_EUI_64 (PERMANENT)");
+      return;
+    }
+
+    if (mfgCustomEui64 === null && !burnIntoUserdata) {
+      throw new Error(
+        `Firmware does not support NV3 tokens. ` +
+          `Custom IEEE will not be written unless you pass select "Force" option. ` +
+          `WARNING: MFG_CUSTOM_EUI_64 is ONE-TIME write and cannot be changed afterward!`
+      );
+    }
+
+    // MFG token already written
+    throw new Error(
+      `Custom IEEE address has already been ` +
+        `written once to MFG_CUSTOM_EUI_64 (${Array.from(mfgCustomEui64!)
+          .reverse()
+          .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
+          .join(":")}) ` +
+        `and cannot be changed!`
+    );
+  }
+
+  /**
+   * Get NV3 key for restored EUI64 if it exists (bellows: _get_nv3_restored_eui64_key)
+   * Tries both CREATOR_STACK_RESTORED_EUI64 (NCP) and NVM3KEY_STACK_RESTORED_EUI64 (RCP)
+   */
+  private async getNv3RestoredEui64Key(): Promise<number | null> {
+    const tokens = [
+      0x0000e12a, // CREATOR_STACK_RESTORED_EUI64 (NCP firmware)
+      0x0001e12a, // NVM3KEY_STACK_RESTORED_EUI64 (RCP firmware)
+    ];
+
+    for (const tokenId of tokens) {
+      try {
+        const data = await this.getTokenData(tokenId, 0);
+        if (data) {
+          console.log(
+            `Found NV3 token 0x${tokenId.toString(16).padStart(8, "0")}: ${Array.from(data)
+              .map((b) => b.toString(16).padStart(2, "0"))
+              .join(":")}`
+          );
+          return tokenId;
+        }
+      } catch (error) {
+        // Token doesn't exist or not supported, try next
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get MFG_CUSTOM_EUI_64 token if it's valid (bellows: _get_mfg_custom_eui_64)
+   * Returns null if token is empty (0xFF * 8) or doesn't exist
+   */
+  private async getMfgCustomEui64(): Promise<Uint8Array | null> {
+    try {
+      const getMfgTokenFrameId = 0x000b;
+      const payload = new Uint8Array([0x0c]); // MFG_CUSTOM_EUI_64 = 0x0C
+      const response = await this.sendEzspCommand(getMfgTokenFrameId, payload, 4000);
+
+      if (response.length < 9) {
+        return null; // RCP firmware - no MFG tokens
+      }
+
+      const tokenLength = response[0];
+      if (tokenLength !== 8) {
+        return null;
+      }
+
+      const tokenData = response.slice(1, 9);
+
+      // Check if empty (all 0xFF)
+      const isEmpty = tokenData.every((byte) => byte === 0xff);
+      if (isEmpty) {
+        return null;
+      }
+
+      return tokenData;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Check if EUI64 can be rewritten (bellows: can_rewrite_custom_eui64)
+   */
+  public async canRewriteCustomEui64(): Promise<boolean> {
+    return (await this.getNv3RestoredEui64Key()) !== null;
+  }
+
+  /**
+   * Check if EUI64 can be burned once (bellows: can_burn_userdata_custom_eui64)
+   */
+  public async canBurnUserdataCustomEui64(): Promise<boolean> {
+    return (await this.getMfgCustomEui64()) === null;
+  }
+
+  /**
+   * Read token data using getTokenData (0x0102)
+   */
+  private async getTokenData(tokenId: number, index: number): Promise<Uint8Array | null> {
+    const payload = new Uint8Array(8);
+    payload[0] = tokenId & 0xff;
+    payload[1] = (tokenId >> 8) & 0xff;
+    payload[2] = (tokenId >> 16) & 0xff;
+    payload[3] = (tokenId >> 24) & 0xff;
+    payload[4] = index & 0xff;
+    payload[5] = (index >> 8) & 0xff;
+    payload[6] = (index >> 16) & 0xff;
+    payload[7] = (index >> 24) & 0xff;
+
+    const response = await this.sendEzspCommand(0x0102, payload, 4000);
+
+    if (response.length < 1) {
+      return null;
+    }
+
+    const status = response[0];
+    if (status !== 0x00) {
+      return null;
+    }
+
+    // Response format (EZSP v9+): [status, value_length_low, value_length_high, ...value_data]
+    if (response.length < 3) {
+      return null;
+    }
+
+    const valueLength = response[1] | (response[2] << 8);
+    if (response.length < 3 + valueLength) {
+      return null;
+    }
+
+    return response.slice(3, 3 + valueLength);
+  }
+
+  /**
+   * Write token data using setTokenData (0x0103)
+   */
+  private async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
+    const payload = new Uint8Array(4 + 4 + 1 + data.length);
+
+    // Token ID (little-endian)
+    payload[0] = tokenId & 0xff;
+    payload[1] = (tokenId >> 8) & 0xff;
+    payload[2] = (tokenId >> 16) & 0xff;
+    payload[3] = (tokenId >> 24) & 0xff;
+
+    // Index (little-endian)
+    payload[4] = index & 0xff;
+    payload[5] = (index >> 8) & 0xff;
+    payload[6] = (index >> 16) & 0xff;
+    payload[7] = (index >> 24) & 0xff;
+
+    // Length (1 byte) + Data
+    payload[8] = data.length;
+    payload.set(data, 9);
+
+    const response = await this.sendEzspCommand(0x0103, payload, 4000);
+
+    if (response.length < 1) {
+      throw new Error("Invalid setTokenData response");
+    }
+
+    const status = response[0];
+    if (status !== 0x00) {
+      throw new Error(
+        `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
+      );
+    }
+  }
+
+  /**
+   * Write MFG token using setMfgToken (0x0C)
+   */
+  private async setMfgToken(tokenId: number, data: Uint8Array): Promise<void> {
+    const payload = new Uint8Array(1 + 1 + data.length);
+    payload[0] = tokenId;
+    payload[1] = data.length;
+    payload.set(data, 2);
+
+    const response = await this.sendEzspCommand(0x000c, payload, 4000);
+
+    if (response.length < 1) {
+      throw new Error("Invalid setMfgToken response");
+    }
+
+    const status = response[0];
+    if (status !== 0x00) {
+      throw new Error(
+        `setMfgToken failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
+      );
+    }
+  }
+
+  private arraysEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Get human-readable name for EmberStatus code
+   */
+  private getEmberStatusName(status: number): string {
+    const statusNames: { [key: number]: string } = {
+      0x00: "SUCCESS",
+      0x01: "ERR_FATAL",
+      0x02: "BAD_ARGUMENT",
+      0x03: "NOT_FOUND",
+      0xb2: "KEY_INVALID",
+      0xb4: "TABLE_FULL",
+      0xb6: "TABLE_ENTRY_ERASED",
+      0xc0: "NVM3_TOKEN_NO_VALID_PAGES",
+      0xc1: "NVM3_ERR_OPENED_WITH_OTHER_PARAMETERS",
+    };
+    return statusNames[status] || `UNKNOWN_${status}`;
   }
 
   private async ensureReady(): Promise<void> {
@@ -925,11 +1374,25 @@ class EzspAshClient {
     if (this.pendingResponse) throw new Error("EZSP request already in flight");
     const seq = this.ezspSeq;
     this.ezspSeq = (this.ezspSeq + 1) & 0xff;
-    const frame = new Uint8Array(3 + payload.length);
+
+    // EZSP v8+ uses 16-bit frame IDs with extended frame format
+    // Frame structure: [seq, frameControl, 0x01, frameId_low, frameId_high, ...payload]
+    const frame = new Uint8Array(5 + payload.length);
     frame[0] = seq;
     frame[1] = 0x00; // frame control (request)
-    frame[2] = frameId;
-    frame.set(payload, 3);
+    frame[2] = 0x01; // Extended frame format marker (indicates 16-bit frame ID follows)
+    frame[3] = frameId & 0xff; // Frame ID low byte
+    frame[4] = (frameId >> 8) & 0xff; // Frame ID high byte
+    frame.set(payload, 5);
+
+    // console.log(
+    //   `sendEzspCommand: frameId=0x${frameId.toString(16).padStart(4, "0")}, seq=${seq}, payload length=${
+    //     payload.length
+    //   }, full frame:`,
+    //   Array.from(frame)
+    //     .map((b) => "0x" + b.toString(16).padStart(2, "0"))
+    //     .join(" ")
+    // );
 
     const responsePromise = new Promise<Uint8Array>((resolve, reject) => {
       const timer = window.setTimeout(() => {
@@ -1137,7 +1600,15 @@ class EzspAshClient {
   }
 
   private handleFrame(frame: AshFrame) {
+    // console.log(`handleFrame: frame kind=${frame.kind}`, frame);
+
     if (frame.kind === "data") {
+      // console.log(
+      //   `DATA frame: frmNum=${frame.frmNum}, ackNum=${frame.ackNum}, payload length=${frame.payload.length}, payload:`,
+      //   Array.from(frame.payload)
+      //     .map((b) => "0x" + b.toString(16).padStart(2, "0"))
+      //     .join(" ")
+      // );
       this.handleAckInfo(frame.ackNum);
       if (frame.frmNum === this.rxSeq || frame.reTx) {
         if (frame.frmNum === this.rxSeq) {
@@ -1180,9 +1651,35 @@ class EzspAshClient {
 
   private handleEzspPayload(payload: Uint8Array) {
     if (!this.pendingResponse) return;
+
     const seq = payload[0];
     const frameControl = payload[1];
-    const body = payload.slice(3);
+
+    // EZSP v8+ uses extended frame format with 16-bit frame IDs
+    // Format: [seq, frameControl, 0x01, frameId_low, frameId_high, ...body]
+    // We check payload[2] to see if it's 0x01 (extended format marker)
+    let frameId: number;
+    let body: Uint8Array;
+
+    if (payload.length >= 5 && payload[2] === 0x01) {
+      // Extended format (EZSP v8+): 16-bit frame ID
+      frameId = payload[3] | (payload[4] << 8);
+      body = payload.slice(5);
+    } else {
+      // Legacy format (EZSP v4-v7): 8-bit frame ID
+      frameId = payload[2];
+      body = payload.slice(3);
+    }
+
+    // console.log(
+    //   `handleEzspPayload: seq=${seq}, frameControl=0x${frameControl.toString(16)}, frameId=0x${frameId
+    //     .toString(16)
+    //     .padStart(4, "0")}, body length=${body.length}, body:`,
+    //   Array.from(body)
+    //     .map((b) => "0x" + b.toString(16).padStart(2, "0"))
+    //     .join(" ")
+    // );
+
     if ((frameControl & 0x80) === 0 && this.pendingResponse.seq !== seq) {
       return; // callback frame; ignore for now
     }

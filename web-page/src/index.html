@@ -643,8 +643,8 @@
         </div>
 
         <div id="ieeeSection" class="section opacity-50 pe-none" aria-disabled="true">
-            <h2 class="h6">IEEE (Secondary)</h2>
-            <div class="small text-muted mb-2">Read and write secondary IEEE address. Use with caution.</div>
+            <h2 class="h6">IEEE</h2>
+            <div id="ieeeDescription" class="small text-muted mb-2"></div>
             <div class="row g-2 mb-2">
                 <div class="col-md-6">
                     <label class="form-label">Current IEEE</label>
@@ -658,10 +658,22 @@
                 <div class="col-md-6">
                     <label class="form-label">New IEEE</label>
                     <input id="newIeee" class="form-control mb-2" type="text" placeholder="00:00:00:00:00:00:00:00" />
-                    <div class="d-flex justify-content-center">
-                        <button id="btnIeeeWrite" class="btn btn-outline-warning mt-2">
+                    <div class="d-flex justify-content-center align-items-center">
+
+                        <button id="btnIeeeWrite" class="btn btn-outline-warning mt-2 mx-2">
                             <i class="bi bi-upload me-1"></i>Write
                         </button>
+                        <div id="ieeeForceWrap" class="d-flex justify-content-center align-items-center d-none">
+                            <div class="form-check m-0 mt-2">
+                                <input id="forceWrite" class="form-check-input" type="checkbox" />
+                                <label class="form-check-label" for="forceWrite">Force ⚠️</label>
+                            </div>
+                            <button class="btn btn-sm btn-link mt-2" type="button" aria-label="Force IEEE help"
+                                data-bs-toggle="tooltip" data-bs-placement="left"
+                                title="This action is one-time and irreversible. Only use it if the new IEEE is rejected by the device.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -137,10 +137,13 @@ export const progressEl = document.getElementById("progress") as HTMLDivElement;
 
 // IEEE secondary address section
 const ieeeSection = document.getElementById("ieeeSection") as HTMLDivElement | null;
+const ieeeDescription = document.getElementById("ieeeDescription") as HTMLDivElement | null;
 export const currentIeee = document.getElementById("currentIeee") as HTMLInputElement | null;
 export const btnIeeeRead = document.getElementById("btnIeeeRead") as HTMLButtonElement | null;
 export const newIeee = document.getElementById("newIeee") as HTMLInputElement | null;
 export const btnIeeeWrite = document.getElementById("btnIeeeWrite") as HTMLButtonElement | null;
+const ieeeForceWrap = document.getElementById("ieeeForceWrap") as HTMLDivElement | null;
+export const forceWrite = document.getElementById("forceWrite") as HTMLInputElement | null;
 
 // NVRAM section
 const nvramSection = document.getElementById("nvramSection") as HTMLDivElement | null;
@@ -254,6 +257,8 @@ export function updateUIForFamily() {
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
     if (ieeeSection) ieeeSection.classList.remove("d-none");
+    if (ieeeForceWrap) ieeeForceWrap.classList.add("d-none");
+    if (ieeeDescription) ieeeDescription.textContent = "Read and write secondary IEEE address.";
     if (nvramSection) nvramSection.classList.remove("d-none");
     // Fields
     if (flashSizeWrap) {
@@ -310,6 +315,8 @@ export function updateUIForFamily() {
     if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
     if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
     if (ieeeSection) ieeeSection.classList.remove("d-none");
+    if (ieeeForceWrap) ieeeForceWrap.classList.remove("d-none");
+    if (ieeeDescription) ieeeDescription.textContent = "Read and write primary IEEE address. Use with caution!";
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
     if (flashSizeWrap) flashSizeWrap.classList.add("d-none");
