@@ -131,29 +131,60 @@ export function filterFwByChipSL(man: SlZwManifest, chip: string) {
     EFR32MG21: "EFR32MG21",
   };
   const deviceName = chipMap[chip] || chip;
+  const deviceNameLower = deviceName.toLowerCase();
   const result: Record<string, ZwFirmwareInfo[]> = {};
+
   for (const cat of categories) {
     const catObj = man[cat];
     if (!catObj) continue;
+
     for (const sub of Object.keys(catObj)) {
-      if (!sub.startsWith(deviceName)) continue;
-      const boards = catObj[sub];
-      for (const boardName of Object.keys(boards)) {
-        const files = boards[boardName];
-        for (const fname of Object.keys(files)) {
-          const fi = files[fname];
-          (result[cat] ||= []).push({
-            file: fname,
-            ver: fi.ver,
-            link: fi.link,
-            notes: fi.notes,
-            baud: fi.baud,
-            board: boardName,
-            signed: fi.signed,
-          });
+      const subValue = catObj[sub];
+
+      // First try: check if sub matches deviceName (root level)
+      if (sub.toLowerCase().includes(deviceNameLower)) {
+        const boards = subValue;
+        for (const boardName of Object.keys(boards)) {
+          const files = boards[boardName];
+          for (const fname of Object.keys(files)) {
+            const fi = files[fname];
+            (result[cat] ||= []).push({
+              file: fname,
+              ver: fi.ver,
+              link: fi.link,
+              notes: fi.notes,
+              baud: fi.baud,
+              board: boardName,
+              signed: fi.signed,
+            });
+          }
+        }
+      } else {
+        // Second try: search deeper in nested structure
+        // subValue is an object where keys might be board names or another level
+        for (const boardName of Object.keys(subValue)) {
+          const boardValue = subValue[boardName];
+
+          // Check if boardName matches deviceName (case-insensitive substring match)
+          if (boardName.toLowerCase().includes(deviceNameLower)) {
+            const files = boardValue;
+            for (const fname of Object.keys(files)) {
+              const fi = files[fname];
+              (result[cat] ||= []).push({
+                file: fname,
+                ver: fi.ver,
+                link: fi.link,
+                notes: fi.notes,
+                baud: fi.baud,
+                board: boardName,
+                signed: fi.signed,
+              });
+            }
+          }
         }
       }
     }
+
     // Sort by semantic version (newest first)
     if (result[cat]) result[cat]!.sort((a, b) => compareSemanticVersions(b.ver, a.ver));
   }
