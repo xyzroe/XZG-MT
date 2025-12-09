@@ -863,6 +863,28 @@ export class TiTools {
     return this.memRead(addr, 1, 1);
   }
 
+  public async memWrite(addr: number, data: Uint8Array, width: number = 4): Promise<void> {
+    // Memory Write (0x2B) - write data to address
+    // width: 1 = 8-bit, 4 = 32-bit (widthCode: 0 = 8-bit, 1 = 32-bit)
+    if (width !== 1 && width !== 4) {
+      throw new Error("width must be 1 or 4");
+    }
+    if (width !== data.length) {
+      throw new Error("width does not match data length");
+    }
+
+    const widthCode = width === 4 ? 1 : 0;
+    const content = new Uint8Array(1 + 4 + 1 + data.length);
+    content[0] = 0x2b; // CMD_MEMORY_WRITE
+    content.set(this.encodeAddr(addr), 1);
+    content[5] = widthCode;
+    content.set(data, 6);
+
+    await this.sendCommandRaw(content, false, 2000);
+    const ok = await this.checkLastCmd();
+    if (!ok) throw new Error("CCTOOLS: memWrite failed");
+  }
+
   // ============== Application Protocol Methods ==============
 
   public async pingApp(timeoutMs = 3000): Promise<boolean> {
@@ -1207,6 +1229,286 @@ export class TiTools {
     );
 
     this.logger(`Flash dump saved to ${filename}`);
+  }
+
+  // ============== IEEE Address Methods ==============
+
+  /**
+   * Read secondary IEEE address from the device (requires BSL mode)
+   * Note: Device must already be in BSL mode before calling this
+   * @param family - Chip family (required - should be obtained from readDeviceInfo)
+   * @returns 8-byte IEEE address
+   */
+  public async readSecondaryIeeeAddress(family: TiChipFamily): Promise<Uint8Array> {
+    if (!family) {
+      throw new Error("Chip family must be specified. Call readDeviceInfo() first.");
+    }
+
+    this.logger(`Reading secondary IEEE address (${family})...`);
+
+    if (family === "cc2538") {
+      // CC2538: Secondary IEEE at fixed address 0x0027FFCC
+      const ADDR_IEEE_SECONDARY = 0x0027ffcc;
+
+      // Read 8 bytes (2 reads of 4 bytes each)
+      const part1 = await this.memRead(ADDR_IEEE_SECONDARY);
+      const part2 = await this.memRead(ADDR_IEEE_SECONDARY + 4);
+
+      if (!part1 || !part2 || part1.length < 4 || part2.length < 4) {
+        throw new Error("Failed to read secondary IEEE address");
+      }
+
+      // CC2538 returns bytes in inverted order - reverse each 4-byte chunk
+      const ieee = new Uint8Array(8);
+      ieee[0] = part1[3];
+      ieee[1] = part1[2];
+      ieee[2] = part1[1];
+      ieee[3] = part1[0];
+      ieee[4] = part2[3];
+      ieee[5] = part2[2];
+      ieee[6] = part2[1];
+      ieee[7] = part2[0];
+
+      const macFmt = Array.from(ieee)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(":")
+        .toUpperCase();
+      //this.logger(`Secondary IEEE: ${macFmt}`);
+      return ieee;
+    } else {
+      // CC26xx: Secondary IEEE at (flash_size - 88 + 0x20)
+      // First get flash size
+      const FLASH_SIZE = 0x4003002c;
+      const flashSz = await this.memRead32(FLASH_SIZE);
+
+      if (!flashSz || flashSz.length < 4) {
+        throw new Error("Failed to read flash size");
+      }
+
+      const pages = flashSz[0];
+      const flashSize = pages * 8192;
+      const CCFG_LEN = 88;
+      const IEEE_OFFSET = 0x20;
+      const addr = flashSize - CCFG_LEN + IEEE_OFFSET;
+
+      this.logger(`Flash size: ${flashSize} bytes, secondary IEEE at 0x${addr.toString(16)}`);
+
+      // Read 8 bytes (2 reads of 4 bytes each)
+      const part1 = await this.memRead32(addr);
+      const part2 = await this.memRead32(addr + 4);
+
+      if (!part1 || !part2 || part1.length < 4 || part2.length < 4) {
+        throw new Error("Failed to read secondary IEEE address");
+      }
+
+      // CC26xx returns bytes in correct order but we need MSB first (reverse entire address)
+      const ieee = new Uint8Array([...part1, ...part2].reverse());
+
+      const macFmt = Array.from(ieee)
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join(":")
+        .toUpperCase();
+      //this.logger(`Secondary IEEE: ${macFmt}`);
+      return ieee;
+    }
+  }
+
+  /**
+   * Write secondary IEEE address to the device (requires BSL mode)
+   * Note: Device must already be in BSL mode before calling this
+   * @param ieeeAddress - 8-byte IEEE address or colon/dash-separated string
+   * @param family - Chip family (required - should be obtained from readDeviceInfo)
+   */
+  public async writeSecondaryIeeeAddress(ieeeAddress: Uint8Array | string, family: TiChipFamily): Promise<void> {
+    if (!family) {
+      throw new Error("Chip family must be specified. Call readDeviceInfo() first.");
+    }
+
+    let ieee: Uint8Array;
+
+    // Parse IEEE address if it's a string
+    if (typeof ieeeAddress === "string") {
+      ieee = this.parseIeeeAddress(ieeeAddress);
+    } else {
+      ieee = ieeeAddress;
+    }
+
+    if (ieee.length !== 8) {
+      throw new Error("IEEE address must be exactly 8 bytes");
+    }
+
+    const macFmt = Array.from(ieee)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(":")
+      .toUpperCase();
+    this.logger(`Writing secondary IEEE address: ${macFmt} (${family})`);
+
+    if (family === "cc2538") {
+      // CC2538: Write to fixed address 0x0027FFCC (Flash memory)
+      const ADDR_IEEE_SECONDARY = 0x0027ffcc;
+      const PAGE_SIZE = 2048; // CC2538 flash page size
+
+      // Calculate page start address
+      const pageAddr = Math.floor(ADDR_IEEE_SECONDARY / PAGE_SIZE) * PAGE_SIZE;
+      const offsetInPage = ADDR_IEEE_SECONDARY - pageAddr;
+
+      this.logger(`Reading flash page at 0x${pageAddr.toString(16)} (${PAGE_SIZE} bytes)`);
+
+      // Read entire page before erasing
+      const pageData = new Uint8Array(PAGE_SIZE);
+      for (let offset = 0; offset < PAGE_SIZE; offset += 4) {
+        const data = await this.memRead(pageAddr + offset);
+        if (!data || data.length < 4) {
+          throw new Error(`Failed to read page at offset ${offset}`);
+        }
+        // CC2538 returns bytes in inverted order
+        pageData[offset] = data[3];
+        pageData[offset + 1] = data[2];
+        pageData[offset + 2] = data[1];
+        pageData[offset + 3] = data[0];
+      }
+
+      this.logger(`Modifying IEEE address at offset 0x${offsetInPage.toString(16)} in page`);
+
+      // Modify only the 8 bytes of IEEE address in the page data
+      for (let i = 0; i < 8; i++) {
+        pageData[offsetInPage + i] = ieee[i];
+      }
+
+      this.logger(`Erasing flash page at 0x${pageAddr.toString(16)}`);
+
+      // Erase the flash page
+      await this.erase(pageAddr, PAGE_SIZE);
+
+      this.logger(`Writing modified page back to flash (${PAGE_SIZE} bytes)`);
+
+      // Write page back in chunks using downloadTo
+      // CC2538 downloadTo can handle up to ~248 bytes per call
+      const CHUNK_SIZE = 240; // Safe chunk size (multiple of 4)
+      for (let offset = 0; offset < PAGE_SIZE; offset += CHUNK_SIZE) {
+        const chunkSize = Math.min(CHUNK_SIZE, PAGE_SIZE - offset);
+        const chunk = pageData.subarray(offset, offset + chunkSize);
+        await this.downloadTo(pageAddr + offset, chunk);
+
+        if (offset % 512 === 0) {
+          this.logger(`Written ${offset + chunkSize}/${PAGE_SIZE} bytes`);
+        }
+      }
+
+      this.logger("Secondary IEEE address written successfully");
+    } else {
+      // CC26xx: Write to (flash_size - 88 + 0x20) in CCFG area
+      const FLASH_SIZE = 0x4003002c;
+      const flashSz = await this.memRead32(FLASH_SIZE);
+
+      if (!flashSz || flashSz.length < 4) {
+        throw new Error("Failed to read flash size");
+      }
+
+      const pages = flashSz[0];
+      const flashSize = pages * 8192;
+      const CCFG_LEN = 88;
+      const IEEE_OFFSET = 0x20;
+      const SECTOR_SIZE = 8192; // CC26xx flash sector size
+
+      // CCFG is in the last sector
+      const ccfgSectorAddr = flashSize - SECTOR_SIZE;
+      const ieeeAddr = flashSize - CCFG_LEN + IEEE_OFFSET;
+      const offsetInSector = ieeeAddr - ccfgSectorAddr;
+
+      this.logger(`Flash size: ${flashSize} bytes, CCFG sector at 0x${ccfgSectorAddr.toString(16)}`);
+      this.logger(`IEEE address at 0x${ieeeAddr.toString(16)} (offset ${offsetInSector} in sector)`);
+
+      // Read entire CCFG sector before erasing
+      this.logger(`Reading CCFG sector (${SECTOR_SIZE} bytes)...`);
+      const sectorData = new Uint8Array(SECTOR_SIZE);
+
+      // CC26xx can read up to 252 bytes at a time
+      const READ_CHUNK = 252;
+      for (let offset = 0; offset < SECTOR_SIZE; offset += READ_CHUNK) {
+        const chunkSize = Math.min(READ_CHUNK, SECTOR_SIZE - offset);
+        const data = await this.memReadBlock(ccfgSectorAddr + offset, chunkSize);
+        sectorData.set(data, offset);
+
+        if (offset % 2048 === 0) {
+          this.logger(`Read ${offset + chunkSize}/${SECTOR_SIZE} bytes`);
+        }
+      }
+
+      // Modify IEEE address in sector data
+      // CC26xx stores MSB at high address, so reverse the entire address
+      const ieeeReversed = new Uint8Array(ieee).reverse();
+      for (let i = 0; i < 8; i++) {
+        sectorData[offsetInSector + i] = ieeeReversed[i];
+      }
+
+      this.logger(`Erasing CCFG sector at 0x${ccfgSectorAddr.toString(16)}`);
+
+      // Erase the sector
+      await this.sectorErase(ccfgSectorAddr);
+
+      this.logger(`Writing modified CCFG sector back (${SECTOR_SIZE} bytes)...`);
+
+      // Write sector back in chunks
+      const WRITE_CHUNK = 240; // Safe chunk size for downloadTo
+      for (let offset = 0; offset < SECTOR_SIZE; offset += WRITE_CHUNK) {
+        const chunkSize = Math.min(WRITE_CHUNK, SECTOR_SIZE - offset);
+        const chunk = sectorData.subarray(offset, offset + chunkSize);
+        await this.downloadTo(ccfgSectorAddr + offset, chunk);
+
+        if (offset % 2048 === 0) {
+          this.logger(`Written ${offset + chunkSize}/${SECTOR_SIZE} bytes`);
+        }
+      }
+
+      this.logger("Secondary IEEE address written successfully");
+    }
+  }
+
+  /**
+   * Parse IEEE address from string format
+   * Supports formats: hex string, colon-separated, dash-separated
+   * @param addr - IEEE address as string
+   * @returns 8-byte Uint8Array
+   */
+  private parseIeeeAddress(addr: string): Uint8Array {
+    // Remove any whitespace
+    addr = addr.trim();
+
+    let bytes: string[];
+
+    // Try colon-separated format (00:12:4B:00:01:02:03:04)
+    if (addr.includes(":")) {
+      bytes = addr.split(":");
+    }
+    // Try dash-separated format (00-12-4B-00-01-02-03-04)
+    else if (addr.includes("-")) {
+      bytes = addr.split("-");
+    }
+    // Try plain hex string (00124B0001020304)
+    else {
+      // Remove 0x prefix if present
+      addr = addr.replace(/^0x/i, "");
+      if (addr.length !== 16) {
+        throw new Error("IEEE address hex string must be exactly 16 characters");
+      }
+      bytes = addr.match(/.{1,2}/g) || [];
+    }
+
+    if (bytes.length !== 8) {
+      throw new Error("IEEE address must contain exactly 8 bytes");
+    }
+
+    const result = new Uint8Array(8);
+    for (let i = 0; i < 8; i++) {
+      const val = parseInt(bytes[i], 16);
+      if (isNaN(val) || val < 0 || val > 255) {
+        throw new Error(`Invalid byte value in IEEE address: ${bytes[i]}`);
+      }
+      result[i] = val;
+    }
+
+    return result;
   }
 
   // ============== OpenThread RCP Detection Methods ==============

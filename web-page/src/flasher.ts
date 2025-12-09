@@ -39,6 +39,10 @@ import {
   netFwRefreshBtn,
   btnNvRead,
   btnNvErase,
+  currentIeee,
+  btnIeeeRead,
+  newIeee,
+  btnIeeeWrite,
   enterBslBtn,
   resetBtn,
   pingBtn,
@@ -438,14 +442,16 @@ getVersionBtn?.addEventListener("click", async () => {
       // Fallback to OpenThread RCP (460800 baud)
       log("FW version request: timed out or no response");
       // TI with OpenThread RCP  support only 460800 baud
-      await changeBaud(460800);
-      await performReset();
-      await sleep(1000);
-      const rcpInfo = await ti_tools.detectOpenThreadRcp().catch(() => null);
-      if (rcpInfo) {
-        if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
-        log(`OpenThread RCP version: ${rcpInfo.version}`);
-        return;
+      if (detectedTiChipFamily !== "cc2538") {
+        await changeBaud(460800);
+        await performReset();
+        await sleep(1000);
+        const rcpInfo = await ti_tools.detectOpenThreadRcp().catch(() => null);
+        if (rcpInfo) {
+          if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+          log(`OpenThread RCP version: ${rcpInfo.version}`);
+          return;
+        }
       }
 
       throw new Error("Version not available");
@@ -573,6 +579,54 @@ btnNvWrite?.addEventListener("click", async () => {
   });
 });
 
+// UI wiring for IEEE secondary address
+btnIeeeRead?.addEventListener("click", async () => {
+  await withButtonStatus(btnIeeeRead!, async () => {
+    try {
+      await enterBsl();
+      await readChipInfo();
+      const ieee = await ieeeReadSecondary();
+      if (currentIeee) {
+        currentIeee.value = ieee;
+      }
+      log(`Secondary IEEE address: ${ieee}`);
+      return true;
+    } catch (e: any) {
+      log("IEEE read error: " + (e?.message || String(e)));
+      throw e;
+    }
+  });
+});
+
+btnIeeeWrite?.addEventListener("click", async () => {
+  await withButtonStatus(btnIeeeWrite!, async () => {
+    try {
+      const addr = newIeee?.value?.trim();
+      if (!addr) {
+        const err = new Error("Please enter a new IEEE address");
+        log(err.message);
+        throw err;
+      }
+      await ieeeWriteSecondary(addr);
+      log(`Secondary IEEE address written: ${addr}`);
+      log("Resetting device...");
+      try {
+        await performReset();
+      } catch {
+        // ignore reset errors
+      }
+      // Clear the new IEEE field after successful write
+      if (newIeee) {
+        newIeee.value = "";
+      }
+      return true;
+    } catch (e: any) {
+      log("IEEE write error: " + (e?.message || String(e)));
+      throw e;
+    }
+  });
+});
+
 // Flash start button with status feedback
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
@@ -641,14 +695,16 @@ btnFlash.addEventListener("click", async () => {
           }
           if (!info) {
             log("FW version request: timed out or no response");
-            // TI with OpenThread RCP  support only 460800 baud
-            await changeBaud(460800);
-            await performReset();
-            await sleep(1000);
-            const rcpInfo = await ti_tools.detectOpenThreadRcp();
-            if (rcpInfo) {
-              if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
-              log(`OpenThread RCP version: ${rcpInfo.version}`);
+            if (detectedTiChipFamily !== "cc2538") {
+              // TI with OpenThread RCP  support only 460800 baud
+              await changeBaud(460800);
+              await performReset();
+              await sleep(1000);
+              const rcpInfo = await ti_tools.detectOpenThreadRcp();
+              if (rcpInfo) {
+                if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+                log(`OpenThread RCP version: ${rcpInfo.version}`);
+              }
             }
           }
         }
@@ -1579,14 +1635,16 @@ async function runConnectSequence(): Promise<void> {
         }
         if (!info) {
           log("FW version request: timed out or no response");
-          // TI with OpenThread RCP  support only 460800 baud
-          await changeBaud(460800);
-          await performReset();
-          await sleep(1000);
-          const rcpInfo = await ti_tools.detectOpenThreadRcp();
-          if (rcpInfo) {
-            if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
-            log(`OpenThread RCP version: ${rcpInfo.version}`);
+          if (detectedTiChipFamily !== "cc2538") {
+            // TI with OpenThread RCP  support only 460800 baud
+            await changeBaud(460800);
+            await performReset();
+            await sleep(1000);
+            const rcpInfo = await ti_tools.detectOpenThreadRcp();
+            if (rcpInfo) {
+              if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
+              log(`OpenThread RCP version: ${rcpInfo.version}`);
+            }
           }
         }
       } catch {
@@ -1869,6 +1927,31 @@ async function nvramWriteAll(obj: any): Promise<void> {
   if (!ti_tools) throw new Error("TiTools not initialized");
   await ti_tools.nvramWriteAll(obj, (s: string) => log(s), nvProgress);
   // nvProgress(100, "Write done");
+}
+
+// IEEE secondary address functions
+async function ieeeReadSecondary(): Promise<string> {
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+
+  // Read the secondary IEEE address
+  const ieeeBytes = await ti_tools.readSecondaryIeeeAddress(detectedTiChipFamily);
+
+  // Format as colon-separated string
+  const ieeeStr = Array.from(ieeeBytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join(":")
+    .toUpperCase();
+
+  return ieeeStr;
+}
+
+async function ieeeWriteSecondary(address: string): Promise<void> {
+  if (!ti_tools) throw new Error("TiTools not initialized");
+  if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+
+  // Write the secondary IEEE address
+  await ti_tools.writeSecondaryIeeeAddress(address, detectedTiChipFamily);
 }
 
 // DTR = BSL(FLASH), RTS = RESET; (active low);

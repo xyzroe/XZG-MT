@@ -642,6 +642,31 @@
             </div>
         </div>
 
+        <div id="ieeeSection" class="section opacity-50 pe-none" aria-disabled="true">
+            <h2 class="h6">IEEE (Secondary)</h2>
+            <div class="small text-muted mb-2">Read and write secondary IEEE address. Use with caution.</div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <label class="form-label">Current IEEE</label>
+                    <input id="currentIeee" class="form-control mb-2" type="text" readonly />
+                    <div class="d-flex justify-content-center">
+                        <button id="btnIeeeRead" class="btn btn-outline-primary">
+                            <i class="bi bi-download me-1"></i>Read
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">New IEEE</label>
+                    <input id="newIeee" class="form-control mb-2" type="text" placeholder="00:00:00:00:00:00:00:00" />
+                    <div class="d-flex justify-content-center">
+                        <button id="btnIeeeWrite" class="btn btn-outline-warning">
+                            <i class="bi bi-upload me-1"></i>Write
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div id="nvramSection" class="section opacity-50 pe-none" aria-disabled="true">
             <h2 class="h6">NVRAM</h2>
             <div class="small text-muted mb-2">Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with
