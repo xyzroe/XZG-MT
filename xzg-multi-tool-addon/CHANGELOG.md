@@ -1,3 +1,15 @@
+## v0.3.1
+
+## 🚀 Features
+- feat: added IEEE address read/write support for TI CC2538/CC2652  (#84) by @xyzroe
+- feat: add read/write IEEE (SL);  (#85) by @xyzroe
+- feat: manufacturer and model determine (SL, only NCP fw support) (#85) by @xyzroe
+- feat: removed external style/font dependencies (#84) by @xyzroe
+
+## 📘 Documentation
+
+- feat: manufacturer and model determine (SL, only NCP fw support) (#85) by @xyzroe
+
 ## v0.3.0
 
 ## 🚀 Features
