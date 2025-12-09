@@ -249,10 +249,15 @@ input:-webkit-autofill, textarea:-webkit-autofill, select:-webkit-autofill {
 
 /* Mobile tweaks */
 @media (max-width: 576px) {
-  /* 1. NVRAM buttons stacked full width */
-  .nv-actions { flex-direction: column; align-items: stretch; }
-  .nv-actions > .btn { width: 100%; 
-    margin-bottom: 0.5rem; }
+  /* 1. NVRAM buttons centered in column with auto width */
+  .nv-actions { 
+    flex-direction: column;
+    align-items: center;
+  }
+  .nv-actions > .btn { 
+    width: auto;
+    margin-bottom: 0.5rem; 
+  }
 
   /* 2. Actions buttons spacing already handled via margin */
 
