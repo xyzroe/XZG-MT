@@ -1,3 +1,15 @@
+## v0.3.2
+
+## 🚀 Features
+- feat: Arduino flashing support (#86) by @xyzroe
+- feat: dropdown in family selection (#86) by @xyzroe
+
+## 🐛 Bug Fixes
+- fix: small UI fixes (#86) by @xyzroe
+
+## 📘 Documentation
+- docs: update CC Loader how-to about Arduino (#86) by @xyzroe
+
 ## v0.3.1
 
 ## 🚀 Features
