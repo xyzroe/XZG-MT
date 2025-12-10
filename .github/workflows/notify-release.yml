@@ -48,54 +48,26 @@ jobs:
           done
 
       - name: Send Telegram Notification about release
-        uses: appleboy/telegram-action@master
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: markdown
+          photo: release-image.png
           message: |
             *${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*
             
             [View on GitHub](${{ steps.release_data.outputs.url }})
-          photo: release-image.png
 
       - name: Send Discord Notification
         if: env.DISCORD_WEBHOOK != ''
-        run: |
-          # Upload image to Discord and get URL
-          IMAGE_UPLOAD=$(curl -s -F "file=@release-image.png" "$DISCORD_WEBHOOK/slack" | jq -r '.attachments[0].url // empty')
-          
-          if [ -n "$IMAGE_UPLOAD" ]; then
-            # Send with uploaded image
-            curl -X POST "$DISCORD_WEBHOOK" \
-              -H "Content-Type: application/json" \
-              -d @- << EOF
-          {
-            "embeds": [{
-              "title": "${{ steps.release_data.outputs.title }}",
-              "description": "${{ steps.release_data.outputs.version }}",
-              "url": "${{ steps.release_data.outputs.url }}",
-              "color": 3066993,
-              "image": {
-                "url": "$IMAGE_UPLOAD"
-              }
-            }]
-          }
-          EOF
-          else
-            # Fallback: send without image
-            curl -X POST "$DISCORD_WEBHOOK" \
-              -H "Content-Type: application/json" \
-              -d @- << EOF
-          {
-            "embeds": [{
-              "title": "${{ steps.release_data.outputs.title }}",
-              "description": "${{ steps.release_data.outputs.version }}",
-              "url": "${{ steps.release_data.outputs.url }}",
-              "color": 3066993
-            }]
-          }
-          EOF
-          fi
-          echo "✅ Discord notification sent"
+        uses: tsickert/discord-webhook@v6.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          embed-title: ${{ steps.release_data.outputs.title }}
+          embed-description: ${{ steps.release_data.outputs.version }}
+          embed-url: ${{ steps.release_data.outputs.url }}
+          embed-color: 3066993
+          embed-image-url: attachment://release-image.png
+          filename: release-image.png
