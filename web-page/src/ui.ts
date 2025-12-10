@@ -2,7 +2,10 @@
 
 // Family section
 export const familySection = document.getElementById("familySection") as HTMLElement | null;
-export const familyRadios = document.querySelectorAll('input[name="chip_family"]');
+export const familyDropdown = document.getElementById("familyDropdown") as HTMLElement | null;
+export const familyDropdownBtn = document.getElementById("familyDropdownBtn") as HTMLButtonElement | null;
+export const familyDropdownMenu = document.getElementById("familyDropdownMenu") as HTMLElement | null;
+let selectedFamilyValue = "ti";
 
 // General section
 export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
@@ -20,6 +23,9 @@ export const bitrateInput = document.getElementById("bitrateInput") as HTMLInput
 export const autoBslToggle = document.getElementById("autoBslToggle") as HTMLInputElement | null;
 export const autoBslWrap = document.getElementById("autoBslWrap") as HTMLDivElement | null;
 export const chooseSerialBtn = document.getElementById("chooseSerial") as HTMLButtonElement;
+const serialBaudWrap = document.getElementById("serialBaudWrap") as HTMLDivElement | null;
+const arduinoBootWrap = document.getElementById("arduinoBootWrap") as HTMLDivElement | null;
+export const arduinoBootSelect = document.getElementById("arduinoBootSelect") as HTMLInputElement;
 
 // TCP section
 export const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
@@ -201,12 +207,85 @@ bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
 findBaudToggle?.addEventListener("change", saveCtrlSettings);
 bitrateInput?.addEventListener("change", saveCtrlSettings);
 
-familyRadios.forEach((r) => {
-  r.addEventListener("change", () => {
-    updateUIForFamily();
-    saveCtrlSettings();
+// Family dropdown logic
+if (familyDropdownBtn && familyDropdownMenu && familyDropdown) {
+  // Toggle dropdown on button click
+  familyDropdownBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    familyDropdown?.classList.toggle("open");
   });
-});
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", () => {
+    familyDropdown?.classList.remove("open");
+  });
+
+  // Handle item selection
+  const items = familyDropdownMenu.querySelectorAll(".custom-dropdown-item");
+  items.forEach((item) => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const value = (item as HTMLElement).dataset.value || "ti";
+      const img = item.querySelector("img")?.cloneNode(true) as HTMLImageElement;
+      const text = item.querySelector("span")?.textContent || "";
+
+      // Update button
+      if (familyDropdownBtn) {
+        const btnImg = familyDropdownBtn.querySelector(".dropdown-icon") as HTMLImageElement;
+        const btnText = familyDropdownBtn.querySelector(".dropdown-text") as HTMLSpanElement;
+        if (btnImg && img) {
+          btnImg.src = img.src;
+          btnImg.alt = img.alt;
+        }
+        if (btnText) btnText.textContent = text;
+      }
+
+      // Update selected state
+      items.forEach((i) => i.classList.remove("selected"));
+      item.classList.add("selected");
+      selectedFamilyValue = value as "ti" | "sl" | "esp" | "ti_old" | "arduino";
+
+      // Close dropdown
+      familyDropdown?.classList.remove("open");
+
+      // Trigger updates
+      updateUIForFamily();
+      saveCtrlSettings();
+    });
+  });
+
+  // Set initial selected state
+  const initialItem = familyDropdownMenu.querySelector(`[data-value="${selectedFamilyValue}"]`);
+  initialItem?.classList.add("selected");
+}
+
+export function getSelectedFamilyValue(): "ti" | "sl" | "esp" | "ti_old" | "arduino" {
+  return selectedFamilyValue as "ti" | "sl" | "esp" | "ti_old" | "arduino";
+}
+
+export function setSelectedFamilyValue(value: "ti" | "sl" | "esp" | "ti_old" | "arduino") {
+  selectedFamilyValue = value;
+  if (familyDropdownMenu && familyDropdownBtn) {
+    const item = familyDropdownMenu.querySelector(`[data-value="${value}"]`) as HTMLElement;
+    if (item) {
+      const img = item.querySelector("img")?.cloneNode(true) as HTMLImageElement;
+      const text = item.querySelector("span")?.textContent || "";
+
+      // Update button
+      const btnImg = familyDropdownBtn.querySelector(".dropdown-icon") as HTMLImageElement;
+      const btnText = familyDropdownBtn.querySelector(".dropdown-text") as HTMLSpanElement;
+      if (btnImg && img) {
+        btnImg.src = img.src;
+        btnImg.alt = img.alt;
+      }
+      if (btnText) btnText.textContent = text;
+
+      // Update selected state
+      familyDropdownMenu.querySelectorAll(".custom-dropdown-item").forEach((i) => i.classList.remove("selected"));
+      item.classList.add("selected");
+    }
+  }
+}
 
 tcpSettingsBtn?.addEventListener("click", () => {
   // Show/hide the TCP settings panel
@@ -261,6 +340,8 @@ export function updateUIForFamily() {
     if (ieeeDescription) ieeeDescription.textContent = "Read and write secondary IEEE address.";
     if (nvramSection) nvramSection.classList.remove("d-none");
     // Fields
+    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
+    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
     if (flashSizeWrap) {
       flashSizeWrap.className = flashSizeWrap.className.replace("col-md-6", "col-md-4");
       flashSizeWrap.classList.remove("d-none");
@@ -319,6 +400,8 @@ export function updateUIForFamily() {
     if (ieeeDescription) ieeeDescription.textContent = "Read and write primary IEEE address. Use with caution!";
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
+    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
+    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
     if (flashSizeWrap) flashSizeWrap.classList.add("d-none");
     if (ieeeMacWrap) ieeeMacWrap.classList.add("d-none");
     if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
@@ -327,7 +410,10 @@ export function updateUIForFamily() {
       firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-4", "col-md-6");
       firmwareVersionWrap.classList.remove("d-none");
     }
-    if (bootloaderVersionWrap) bootloaderVersionWrap.classList.remove("d-none");
+    if (bootloaderVersionWrap) {
+      bootloaderVersionWrap.className = bootloaderVersionWrap.className.replace("col-md-4", "col-md-6");
+      bootloaderVersionWrap.classList.remove("d-none");
+    }
     if (localFileHelp) {
       localFileHelp.textContent = "Use a local file (*.ota or *.gbl).";
     }
@@ -367,6 +453,8 @@ export function updateUIForFamily() {
     if (ieeeSection) ieeeSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
+    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
+    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
     if (flashSizeWrap) {
       flashSizeWrap.className = flashSizeWrap.className.replace("col-md-4", "col-md-6");
       flashSizeWrap.classList.remove("d-none");
@@ -412,6 +500,8 @@ export function updateUIForFamily() {
     if (ieeeSection) ieeeSection.classList.add("d-none");
     if (nvramSection) nvramSection.classList.add("d-none");
     // Fields
+    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
+    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
     if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
     if (debuggerOptionWrap) debuggerOptionWrap.classList.remove("d-none");
     if (localFileHelp) {
@@ -426,6 +516,68 @@ export function updateUIForFamily() {
     if (getModelBtn) getModelBtn.classList.remove("d-none");
 
     if (enterBslBtn) enterBslBtn.classList.add("d-none");
+    if (getVersionBtn) getVersionBtn.classList.add("d-none");
+    if (pingBtn) pingBtn.classList.add("d-none");
+  }
+  if (family === "arduino") {
+    // Sections
+    if (generalSection) generalSection.classList.add("d-none");
+    if (connectionSection) connectionSection.classList.remove("d-none");
+
+    if (tcpSection) tcpSection.classList.add("d-none");
+    if (serialSection) serialSection.className = serialSection.className.replace("col-md-6", "col-md-12");
+    if (deviceSection) deviceSection.classList.remove("d-none");
+    if (debuggerSection) debuggerSection.classList.add("d-none");
+    if (localFirmwareSection) {
+      localFirmwareSection.classList.remove("d-none");
+      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
+    }
+    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
+    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
+
+    if (ieeeSection) ieeeSection.classList.add("d-none");
+    if (nvramSection) nvramSection.classList.add("d-none");
+    // Fields
+    if (serialBaudWrap) serialBaudWrap.classList.add("d-none");
+    if (arduinoBootWrap) arduinoBootWrap.classList.remove("d-none");
+
+    if (flashSizeWrap) {
+      // flashSizeWrap.className = flashSizeWrap.className.replace("col-md-4", "col-md-6");
+      flashSizeWrap.classList.remove("d-none");
+    }
+    if (ieeeMacWrap) {
+      // ieeeMacWrap.className = ieeeMacWrap.className.replace("col-md-4", "col-md-6");
+      ieeeMacWrap.classList.remove("d-none");
+    }
+    if (bootloaderVersionWrap) {
+      bootloaderVersionWrap.className = bootloaderVersionWrap.className.replace("col-md-6", "col-md-4");
+      bootloaderVersionWrap.classList.remove("d-none");
+    }
+    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
+    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
+    if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
+
+    if (netFwSourceEl) {
+      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/cc_loader";
+      netFwSourceEl.textContent = "XZG-MT/cc_loader";
+    }
+
+    if (localFileHelp) {
+      localFileHelp.textContent = "Use a local file (*.hex).";
+    }
+    if (localFile) {
+      localFile.accept = ".hex";
+    }
+
+    // Toggles
+    if (autoBslWrap) autoBslWrap.classList.add("d-none");
+    if (findBaudWrap) findBaudWrap.classList.add("d-none");
+    // Buttons
+    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
+    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
+
+    if (enterBslBtn) enterBslBtn.classList.add("d-none");
+    if (getModelBtn) getModelBtn.classList.add("d-none");
     if (getVersionBtn) getVersionBtn.classList.add("d-none");
     if (pingBtn) pingBtn.classList.add("d-none");
   }
@@ -756,7 +908,10 @@ export function updateConnectionUI() {
       portInfoEl.value = host && port ? `tcp://${host}:${port}` : "tcp://";
     } else {
       // Web Serial has no stable system path; show logical info
-      const br = parseInt(bitrateInput.value, 10) || 115200;
+      let br = parseInt(bitrateInput.value, 10) || 115200;
+      if (getSelectedFamily() === "arduino") {
+        br = parseInt(arduinoBootSelect.value, 10) || 115200;
+      }
       portInfoEl.value = `serial @ ${br}bps`;
     }
   }
@@ -772,6 +927,10 @@ export function updateConnectionUI() {
     if (firmwareVersionEl) firmwareVersionEl.value = "";
     if (bootloaderVersionEl) bootloaderVersionEl.value = "";
     if (currentIeee) currentIeee.value = "";
+    // clear local file
+    if (localFile) localFile.value = "";
+    // clear cloud fw selection
+    if (netFwSelect) netFwSelect.value = "";
   }
 
   // Gate entire Actions section like Firmware/NVRAM

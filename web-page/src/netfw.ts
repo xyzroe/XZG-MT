@@ -57,7 +57,7 @@ interface EspManifest {
 
 export async function fetchManifest(): Promise<TiZwManifest | SlZwManifest | EspManifest> {
   const family = getSelectedFamily();
-  if (family === "esp") {
+  if (family === "esp" || family === "arduino") {
     const urls = ["https://raw.githubusercontent.com/xyzroe/XZG-MT/refs/heads/cc_loader/bins/manifest.json"];
     const combined: EspManifest = { firmwares: [] };
     for (const url of urls) {
@@ -198,6 +198,7 @@ export function filterFwByChipESP(man: EspManifest, chip: string) {
     { pattern: "ESP32-S3*", target: "ESP32-S3" },
     { pattern: "ESP32-C3*", target: "ESP32-C3" },
     { pattern: "ESP32-*", target: "ESP32" },
+    { pattern: "ATmega328P", target: "ATmega328P" },
   ];
 
   let deviceName = chip;
@@ -221,7 +222,7 @@ export function filterFwByChipESP(man: EspManifest, chip: string) {
     for (const fw of man.firmwares) {
       if (deviceName && fw.chip !== deviceName) continue;
       let notes =
-        "This firmware transforms your ESP device into a **CCLoader** programmer, allowing you to flash CC253x chips.\n\n";
+        "This firmware transforms your Arduino/ESP device into a **CCLoader** programmer, allowing you to flash CC253x chips.\n\n";
 
       notes += `**🧩 Chip Family:** ${fw.chip}\n\n`;
       notes += `**🛹 Board:** ${fw.board}\n\n`;
@@ -302,21 +303,27 @@ export function isLikelyIntelHexPreview(txt: string): boolean {
   return true;
 }
 
-export function parseImageFromBuffer(bytes: Uint8Array): { startAddress: number; data: Uint8Array } {
+export function parseImageFromBuffer(
+  bytes: Uint8Array,
+  fillByte: number = 0x00
+): { startAddress: number; data: Uint8Array } {
   const previewLen = Math.min(4096, bytes.length);
   const preview = new TextDecoder().decode(bytes.subarray(0, previewLen));
   if (isLikelyIntelHexPreview(preview)) {
     const fullText = new TextDecoder().decode(bytes);
-    return parseIntelHex(fullText);
+    return parseIntelHex(fullText, fillByte);
   }
   return { startAddress: 0x00000000, data: bytes };
 }
 
-export async function downloadFirmwareFromUrl(url: string): Promise<{ startAddress: number; data: Uint8Array }> {
+export async function downloadFirmwareFromUrl(
+  url: string,
+  fillByte: number = 0x00
+): Promise<{ startAddress: number; data: Uint8Array }> {
   const resp = await fetch(url, { cache: "no-cache" });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
   const buf = await resp.arrayBuffer();
-  return parseImageFromBuffer(new Uint8Array(buf));
+  return parseImageFromBuffer(new Uint8Array(buf), fillByte);
 }
 
 export function getSelectedFwNotes() {
@@ -383,7 +390,7 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
     } else if (family === "ti") {
       filtered = filterFwByChip(man as TiZwManifest, chip);
       categories = ["coordinator", "router", "thread"];
-    } else if (family === "esp") {
+    } else if (family === "esp" || family === "arduino") {
       filtered = filterFwByChipESP(man as EspManifest, chip);
       categories = ["ccloader"];
     } else {
@@ -417,7 +424,7 @@ export async function refreshNetworkFirmwareList(chipModel?: string) {
           else if (category === "multipan") typeStr = "MultiPAN";
           else if (category === "openthread_rcp") typeStr = "RCP";
           label = `[${typeStr}] ${it.ver} — ${it.file}`;
-        } else if (family === "esp") {
+        } else if (family === "esp" || family === "arduino") {
           label = `${it.board} — ${it.file}`;
         } else {
           label = `${it.ver} — ${it.file}`;

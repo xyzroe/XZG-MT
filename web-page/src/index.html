@@ -72,31 +72,32 @@
                 </div>
                 <div class="col-12 mb-1">
                     <div class="d-flex align-items-center justify-content-center gap-2">
-                        <div class="d-flex flex-column align-items-center">
-                            <div class="radio-group d-flex flex-row gap-2">
-                                <div class="d-flex align-items-center my-1">
-                                    <input type="radio" id="chip_ti" name="chip_family" value="ti" checked>
-                                    <label for="chip_ti" class="mx-2"><img src="imgs/ti.png" alt="Texas Instruments"
-                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        TI CCXX52</label>
+                        <div class="custom-dropdown" id="familyDropdown">
+                            <button class="custom-dropdown-toggle" type="button" id="familyDropdownBtn">
+                                <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                                <span class="dropdown-text">TI CCXX52</span>
+                                <i class="bi bi-chevron-down ms-auto"></i>
+                            </button>
+                            <div class="custom-dropdown-menu" id="familyDropdownMenu">
+                                <div class="custom-dropdown-item" data-value="ti">
+                                    <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                                    <span>TI CCXX52</span>
                                 </div>
-                                <div class="d-flex align-items-center my-1">
-                                    <input type="radio" id="chip_si" name="chip_family" value="sl">
-                                    <label for="chip_si" class="mx-2"><img src="imgs/si.png" alt="Silicon Labs"
-                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        SL</label>
+                                <div class="custom-dropdown-item" data-value="sl">
+                                    <img src="imgs/si.png" alt="Silicon Labs" class="dropdown-icon">
+                                    <span>SL</span>
                                 </div>
-                                <div class="d-flex align-items-center my-1">
-                                    <input type="radio" id="chip_esp" name="chip_family" value="esp">
-                                    <label for="chip_esp" class="mx-2"><img src="imgs/esp.png" alt="Espressif"
-                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        ESP</label>
+                                <div class="custom-dropdown-item" data-value="esp">
+                                    <img src="imgs/esp.png" alt="Espressif" class="dropdown-icon">
+                                    <span>ESP</span>
                                 </div>
-                                <div class="d-flex align-items-center my-1">
-                                    <input type="radio" id="chip_ti_old" name="chip_family" value="ti_old">
-                                    <label for="chip_ti_old" class="mx-2"><img src="imgs/ti.png" alt="Texas Instruments"
-                                            class="me-1" style="height:2em;width:auto;vertical-align:middle">
-                                        TI CC25XX</label>
+                                <div class="custom-dropdown-item" data-value="ti_old">
+                                    <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                                    <span>TI CC25XX</span>
+                                </div>
+                                <div class="custom-dropdown-item" data-value="arduino">
+                                    <img src="imgs/arduino.png" alt="Arduino" class="dropdown-icon">
+                                    <span>Arduino</span>
                                 </div>
                             </div>
                         </div>
@@ -178,9 +179,8 @@
                             </div>
                         </div>
                         <div class="serial-controls mb-2">
-
                             <div class="row g-2 align-items-center mb-4">
-                                <div class="col d-flex justify-content-center">
+                                <div id="serialBaudWrap" class="col d-flex justify-content-center">
                                     <div class="col-auto">
                                         <label class="col-form-label px-2" for="bitrateInput">Baud</label>
                                     </div>
@@ -194,6 +194,17 @@
                                             <option value="230400">230400</option>
                                             <option value="460800">460800</option>
                                             <option value="921600">921600</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="arduinoBootWrap" class="col d-flex justify-content-center">
+                                    <div class="col-auto">
+                                        <label class="col-form-label px-2" for="arduinoBootSelect">Bootloader</label>
+                                    </div>
+                                    <div class="col-auto">
+                                        <select id="arduinoBootSelect" class="form-select" style="width:170px">
+                                            <option value="57600">Old (57600)</option>
+                                            <option value="115200" selected>Classic (115200)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -780,10 +791,14 @@
 
 
         <footer class="app-footer mt-4 pt-3">
+            <div class="text-center small text-muted mb-2">
+                <span class="gradient-text">Have feedback, ideas, or want to support the project? Visit the links
+                    below!</span>
+            </div>
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="small">
-                    Created with <span aria-hidden="true">❤️</span> by <a href="https://github.com/xyzroe"
-                        target="_blank" rel="noopener">xyzroe</a> © 2025
+                    Created with <span aria-hidden="true">❤️</span> by <a href="https://xyzroe.cc" target="_blank"
+                        rel="noopener">xyzroe</a> © 2025
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <span id="commitSha" class="text-muted small" title="Last commit SHA"
@@ -796,6 +811,7 @@
                             class="bi bi-telegram"></i></a>
                 </div>
             </div>
+
             <div class="text-center small text-muted mt-2">
                 All trademarks and logos are the property of their respective owners.
             </div>

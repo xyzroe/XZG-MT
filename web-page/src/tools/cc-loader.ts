@@ -640,7 +640,7 @@ export class CCLoader {
       await this.setLines(true, false);
     }
 
-    await sleep(1000);
+    await sleep(3000);
   }
 
   public updateChipInfoUI(chipInfo: ChipInfo): void {
