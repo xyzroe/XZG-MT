@@ -29,6 +29,24 @@ jobs:
           echo "url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           echo "title=🎉 New Release of MT" >> "$GITHUB_OUTPUT"
 
+      - name: Download OpenGraph image
+        run: |
+          IMAGE_URL="https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+          echo "📥 Downloading OpenGraph image from: $IMAGE_URL"
+          
+          # Try to download with retries (in case image is still generating)
+          for i in {1..5}; do
+            if curl -s -L -o release-image.png "$IMAGE_URL"; then
+              if [ -s release-image.png ]; then
+                echo "✅ Image downloaded successfully (attempt $i)"
+                ls -lh release-image.png
+                break
+              fi
+            fi
+            echo "⏳ Attempt $i failed, waiting 3 seconds..."
+            sleep 3
+          done
+
       - name: Send Telegram Notification about release
         uses: appleboy/telegram-action@master
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
@@ -40,14 +58,19 @@ jobs:
             *${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*
             
             [View on GitHub](${{ steps.release_data.outputs.url }})
-          photo: https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}
+          photo: release-image.png
 
       - name: Send Discord Notification
         if: env.DISCORD_WEBHOOK != ''
         run: |
-          curl -X POST "$DISCORD_WEBHOOK" \
-            -H "Content-Type: application/json" \
-            -d @- << 'EOF'
+          # Upload image to Discord and get URL
+          IMAGE_UPLOAD=$(curl -s -F "file=@release-image.png" "$DISCORD_WEBHOOK/slack" | jq -r '.attachments[0].url // empty')
+          
+          if [ -n "$IMAGE_UPLOAD" ]; then
+            # Send with uploaded image
+            curl -X POST "$DISCORD_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d @- << EOF
           {
             "embeds": [{
               "title": "${{ steps.release_data.outputs.title }}",
@@ -55,9 +78,24 @@ jobs:
               "url": "${{ steps.release_data.outputs.url }}",
               "color": 3066993,
               "image": {
-                "url": "https://opengraph.githubassets.com/0.1.0/${{ github.repository }}/releases/tag/${{ steps.release_data.outputs.version }}"
+                "url": "$IMAGE_UPLOAD"
               }
             }]
           }
           EOF
+          else
+            # Fallback: send without image
+            curl -X POST "$DISCORD_WEBHOOK" \
+              -H "Content-Type: application/json" \
+              -d @- << EOF
+          {
+            "embeds": [{
+              "title": "${{ steps.release_data.outputs.title }}",
+              "description": "${{ steps.release_data.outputs.version }}",
+              "url": "${{ steps.release_data.outputs.url }}",
+              "color": 3066993
+            }]
+          }
+          EOF
+          fi
           echo "✅ Discord notification sent"
