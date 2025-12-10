@@ -48,6 +48,34 @@ html.dark {
 
 }
 
+/* Gradient text animation */
+.gradient-text {
+  background: linear-gradient(
+    90deg,
+    #667eea 0%,
+    #764ba2 20%,
+    #f093fb 40%,
+    #4facfe 60%,
+    #00f2fe 80%,
+    #667eea 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 5s ease-in-out infinite;
+  font-weight: 500;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
 /* Fallback for non-Bootstrap tooltip implementations */
 .tooltip .tooltip-inner { background-color: var(--tooltip-bg); color: var(--tooltip-fg); }
 
@@ -63,6 +91,86 @@ body {
   padding: 16px;
   background: var(--bg);
   color: var(--fg);
+}
+
+/* Custom Dropdown */
+.custom-dropdown {
+  position: relative;
+  width: 250px;
+}
+
+.custom-dropdown-toggle {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.custom-dropdown-toggle:hover {
+  border-color: var(--input-focus);
+}
+
+.custom-dropdown-toggle:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.custom-dropdown.open .custom-dropdown-toggle {
+  border-color: var(--input-focus);
+}
+
+.dropdown-icon {
+  height: 2em;
+  width: auto;
+  vertical-align: middle;
+}
+
+.dropdown-text {
+  flex: 1;
+}
+
+.custom-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: none;
+  overflow: hidden;
+}
+
+.custom-dropdown.open .custom-dropdown-menu {
+  display: block;
+}
+
+.custom-dropdown-item {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.custom-dropdown-item:hover {
+  background-color: rgba(13, 110, 253, 0.1);
+}
+
+.custom-dropdown-item.selected {
+  background-color: rgba(13, 110, 253, 0.15);
+  font-weight: 500;
 }
 
 .section {

@@ -9,6 +9,7 @@ import { TiTools, TiChipFamily } from "./tools/ti";
 import { SilabsTools } from "./tools/sl";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
+import { ArduinoTools } from "./tools/arduino";
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { deriveControlConfig, ControlConfig } from "./utils/control";
@@ -96,6 +97,7 @@ import {
   debuggerOptionWrap,
   portInfoEl,
   forceWrite,
+  arduinoBootSelect,
 } from "./ui";
 
 // Global state variables and UI elements
@@ -108,6 +110,9 @@ let ccDebugger: CCDebugger | null = null;
 
 // CCLoader instance for CC2530 via Arduino
 let ccLoader: CCLoader | null = null;
+
+// Arduino tools instance
+let arduinoTools: ArduinoTools | null = null;
 
 export let activeConnection: "serial" | "tcp" | null = null;
 let esploader: ESPLoader | null = null;
@@ -127,10 +132,11 @@ chooseSerialBtn.addEventListener("click", async () => {
   try {
     if (!("serial" in navigator)) throw new Error("Web Serial not supported");
     const br = parseInt(bitrateInput.value, 10) || 115200;
+    deviceDetectBusy(true);
     const chosen = await (navigator as any).serial.requestPort();
     if (!chosen) throw new Error("No port selected");
-
-    if (getSelectedFamily() === "esp") {
+    const family = getSelectedFamily();
+    if (family === "esp") {
       log("Port selected, initializing ESP transport...");
       const transport = new Transport(chosen);
       const terminal = {
@@ -178,6 +184,87 @@ chooseSerialBtn.addEventListener("click", async () => {
 
       activeConnection = "serial";
       updateConnectionUI();
+      deviceDetectBusy(false);
+      return;
+    }
+
+    if (family === "arduino") {
+      log("Port selected, initializing Arduino connection...");
+      const br = parseInt(arduinoBootSelect.value, 10) || 115200;
+      log(`Opening serial port at ${br}bps...`);
+      await chosen.open({ baudRate: br });
+      serial?.close();
+      serial = new SerialWrap(br);
+      serial.useExistingPortAndStart(chosen);
+
+      // Low-level RX/TX logs
+      serial.onData((d) => {
+        log(`RX: ${bufToHex(d)}`, "rx");
+      });
+      serial.onTx((d) => {
+        log(`TX: ${bufToHex(d)}`, "tx");
+      });
+
+      log("Serial port opened, connecting to Arduino bootloader...");
+
+      // Give bootloader time to initialize after port open
+      await sleep(250);
+
+      // Create Arduino tools instance
+      arduinoTools = new ArduinoTools(serial);
+      arduinoTools.setLogger(log);
+      arduinoTools.setProgressCallback((percent, msg) => {
+        if (progressEl) {
+          progressEl.style.width = `${percent}%`;
+          progressEl.textContent = msg;
+        }
+      });
+      arduinoTools.setSetLinesHandler((dtr, rts) => {
+        if (serial) {
+          serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
+        }
+      });
+
+      // Get board info
+      try {
+        const boardInfo = await arduinoTools.getBoardInfo();
+        if (boardInfo) {
+          if (chipModelEl) chipModelEl.value = boardInfo.chipName;
+          // if (portInfoEl) portInfoEl.value = `Arduino @ ${br}bps`;
+
+          // Set flash size
+          if (flashSizeEl && boardInfo.flashSize) {
+            const sizeKB = (boardInfo.flashSize / 1024).toFixed(0);
+            flashSizeEl.value = `${sizeKB}KB (${boardInfo.flashSize} bytes)`;
+          }
+
+          // Set device ID (pseudo-serial number)
+          if (ieeeMacEl && boardInfo.serialNumber) {
+            ieeeMacEl.value = boardInfo.serialNumber;
+          }
+
+          // Set bootloader version
+          if (bootloaderVersionEl && boardInfo.swMajor !== undefined && boardInfo.swMinor !== undefined) {
+            bootloaderVersionEl.value = `${boardInfo.swMajor}.${boardInfo.swMinor}`;
+          }
+
+          log(`Arduino board connected: ${boardInfo.chipName}`);
+
+          // Refresh network firmware list
+          await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
+            log("Network FW list fetch failed: " + (e?.message || String(e)))
+          );
+        } else {
+          log("Warning: Could not read board information");
+        }
+      } catch (e: any) {
+        log("Board detection error: " + (e?.message || String(e)));
+      }
+
+      activeConnection = "serial";
+      updateConnectionUI();
+      optErase.disabled = true;
+      deviceDetectBusy(false);
       return;
     }
 
@@ -210,6 +297,7 @@ disconnectBtn.addEventListener("click", async () => {
   sl_tools = null;
   ti_tools = null;
   detectedTiChipFamily = null;
+  arduinoTools = null;
 
   if (activeConnection === "serial") {
     try {
@@ -245,6 +333,7 @@ disconnectBtn.addEventListener("click", async () => {
     currentConnMeta = {};
     log("TCP disconnected");
   }
+  hexImage = null;
   updateConnectionUI();
 });
 
@@ -290,7 +379,8 @@ netFwSelect?.addEventListener("change", async () => {
   const link = opt?.getAttribute("data-link");
   if (!link) return;
   try {
-    const img = await downloadFirmwareFromUrl(link);
+    const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
+    const img = await downloadFirmwareFromUrl(link, fillByte);
     hexImage = img;
     updateOptionsStateForFile(true);
     log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
@@ -314,7 +404,8 @@ localFile.addEventListener("change", async () => {
     if (buf.byteLength !== f.size) {
       log(`Warning: read length (${buf.byteLength}) != file.size (${f.size})`);
     }
-    const img = parseImageFromBuffer(new Uint8Array(buf));
+    const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
+    const img = parseImageFromBuffer(new Uint8Array(buf), fillByte);
     hexImage = img;
     log(`Image loaded: ${f.name}, ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
     updateOptionsStateForFile(true);
@@ -641,8 +732,9 @@ btnIeeeWrite?.addEventListener("click", async () => {
 // Flash start button with status feedback
 btnFlash.addEventListener("click", async () => {
   await withButtonStatus(btnFlash, async () => {
+    const family = getSelectedFamily();
     // TI old family (CC253x) - use CC Debugger
-    if (getSelectedFamily() === "ti_old") {
+    if (family === "ti_old") {
       flashWarning?.classList.remove("d-none");
 
       if (ccLoader) {
@@ -656,6 +748,78 @@ btnFlash.addEventListener("click", async () => {
       setTimeout(() => flashWarning?.classList.add("d-none"), 500);
 
       return;
+    } else if (family === "arduino") {
+      // Arduino flashing
+      if (!arduinoTools) throw new Error("ArduinoTools not initialized");
+
+      // Check if firmware is loaded
+      if (!hexImage) {
+        throw new Error("No firmware loaded. Please select a firmware file first.");
+      }
+
+      flashWarning?.classList.remove("d-none");
+
+      try {
+        const firmware = hexImage.data;
+        const pageSize = 128; // Standard page size for most Arduino boards
+
+        // Give bootloader time to be ready
+        await sleep(100);
+
+        // Check write option
+        if (optWrite.checked) {
+          log(`Flashing ${firmware.length} bytes to Arduino...`);
+
+          // Flash with optional verification
+          await arduinoTools.flash(firmware, pageSize, optVerify.checked);
+
+          //log("Flashing complete!");
+
+          if (optVerify.checked) {
+            log("Verification successful!");
+          }
+        } else if (optVerify.checked) {
+          // Only verify without writing
+          log("Verify-only mode: reading flash and comparing...");
+          const readData = await arduinoTools.readFlash(0, firmware.length, pageSize);
+
+          // Compare
+          let errors = 0;
+          for (let i = 0; i < firmware.length; i++) {
+            if (readData[i] !== firmware[i]) {
+              errors++;
+              if (errors <= 10) {
+                log(
+                  `Verify error at 0x${i.toString(16)}: expected 0x${firmware[i]
+                    .toString(16)
+                    .padStart(2, "0")}, got 0x${readData[i].toString(16).padStart(2, "0")}`
+                );
+              }
+            }
+          }
+
+          if (errors > 0) {
+            throw new Error(`Verification failed: ${errors} byte(s) mismatch`);
+          }
+
+          log("Verification successful!");
+        } else {
+          throw new Error("Please enable Write or Verify option");
+        }
+
+        // Leave programming mode
+        await sleep(100);
+
+        await arduinoTools.resetArduino();
+        // Device will reset automatically after leaving programming mode
+      } catch (e: any) {
+        log("Arduino flash error: " + (e?.message || String(e)));
+        throw e;
+      } finally {
+        setTimeout(() => flashWarning?.classList.add("d-none"), 500);
+      }
+
+      return true;
     } else {
       try {
         await flash(detectedTiChipFamily);
@@ -666,7 +830,7 @@ btnFlash.addEventListener("click", async () => {
         } catch (e: any) {
           log("Restart error: " + (e?.message || String(e)));
         }
-        const family = getSelectedFamily();
+
         if (family == "esp") {
           // don't ping and version check for ESP
           return true;
@@ -739,6 +903,7 @@ baudUrlSelect?.addEventListener("change", () => applySelectToInput(baudUrlSelect
 btnClearLog?.addEventListener("click", () => {
   logEl.innerHTML = "";
 });
+
 btnCopyLog?.addEventListener("click", async () => {
   const lines = Array.from(logEl.querySelectorAll<HTMLElement>(".log-line"))
     .filter((el) => {
@@ -777,6 +942,7 @@ connectDebuggerBtn?.addEventListener("click", async () => {
       if (targetIeeeEl) targetIeeeEl.value = "";
       log("CC Debugger disconnected");
       activeConnection = null;
+      hexImage = null;
       updateConnectionUI();
     } catch (e: any) {
       log("Disconnect error: " + (e?.message || String(e)));
@@ -846,6 +1012,8 @@ btnReadFlash?.addEventListener("click", async () => {
 
       const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
       await changeBaud(originalBaudRate);
+    } else if (arduinoTools) {
+      await arduinoTools?.dumpFlash();
     }
 
     setTimeout(() => flashWarning?.classList.add("d-none"), 500);
@@ -893,6 +1061,7 @@ connectLoaderBtn?.addEventListener("click", async () => {
       if (debugManufEl) debugManufEl.value = "";
       log("CC Loader disconnected");
       activeConnection = null;
+      hexImage = null;
       updateConnectionUI();
     } catch (e: any) {
       log("Disconnect error: " + (e?.message || String(e)));
@@ -1078,10 +1247,9 @@ async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
   //log(`HTTP control response: ${r.text ?? ""}`);
 }
 
-export function getSelectedFamily(): "ti" | "sl" | "esp" | "ti_old" {
-  const el = document.querySelector('input[name="chip_family"]:checked') as HTMLInputElement | null;
-  const v = (el?.value || "ti").toLowerCase();
-  return v === "sl" ? "sl" : v === "esp" ? "esp" : v === "ti_old" ? "ti_old" : "ti";
+export function getSelectedFamily(): string {
+  const { getSelectedFamilyValue } = require("./ui");
+  return getSelectedFamilyValue();
 }
 
 // Bootstrap tooltip init moved to index.js
@@ -1151,11 +1319,13 @@ function loadCtrlSettings() {
 
     const savedFamily = localStorage.getItem("chip_family");
     if (savedFamily) {
-      const radio = document.querySelector(`input[name="chip_family"][value="${savedFamily}"]`) as HTMLInputElement;
-      if (radio) {
-        radio.checked = true;
-        updateUIForFamily();
-      }
+      const { setSelectedFamilyValue } = require("./ui");
+      const validFamily =
+        savedFamily === "sl" || savedFamily === "esp" || savedFamily === "ti_old" || savedFamily === "arduino"
+          ? savedFamily
+          : "ti";
+      setSelectedFamilyValue(validFamily);
+      updateUIForFamily();
     }
   } catch {
     // ignore
@@ -1417,13 +1587,21 @@ async function performReset(): Promise<void> {
     await sl_tools?.reset(implyGateToggle?.checked ?? false);
   }
   if (family === "esp") {
-    if (esploader) {
-      log("ESP: Resetting...");
-      await (esploader as any).after("hard_reset");
-    } else {
-      log("ESP: Not connected");
+    if (!esploader) {
+      log("ESP: Tools not initialized");
+      return;
     }
+    log("ESP: Resetting...");
+    await (esploader as any).after("hard_reset");
   }
+  if (family === "arduino") {
+    if (!arduinoTools) {
+      log("Arduino: Tools not initialized");
+      return;
+    }
+    await arduinoTools.resetArduino();
+  }
+  // UNO: DTR=off, RTS=off
 
   return;
 }

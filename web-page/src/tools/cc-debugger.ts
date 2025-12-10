@@ -4,6 +4,7 @@ interface HexSection {
 }
 
 import { saveToFile } from "../utils/http";
+import { generateHex } from "../utils/intelhex";
 
 import {
   //log,
@@ -100,73 +101,6 @@ function parseHex(content: string): HexSection[] {
   }
   if (currentSection) sections.push(currentSection);
   return sections;
-}
-
-// Generate Intel HEX format from binary data
-export function generateHex(data: Uint8Array, baseAddress: number = 0): string {
-  const lines: string[] = [];
-  const BYTES_PER_LINE = 16;
-
-  // Helper to calculate checksum
-  function calculateChecksum(bytes: number[]): number {
-    let sum = 0;
-    for (const b of bytes) {
-      sum += b;
-    }
-    return -sum & 0xff;
-  }
-
-  // Helper to format hex byte
-  function toHex(value: number, digits: number = 2): string {
-    return value.toString(16).toUpperCase().padStart(digits, "0");
-  }
-
-  let currentExtendedAddress = -1;
-
-  for (let offset = 0; offset < data.length; offset += BYTES_PER_LINE) {
-    const address = baseAddress + offset;
-    const highAddress = (address >> 16) & 0xffff;
-
-    // Emit Extended Linear Address record if needed
-    if (highAddress !== currentExtendedAddress) {
-      currentExtendedAddress = highAddress;
-      const recordData = [
-        0x02, // byte count
-        0x00,
-        0x00, // address (always 0000 for type 04)
-        0x04, // record type (Extended Linear Address)
-        (highAddress >> 8) & 0xff,
-        highAddress & 0xff,
-      ];
-      const checksum = calculateChecksum(recordData);
-      lines.push(`:02000004${toHex(highAddress, 4)}${toHex(checksum)}`);
-    }
-
-    // Emit data record
-    const lineAddress = address & 0xffff;
-    const count = Math.min(BYTES_PER_LINE, data.length - offset);
-    const recordData = [
-      count,
-      (lineAddress >> 8) & 0xff,
-      lineAddress & 0xff,
-      0x00, // record type (Data)
-    ];
-
-    let dataHex = "";
-    for (let i = 0; i < count; i++) {
-      const byte = data[offset + i];
-      recordData.push(byte);
-      dataHex += toHex(byte);
-    }
-
-    const checksum = calculateChecksum(recordData);
-    lines.push(`:${toHex(count)}${toHex(lineAddress, 4)}00${dataHex}${toHex(checksum)}`);
-  }
-
-  // Emit EOF record
-  lines.push(":00000001FF");
-
-  return lines.join("\n") + "\n";
 }
 
 // Minimal WebUSB Type Definitions

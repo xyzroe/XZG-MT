@@ -2,18 +2,18 @@
 
 ## 📖 Introduction
 
-The CC2530 is a System-on-Chip (SoC) from Texas Instruments, commonly used in Zigbee applications, smart home devices, and IoT projects. CCLoader is an ESP-based device with special firmware that allows programming CC2530 family chips without the need for dedicated debuggers like TI CC Debugger. This guide covers using CCLoader to program CC2530 chips using the XZG-MT tool.
+The CC2530 is a System-on-Chip (SoC) from Texas Instruments, commonly used in Zigbee applications, smart home devices, and IoT projects. CCLoader is an ESP/Arduino-based device with special firmware that allows programming CC2530 family chips without the need for dedicated debuggers like TI CC Debugger. This guide covers using CCLoader to program CC2530 chips using the XZG-MT tool.
 
 ## 🔧 Required Hardware
 
-- **CCLoader**: An ESP8266 or ESP32 module flashed with the special CCLoader firmware.
+- **CCLoader**: An Arduino/ESP8266/ESP32 module flashed with the special CCLoader firmware.
 - **CC2530 device**: The target device to be flashed.
 - **USB Cable**: For connecting the CCLoader to your host device.
 - **Host device**: Computer (Windows, Linux, macOS)
 
 ## 💻 Preparing CCLoader Firmware
 
-Before using CCLoader, you need to flash the ESP8266 or ESP32 with the special CCLoader firmware. This can be done using XZG-MT:
+Before using CCLoader, you need to flash the Arduino/ESP with the special CCLoader firmware. This can be done using XZG-MT:
 
 1. **Open XZG-MT**:
 
@@ -21,19 +21,19 @@ Before using CCLoader, you need to flash the ESP8266 or ESP32 with the special C
 
 2. **Select Chip Family**:
 
-   - In XZG-MT, select the `ESP` in the Family section.
+   - In XZG-MT, select the `Arduino` or `ESP` in the Family section.
 
 3. **Connect to Device**:
 
-   - Connect your ESP8266 or ESP32 to your computer via USB.
+   - Connect your board to your computer via USB.
    - Click the `Connect` button in XZG-MT.
    - The web browser should display a list of available serial ports; select yours and click `Connect`.
 
 4. **Select Firmware**:
 
-   - In the cloud firmware list, select the corresponding CCLoader firmware for your ESP board and pinout.
+   - In the cloud firmware list, select the corresponding CCLoader firmware for your board and pinout.
 
-     _For pinout information on how to connect the ESP to the CC2530, click the info button after selecting the firmware in the cloud list. A popup will display the required connections._
+     _For pinout information on how to connect the board to the CC2530, click the info button after selecting the firmware in the cloud list. A popup will display the required connections._
 
 5. **Flash the Firmware**:
    - Click the `Flash` button in XZG-MT.
@@ -90,7 +90,7 @@ XZG-MT allows to read device's flash and save it to a local file.
 - **Device Not Recognized**: Try a different USB port or cable.
 - **Connection Failed**: Check physical connections between CCLoader and CC2530 according to the pinout. Ensure the chip is powered. Ensure the CCLoader is properly flashed with CCLoader firmware.
 - **CC2530 Flashing Errors**: Verify the firmware file is compatible with CC2530. Check for voltage issues or faulty hardware.
-- **CCLoader Flashing Issues**: Ensure you selected the correct ESP family and firmware in XZG-MT.
+- **CCLoader Flashing Issues**: Ensure you selected the correct Arduino / ESP board and firmware in XZG-MT.
 
 ## 🆘 If the Problem Persists
 

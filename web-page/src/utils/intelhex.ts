@@ -66,3 +66,86 @@ export function parseIntelHex(fullText: string, fillByte: number = 0x00): { star
 
   return { startAddress: minAddr >>> 0, data: out };
 }
+
+// Generate Intel HEX format from binary data
+export function generateHex(data: Uint8Array, baseAddress: number = 0): string {
+  const lines: string[] = [];
+  const BYTES_PER_LINE = 16;
+
+  // Helper to calculate checksum
+  function calculateChecksum(bytes: number[]): number {
+    let sum = 0;
+    for (const b of bytes) {
+      sum += b;
+    }
+    return -sum & 0xff;
+  }
+
+  // Helper to format hex byte
+  function toHex(value: number, digits: number = 2): string {
+    return value.toString(16).toUpperCase().padStart(digits, "0");
+  }
+
+  // Helper to check if a line contains only 0xFF (empty flash)
+  function isEmptyLine(data: Uint8Array, offset: number, count: number): boolean {
+    for (let i = 0; i < count; i++) {
+      if (data[offset + i] !== 0xff) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  let currentExtendedAddress = -1;
+
+  for (let offset = 0; offset < data.length; offset += BYTES_PER_LINE) {
+    const count = Math.min(BYTES_PER_LINE, data.length - offset);
+
+    // Skip lines that contain only 0xFF (unprogrammed flash)
+    if (isEmptyLine(data, offset, count)) {
+      continue;
+    }
+
+    const address = baseAddress + offset;
+    const highAddress = (address >> 16) & 0xffff;
+
+    // Emit Extended Linear Address record if needed
+    if (highAddress !== currentExtendedAddress) {
+      currentExtendedAddress = highAddress;
+      const recordData = [
+        0x02, // byte count
+        0x00,
+        0x00, // address (always 0000 for type 04)
+        0x04, // record type (Extended Linear Address)
+        (highAddress >> 8) & 0xff,
+        highAddress & 0xff,
+      ];
+      const checksum = calculateChecksum(recordData);
+      lines.push(`:02000004${toHex(highAddress, 4)}${toHex(checksum)}`);
+    }
+
+    // Emit data record
+    const lineAddress = address & 0xffff;
+    const recordData = [
+      count,
+      (lineAddress >> 8) & 0xff,
+      lineAddress & 0xff,
+      0x00, // record type (Data)
+    ];
+
+    let dataHex = "";
+    for (let i = 0; i < count; i++) {
+      const byte = data[offset + i];
+      recordData.push(byte);
+      dataHex += toHex(byte);
+    }
+
+    const checksum = calculateChecksum(recordData);
+    lines.push(`:${toHex(count)}${toHex(lineAddress, 4)}00${dataHex}${toHex(checksum)}`);
+  }
+
+  // Emit EOF record
+  lines.push(":00000001FF");
+
+  return lines.join("\n") + "\n";
+}
