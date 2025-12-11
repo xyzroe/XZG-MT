@@ -1,0 +1,30 @@
+---
+name: 📦 Firmware Request
+about: Request to add a new firmware to the cloud repository
+title: '[Firmware] '
+labels: ['firmware']
+assignees: []
+---
+
+## Firmware Information
+- **Firmware Name**: (e.g., Z2M Coordinator, Thread Border Router)
+- **Target Device/Chip**: (e.g., CC2652P, EFR32MG21, ESP32)
+- **Project/Source**: (link to original project/repository)
+- **Version**: (firmware version, if applicable)
+
+## Why Add This Firmware?
+<!-- Explain why this firmware should be included -->
+
+## Firmware Details
+- **File Format**: (e.g., .hex, .bin, .ota, .gbl)
+- **File Size**: (approximate size)
+- **License**: (what license does the firmware use?)
+- **Official Release**: (Is this an official release or community build?)
+
+## Additional Information
+- **Download Link**: (direct link to firmware file)
+- **Documentation**: (link to setup/usage documentation)
+- **Special Requirements**: (any special flashing requirements or notes)
+
+## Related Links
+<!-- Add any relevant links: project homepage, documentation, GitHub repo, etc. -->

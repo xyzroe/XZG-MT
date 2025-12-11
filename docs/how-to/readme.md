@@ -9,7 +9,7 @@ This section provides detailed, step-by-step guides for using XZG-MT to accompli
 Here are the guides currently available:
 
 - [Using CC Debugger for Flashing CC2530 Chips](cc_debuger.md) - Learn how to use TI CC Debugger or SmartRF04EB to program CC2530 family chips.
-- [Using CC Loader for Flashing CC2530 Chips](cc_loader.md) - Instructions for using ESP-based CC Loader as an alternative to dedicated debuggers.
+- [Using CC Loader for Flashing CC2530 Chips](cc_loader.md) - Instructions for using Arduino/ESP-based CC Loader as an alternative to dedicated debuggers.
 
 ## 🚀 Planned Guides
 
