@@ -11,7 +11,7 @@
     "esbuild:base": "esbuild src/flasher.ts --bundle --outfile=dist/flasher.js --platform=browser --target=es2020 --minify --tree-shaking=true --legal-comments=none",
     "esbuild:watch": "npm run esbuild:base -- --watch",
     "copy:static": "copyfiles -u 1 src/index.html src/style.css src/index.js dist && copyfiles -u 1 static/**/* dist",
-    "optimize:css": "purgecss --css dist/css/bootstrap.min.css --content dist/index.html dist/flasher.js --output dist/css/ && purgecss --css dist/css/bootstrap-icons.min.css --content dist/index.html dist/flasher.js --output dist/css/",
+    "optimize:css": "purgecss --config purgecss.config.js && purgecss --css dist/css/bootstrap-icons.min.css --content dist/index.html dist/flasher.js --output dist/css/",
     "copy:ready": "copyfiles -u 1 dist/* ../bridge/web/",
     "fav:gen": "realfavicon generate favicon/logo.svg favicon/favicon-settings.json favicon/favicon-data.json dist/fav",
     "fav:inject": "realfavicon inject favicon/favicon-data.json dist dist/index.html",
