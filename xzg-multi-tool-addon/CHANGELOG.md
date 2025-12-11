@@ -12,33 +12,27 @@
 
 - docs: add issue templates (#87) by @xyzroe
 
-## v0.3.3
-
-## 🚀 Features
-
-- feat: add CSS and JS optimization, deleted unnecessary files to reduce total size (#88) by @xyzroe
-
-## 📘 Documentation
-
-- docs: add issue templates (#87) by @xyzroe
-
 ## v0.3.2
 
 ## 🚀 Features
+
 - feat: Arduino flashing support (#86) by @xyzroe
 - feat: dropdown in family selection (#86) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: small UI fixes (#86) by @xyzroe
 
 ## 📘 Documentation
+
 - docs: update CC Loader how-to about Arduino (#86) by @xyzroe
 
 ## v0.3.1
 
 ## 🚀 Features
-- feat: added IEEE address read/write support for TI CC2538/CC2652  (#84) by @xyzroe
-- feat: add read/write IEEE (SL);  (#85) by @xyzroe
+
+- feat: added IEEE address read/write support for TI CC2538/CC2652 (#84) by @xyzroe
+- feat: add read/write IEEE (SL); (#85) by @xyzroe
 - feat: manufacturer and model determine (SL, only NCP fw support) (#85) by @xyzroe
 - feat: removed external style/font dependencies (#84) by @xyzroe
 
@@ -49,6 +43,7 @@
 ## v0.3.0
 
 ## 🚀 Features
+
 - feat: retry connect with different option if chip id read error (TI & SL) (#83) by @xyzroe
 - feat: version detect for MultiPAN (CPC), OpenThred (Spinel) and Router firmwares (SL) (#83) by @xyzroe
 - feat: verison detect for OpenThread firmwares (TI) (#83) by @xyzroe
@@ -57,45 +52,50 @@
 - feat: save baud rate value in cookies (#83) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: improve auto find baud rate (TI) (#83) by @xyzroe
 - fix: setLinesHandler instead of direct import (SL & CCLoader) (#83) by @xyzroe
 - fix: some code cleanup (#83) by @xyzroe
 - fix: implement saveToFile utility for unify file downloads (#83) by @xyzroe
-- 
+-
 
 ## v0.2.24
 
 ## 🚀 Features
+
 - feat: add dump flash option to CCXX52 devices (#82) by @xyzroe
 - feat: hide unrelated option in ESP section (#79) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: massive code cleanup (#82) by @xyzroe
 - fix: improve progress logging and update checkbox handling for CC Debugger (#81) by @xyzroe
 
 ## 📘 Documentation
+
 - docs: update release drafter version and make auto labeler work (#80) by @xyzroe
-- docs: update release drafter configuration  (#78) by @xyzroe
-
-
+- docs: update release drafter configuration (#78) by @xyzroe
 
 ## v0.2.23
 
 ## 🚀 Features
+
 - feat: add separate imply gate and original logic to SL reset and boot loader (#77) by @xyzroe
 - feat: bridge: separate function to trigger DTR and RTS (#77) by @xyzroe
 - feat: bridge: support trigger both using one request (#77) by @xyzroe
 - feat: enhance debugger and loader connection UI, update firmware source links (#70) by @xyzroe
-- feat: add workflow to update GHCR downloads  (#66) by @xyzroe
+- feat: add workflow to update GHCR downloads (#66) by @xyzroe
 - feat: enhance debugger and loader connection UI, update firmware source links (#70) by @xyzroe
 
 ## 🐛 Bug Fixes
+
 - fix: make possible to flash dongles with imply gate logic vie bridge (#77) by @xyzroe
 - fix: refactor SL tools and TI tools integration (#77) by @xyzroe
 - fix: small UI enhancements (#77) by @xyzroe
 - fix: bridge: logs with timestamp (#77) by @xyzroe
 
 ## 📘 Documentation
+
 - docs: some docs improvements (#77) by @xyzroe
 - docs: update .gitignore and update telegram banner (#76) by @xyzroe
 - docs: refactor documentation (#75) by @xyzroe

@@ -1,7 +1,7 @@
 {
   "name": "xzg-multi-tool",
   "version": "0.3.3",
-  "description": "A static web app for flashing TI CC2538 / CC1352 / CC2652 and SL EFR32 using the Web Serial API or bridge.",
+  "description": "Web-based multi-tool for flashing and managing various chips via local or remote connection",
   "main": "dist/flasher.js",
   "engines": {
     "node": ">=20.18.0"
