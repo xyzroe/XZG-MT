@@ -1,0 +1,42 @@
+---
+name: 🐛 Flashing Issue
+about: Report a problem during device flashing
+title: '[Flash] '
+labels: ['bug', 'flashing']
+assignees: []
+---
+
+## Device Information
+- **Chip Family**: (e.g., TI CC2652, Silabs EFR32, Arduino, ESP32)
+- **Device Model**: (e.g., CC2652P, EFR32MG21, Arduino Uno)
+- **Connection Type**: (Serial / TCP / CC Debugger / CC Loader)
+- **Browser**: (e.g., Chrome 120, Edge 119)
+- **OS**: (e.g., Windows 11, macOS 14, Ubuntu 22.04)
+
+## Firmware Information
+- **Firmware Source**: (Local file / Cloud repository)
+- **Firmware File**: (filename or cloud selection)
+- **File Format**: (e.g., .hex, .bin, .ota, .gbl)
+
+## Problem Description
+<!-- Describe what happened during flashing -->
+
+## Steps to Reproduce
+1. 
+2. 
+3. 
+
+## Expected Behavior
+<!-- What should have happened? -->
+
+## Actual Behavior
+<!-- What actually happened? -->
+
+## Console Logs
+<!-- Please copy logs from the tool (use "Show TX/RX" if needed) -->
+```
+Paste logs here
+```
+
+## Additional Context
+<!-- Add any other context, screenshots, or information -->
