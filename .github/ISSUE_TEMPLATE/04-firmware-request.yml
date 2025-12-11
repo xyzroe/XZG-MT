@@ -1,30 +1,110 @@
----
 name: 📦 Firmware Request
-about: Request to add a new firmware to the cloud repository
-title: '[Firmware] '
-labels: ['firmware']
-assignees: []
----
-
-## Firmware Information
-- **Firmware Name**: (e.g., Z2M Coordinator, Thread Border Router)
-- **Target Device/Chip**: (e.g., CC2652P, EFR32MG21, ESP32)
-- **Project/Source**: (link to original project/repository)
-- **Version**: (firmware version, if applicable)
-
-## Why Add This Firmware?
-<!-- Explain why this firmware should be included -->
-
-## Firmware Details
-- **File Format**: (e.g., .hex, .bin, .ota, .gbl)
-- **File Size**: (approximate size)
-- **License**: (what license does the firmware use?)
-- **Official Release**: (Is this an official release or community build?)
-
-## Additional Information
-- **Download Link**: (direct link to firmware file)
-- **Documentation**: (link to setup/usage documentation)
-- **Special Requirements**: (any special flashing requirements or notes)
-
-## Related Links
-<!-- Add any relevant links: project homepage, documentation, GitHub repo, etc. -->
+description: Request to add a new firmware to the cloud repository
+title: "[Firmware] "
+labels: ["firmware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a firmware to add!
+        
+  - type: input
+    id: firmware-name
+    attributes:
+      label: Firmware Name
+      placeholder: ex. Z2M Coordinator, Thread Border Router
+    validations:
+      required: true
+      
+  - type: input
+    id: target-device
+    attributes:
+      label: Target Device/Chip
+      placeholder: ex. CC2652P, EFR32MG21, ESP32
+    validations:
+      required: true
+      
+  - type: input
+    id: project-source
+    attributes:
+      label: Project/Source
+      description: Link to original project or repository
+      placeholder: https://github.com/...
+    validations:
+      required: true
+      
+  - type: input
+    id: version
+    attributes:
+      label: Firmware Version
+      placeholder: ex. v1.2.3
+      
+  - type: textarea
+    id: why
+    attributes:
+      label: Why Add This Firmware?
+      description: Explain why this firmware should be included
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: file-format
+    attributes:
+      label: File Format
+      options:
+        - .hex
+        - .bin
+        - .ota
+        - .gbl
+        - Other
+    validations:
+      required: true
+      
+  - type: input
+    id: file-size
+    attributes:
+      label: File Size
+      description: Approximate size
+      placeholder: ex. 500 KB
+      
+  - type: input
+    id: license
+    attributes:
+      label: License
+      description: What license does the firmware use?
+      placeholder: ex. MIT, GPL-3.0, Apache-2.0
+      
+  - type: dropdown
+    id: official
+    attributes:
+      label: Release Type
+      options:
+        - Official release
+        - Community build
+        - Development/Beta
+        
+  - type: input
+    id: download-link
+    attributes:
+      label: Download Link
+      description: Direct link to firmware file
+      placeholder: https://...
+      
+  - type: input
+    id: documentation
+    attributes:
+      label: Documentation
+      description: Link to setup/usage documentation
+      placeholder: https://...
+      
+  - type: textarea
+    id: special-requirements
+    attributes:
+      label: Special Requirements
+      description: Any special flashing requirements or notes
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Related Links
+      description: Add any relevant links (project homepage, documentation, GitHub repo, etc.)

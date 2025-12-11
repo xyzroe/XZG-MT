@@ -1,32 +1,59 @@
----
 name: 💡 Feature Request / Improvement
-about: Suggest an idea or improvement for the Multi-Tool
-title: '[Idea] '
-labels: ['enhancement']
-assignees: []
----
-
-## Feature Category
-<!-- Check what area this relates to -->
-- [ ] User Interface
-- [ ] Flashing/Programming
-- [ ] Bridge
-- [ ] Device Support
-- [ ] Firmware Management
-- [ ] Documentation
-- [ ] Other
-
-## Problem or Need
-<!-- Is your feature request related to a problem? Describe it -->
-
-## Proposed Solution
-<!-- Describe your idea or suggestion -->
-
-## Alternative Solutions
-<!-- Have you considered any alternative approaches? -->
-
-## Use Case
-<!-- How would this feature be used? Who would benefit? -->
-
-## Additional Context
-<!-- Add mockups, screenshots, links, or other relevant information -->
+description: Suggest an idea or improvement for the Multi-Tool
+title: "[Idea] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement!
+        
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What area does this relate to?
+      options:
+        - User Interface
+        - Flashing/Programming
+        - Bridge
+        - Device Support
+        - Firmware Management
+        - Documentation
+        - Other
+    validations:
+      required: true
+      
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Need
+      description: Is your feature request related to a problem? Describe it
+    validations:
+      required: true
+      
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your idea or suggestion
+    validations:
+      required: true
+      
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative approaches?
+      
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use Case
+      description: How would this feature be used? Who would benefit?
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add mockups, screenshots, links, or other relevant information

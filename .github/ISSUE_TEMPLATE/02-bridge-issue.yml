@@ -1,41 +1,95 @@
----
 name: 🌉 Bridge Issue
-about: Report a problem with the bridge application
-title: '[Bridge] '
-labels: ['bug', 'bridge']
-assignees: []
----
-
-## Bridge Information
-- **Bridge Version**: (e.g., v0.3.2)
-- **Installation Method**: (Standalone / Docker / Home Assistant Add-on)
-- **OS/Platform**: (e.g., Windows, macOS, Linux, Raspberry Pi, HA OS)
-- **Architecture**: (e.g., amd64, arm64, armv7)
-
-## Network Setup
-- **Bridge Address**: (e.g., http://192.168.1.100:8765)
-- **Access Type**: (Local network / Same machine)
-- **Firewall/Antivirus**: (Yes/No, which one?)
-
-## Problem Description
-<!-- Describe what's wrong with the bridge -->
-
-## Steps to Reproduce
-1. 
-2. 
-3. 
-
-## Expected Behavior
-<!-- What should have happened? -->
-
-## Actual Behavior
-<!-- What actually happened? -->
-
-## Bridge Logs
-<!-- Please provide bridge console output or logs -->
-```
-Paste bridge logs here
-```
-
-## Additional Context
-<!-- Add configuration files (remove sensitive data), screenshots, or other info -->
+description: Report a problem with the bridge application
+title: "[Bridge] "
+labels: ["bug", "bridge"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bridge issue!
+        
+  - type: input
+    id: version
+    attributes:
+      label: Bridge Version
+      placeholder: ex. v0.3.2
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation Method
+      options:
+        - Standalone binary
+        - Docker
+        - Home Assistant Add-on
+    validations:
+      required: true
+      
+  - type: input
+    id: platform
+    attributes:
+      label: OS/Platform
+      placeholder: ex. Windows, macOS, Linux, Raspberry Pi, HA OS
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: architecture
+    attributes:
+      label: Architecture
+      options:
+        - amd64
+        - arm64
+        - armv7
+        - Other
+        
+  - type: input
+    id: bridge-address
+    attributes:
+      label: Bridge Address
+      placeholder: ex. http://192.168.1.100:8765
+      
+  - type: dropdown
+    id: access-type
+    attributes:
+      label: Access Type
+      options:
+        - Local network
+        - Same machine
+        - Other
+        
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: Describe what's wrong with the bridge
+    validations:
+      required: true
+      
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+      
+  - type: textarea
+    id: logs
+    attributes:
+      label: Bridge Logs
+      description: Please provide bridge console output or logs
+      render: shell
+    validations:
+      required: true
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add configuration files (remove sensitive data), screenshots, or other info

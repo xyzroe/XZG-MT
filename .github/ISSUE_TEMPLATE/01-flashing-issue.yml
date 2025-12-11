@@ -1,42 +1,110 @@
----
 name: 🐛 Flashing Issue
-about: Report a problem during device flashing
-title: '[Flash] '
-labels: ['bug', 'flashing']
-assignees: []
----
-
-## Device Information
-- **Chip Family**: (e.g., TI CC2652, Silabs EFR32, Arduino, ESP32)
-- **Device Model**: (e.g., CC2652P, EFR32MG21, Arduino Uno)
-- **Connection Type**: (Serial / TCP / CC Debugger / CC Loader)
-- **Browser**: (e.g., Chrome 120, Edge 119)
-- **OS**: (e.g., Windows 11, macOS 14, Ubuntu 22.04)
-
-## Firmware Information
-- **Firmware Source**: (Local file / Cloud repository)
-- **Firmware File**: (filename or cloud selection)
-- **File Format**: (e.g., .hex, .bin, .ota, .gbl)
-
-## Problem Description
-<!-- Describe what happened during flashing -->
-
-## Steps to Reproduce
-1. 
-2. 
-3. 
-
-## Expected Behavior
-<!-- What should have happened? -->
-
-## Actual Behavior
-<!-- What actually happened? -->
-
-## Console Logs
-<!-- Please copy logs from the tool (use "Show TX/RX" if needed) -->
-```
-Paste logs here
-```
-
-## Additional Context
-<!-- Add any other context, screenshots, or information -->
+description: Report a problem during device flashing
+title: "[Flash] "
+labels: ["bug", "flashing"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a flashing issue!
+        
+  - type: dropdown
+    id: chip-family
+    attributes:
+      label: Chip Family
+      description: Select your device chip family
+      options:
+        - TI CC2652
+        - Silabs EFR32
+        - Arduino
+        - ESP32
+        - Other
+    validations:
+      required: true
+      
+  - type: input
+    id: device-model
+    attributes:
+      label: Device Model
+      description: Specific model (e.g., CC2652P, EFR32MG21, Arduino Uno)
+      placeholder: ex. CC2652P
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: connection-type
+    attributes:
+      label: Connection Type
+      options:
+        - Serial
+        - TCP
+        - CC Debugger
+        - CC Loader
+    validations:
+      required: true
+      
+  - type: input
+    id: browser
+    attributes:
+      label: Browser
+      description: Browser name and version
+      placeholder: ex. Chrome 120
+    validations:
+      required: true
+      
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: ex. Windows 11, macOS 14, Ubuntu 22.04
+    validations:
+      required: true
+      
+  - type: dropdown
+    id: firmware-source
+    attributes:
+      label: Firmware Source
+      options:
+        - Local file
+        - Cloud repository
+      
+  - type: input
+    id: firmware-file
+    attributes:
+      label: Firmware File
+      description: Filename or cloud firmware selection
+      
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem Description
+      description: Describe what happened during flashing
+    validations:
+      required: true
+      
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+      
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console Logs
+      description: Please copy logs from the tool (enable "Show TX/RX" if needed)
+      render: shell
+    validations:
+      required: true
+      
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or information
