@@ -1,3 +1,13 @@
+## v0.3.3
+
+## 🚀 Features
+
+- feat: add CSS and JS optimization, deleted unnecessary files to reduce total size (#88) by @xyzroe
+
+## 📘 Documentation
+
+- docs: add issue templates (#87) by @xyzroe
+
 ## v0.3.2
 
 ## 🚀 Features
