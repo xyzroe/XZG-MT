@@ -14,10 +14,11 @@ body:
       label: Chip Family
       description: Select your device chip family
       options:
-        - TI CC2652
+        - TI CCXX52 (CC2652, CC1352, CC2538)
         - Silabs EFR32
+        - TI CC25XX (CC2530, CC2531 and so on)
         - Arduino
-        - ESP32
+        - ESP8266 / ESP32
         - Other
     validations:
       required: true
@@ -26,8 +27,7 @@ body:
     id: device-model
     attributes:
       label: Device Model
-      description: Specific model (e.g., CC2652P, EFR32MG21, Arduino Uno)
-      placeholder: ex. CC2652P
+      description: Specific model (e.g., ZigStar UZG-01, SONOFF ZBDongle-E, Arduino Uno)
     validations:
       required: true
       
@@ -36,8 +36,8 @@ body:
     attributes:
       label: Connection Type
       options:
-        - Serial
-        - TCP
+        - Local USB
+        - Remote via Bridge
         - CC Debugger
         - CC Loader
     validations:
@@ -98,7 +98,7 @@ body:
     id: logs
     attributes:
       label: Console Logs
-      description: Please copy logs from the tool (enable "Show TX/RX" if needed)
+      description: Please copy logs from the tool (disable "Show TX/RX")
       render: shell
     validations:
       required: true

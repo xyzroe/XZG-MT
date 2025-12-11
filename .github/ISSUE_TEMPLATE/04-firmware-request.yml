@@ -47,56 +47,6 @@ body:
     validations:
       required: true
       
-  - type: dropdown
-    id: file-format
-    attributes:
-      label: File Format
-      options:
-        - .hex
-        - .bin
-        - .ota
-        - .gbl
-        - Other
-    validations:
-      required: true
-      
-  - type: input
-    id: file-size
-    attributes:
-      label: File Size
-      description: Approximate size
-      placeholder: ex. 500 KB
-      
-  - type: input
-    id: license
-    attributes:
-      label: License
-      description: What license does the firmware use?
-      placeholder: ex. MIT, GPL-3.0, Apache-2.0
-      
-  - type: dropdown
-    id: official
-    attributes:
-      label: Release Type
-      options:
-        - Official release
-        - Community build
-        - Development/Beta
-        
-  - type: input
-    id: download-link
-    attributes:
-      label: Download Link
-      description: Direct link to firmware file
-      placeholder: https://...
-      
-  - type: input
-    id: documentation
-    attributes:
-      label: Documentation
-      description: Link to setup/usage documentation
-      placeholder: https://...
-      
   - type: textarea
     id: special-requirements
     attributes:

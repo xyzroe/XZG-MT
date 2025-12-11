@@ -44,13 +44,7 @@ body:
         - arm64
         - armv7
         - Other
-        
-  - type: input
-    id: bridge-address
-    attributes:
-      label: Bridge Address
-      placeholder: ex. http://192.168.1.100:8765
-      
+         
   - type: dropdown
     id: access-type
     attributes:
