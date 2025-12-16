@@ -47,8 +47,8 @@ jobs:
                 fi
               fi
             fi
-            echo "⏳ Attempt $i failed, waiting 3 seconds..."
-            sleep 3
+            echo "⏳ Attempt $i failed, waiting $((i*3)) seconds..."
+            sleep $((i*3))
           done
           
           if [ ! -f release-image.png ] || ! file --mime-type release-image.png | grep -q "image/"; then
@@ -71,6 +71,7 @@ jobs:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
     steps:
       - name: Download release image
         uses: actions/download-artifact@v4
@@ -78,17 +79,16 @@ jobs:
           name: release-image
 
       - name: Send Telegram Notification about release
-        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          format: markdown
-          photo: release-image.png
-          message: |
-            *${{ needs.prepare.outputs.title }}: ${{ needs.prepare.outputs.version }}*
-            
-            [View on GitHub](${{ needs.prepare.outputs.url }})
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != '' && env.TELEGRAM_THREAD_ID != ''
+        run: |
+          CAPTION=$'*${{ needs.prepare.outputs.title }}: ${{ needs.prepare.outputs.version }}*\n\n[View on GitHub](${{ needs.prepare.outputs.url }})'
+          
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendPhoto" \
+            -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -F message_thread_id="${{ secrets.TELEGRAM_THREAD_ID }}" \
+            -F parse_mode="Markdown" \
+            -F photo="@release-image.png" \
+            -F caption="$CAPTION"
 
   notify-discord:
     name: Send Discord Notification
@@ -105,12 +105,21 @@ jobs:
 
       - name: Send Discord Notification
         if: env.DISCORD_WEBHOOK != ''
-        uses: tsickert/discord-webhook@v6.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          embed-title: ${{ needs.prepare.outputs.title }}
-          embed-description: ${{ needs.prepare.outputs.version }}
-          embed-url: ${{ needs.prepare.outputs.url }}
-          embed-color: 3066993
-          embed-image-url: attachment://release-image.png
-          filename: release-image.png
+        run: |
+          # Construct JSON payload using jq to handle escaping safely
+          JSON_PAYLOAD=$(jq -n \
+            --arg title "${{ needs.prepare.outputs.title }}" \
+            --arg version "${{ needs.prepare.outputs.version }}" \
+            --arg url "${{ needs.prepare.outputs.url }}" \
+            '{
+              embeds: [{
+                title: $title,
+                description: ($version + "\n\n[View on GitHub](" + $url + ")"),
+                color: 3066993,
+                image: { url: "attachment://release-image.png" }
+              }]
+            }')
+          
+          curl -s -X POST "${{ secrets.DISCORD_WEBHOOK }}" \
+            -F "file=@release-image.png" \
+            -F "payload_json=$JSON_PAYLOAD"
