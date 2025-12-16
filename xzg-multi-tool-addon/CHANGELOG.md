@@ -1,3 +1,22 @@
+## v0.3.4
+
+## 🚀 Features
+
+- feat: Telink UART-SWire emulation protocol (Telink)  (#91) by @xyzroe
+- feat: Telink UART2SWire protocol (Telink)  (#91) by @xyzroe
+- feat: universal makeReset and enterBootloader functions, more robust work (TI & SL). Thanks [FerrumLogic](https://github.com/FerrumLogic) https://github.com/xyzroe/XZG-MT/issues/90
+
+## 🐛 Bug Fixes
+
+- fix: TCP bridge work (TI). Thanks [axodentally](https://github.com/axodentally) https://github.com/xyzroe/XZG-MT/issues/90 
+- fix: small UI improvements  (#91) by @xyzroe
+- fix: some code cleanup  (#91) by @xyzroe
+
+## 📘 Documentation
+
+- docs: how-to about Telink devices  (#91) by @xyzroe
+
+
 ## v0.3.3
 
 ## 🚀 Features

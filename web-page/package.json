@@ -1,6 +1,6 @@
 {
   "name": "xzg-multi-tool",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Web-based multi-tool for flashing and managing various chips via local or remote connection",
   "main": "dist/flasher.js",
   "engines": {
