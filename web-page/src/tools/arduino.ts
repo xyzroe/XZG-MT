@@ -82,7 +82,7 @@ export class ArduinoTools {
   /**
    * Reset Arduino by toggling DTR line
    */
-  public async resetArduino(): Promise<void> {
+  public async reset(): Promise<void> {
     if (!this.setLinesHandler) {
       throw new Error("setLinesHandler not set");
     }
@@ -292,6 +292,8 @@ export class ArduinoTools {
    */
   public async getBoardInfo(): Promise<BoardInfo | null> {
     try {
+      this.reset();
+      await sleep(100);
       // Sync first
       if (!(await this.sync())) {
         throw new Error("Failed to sync with bootloader");
@@ -444,7 +446,7 @@ export class ArduinoTools {
     try {
       // Reset Arduino to enter bootloader
       if (this.setLinesHandler) {
-        await this.resetArduino();
+        await this.reset();
       }
 
       if (!(await this.sync())) {
@@ -537,7 +539,7 @@ export class ArduinoTools {
     try {
       // Reset Arduino to enter bootloader
       if (this.setLinesHandler) {
-        await this.resetArduino();
+        await this.reset();
       }
 
       if (!(await this.sync())) {
@@ -609,7 +611,7 @@ export class ArduinoTools {
     this.logger(`Flash saved to ${filename}`);
 
     // Reset to normal mode after read
-    await this.resetArduino();
+    await this.reset();
   }
 
   public dispose(): void {

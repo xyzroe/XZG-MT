@@ -47,7 +47,8 @@ export function saveToFile(
   extension: string,
   prefix: string,
   chipModel?: string,
-  ieeeAddress?: string
+  ieeeAddress?: string,
+  extraInfo?: string
 ): string {
   // Sanitize chip model: replace spaces with dashes, remove non-alphanumeric chars
   const modelSafe = (chipModel || "unknown")
@@ -63,7 +64,15 @@ export function saveToFile(
   const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, -5);
 
   // Build filename
-  const filename = `${prefix}_${modelSafe}_${ieeeSafe}_${timestamp}.${extension}`;
+  let filename = `${prefix}_${modelSafe}`;
+  if (ieeeAddress) {
+    filename += `_${ieeeSafe}`;
+  }
+  if (extraInfo) {
+    filename += `_${extraInfo}`;
+  }
+
+  filename += `_${timestamp}.${extension}`;
 
   // Create blob based on data type
   let blob: Blob;

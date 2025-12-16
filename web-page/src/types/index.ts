@@ -25,3 +25,28 @@ export interface HexImage {
   startAddress: number;
   data: Uint8Array; // linear, dense image with gaps padded as 0xFF
 }
+
+export enum VerifyMethod {
+  BY_READ = "read",
+  BY_CRC = "crc",
+}
+
+export enum WriteMethod {
+  FAST = "fast",
+  SLOW = "slow",
+}
+
+export enum EraseMethod {
+  FULL = "full",
+  SECTOR = "sector",
+}
+
+export enum TelinkFamily {
+  TLSR825X = 8250,
+  TLSR826X = 8260,
+}
+
+export enum TelinkMethod {
+  UART = "uart",
+  SWIRE = "swire",
+}

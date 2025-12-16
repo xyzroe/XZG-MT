@@ -17,13 +17,13 @@
 
 ## 📖 About
 
-The XZG Multi-Tool is a browser-based flashing solution that enables hobbyists and developers to program Texas Instruments, Silicon Labs, Espressif and Arduino devices. It provides a simple, polished web UI that enables users to flash adapters directly from the browser, eliminating the need for client software installation.
+The XZG Multi-Tool is a browser-based flashing solution that enables hobbyists and developers to program Texas Instruments, Silicon Labs, Espressif, Arduino and Telink devices. It provides a simple, polished web UI that enables users to flash adapters directly from the browser, eliminating the need for client software installation.
 
 The web front end performs local flashing via the WebSerial and WebUSB APIs, offering automatic device detection and convenient firmware flashing features. The bridge component (WebSocket ↔ TCP) enables headless or remote hosts to expose local serial ports via TCP and connect them to the web UI. The bridge also supports connecting to remote TCP-based adapters, enabling access to networked adapters from any browser.
 
 ## ⭐ Features
 
-- 🔌 Work with various TI, SL, ESP, Arduino devices locally via WebSerial/WebUSB or remotely via bridge.
+- 🔌 Work with various devices locally via WebSerial/WebUSB or remotely via bridge.
 - 📂 Flash firmware from a local file or select from a provided list.
 - 📝 List of cloud firmware with descriptions
 - 🦾 Automatically detects chip model, flash size, IEEE, and firmware version
@@ -172,6 +172,7 @@ For step-by-step guides and detailed documentation, explore the following:
 - 🌐 Web UI: [README](web-page/README.md)
 - 🚀 WebSocket bridge — [README](bridge/README.md)
 - 🏠 Home Assistant add-on: [README](xzg-multi-tool-addon/README.md)
+- 🤖 AI Generated Wiki: [DeepWiki](https://deepwiki.com/xyzroe/XZG-MT)
 
 ## 👥 Community
 
@@ -257,6 +258,10 @@ Built on the shoulders of giants:
     - [CC Loader fork](https://github.com/tjko/CCLoader) by Timo Kokkonen
 - **Arduino** — inspired by
   - [arduino-web-uploader](https://github.com/dbuezas/arduino-web-uploader) by David Buezas
+- **Telink** - inspired by
+  - [TlsrComProg825x](https://github.com/pvvx/TlsrComProg825x) by pvvx Viktor
+  - [TlsrComProg](https://github.com/pvvx/TlsrComProg) by pvvx Viktor
+  - [TLSRPGM](https://github.com/pvvx/TLSRPGM) by pvvx Viktor
 
 ---
 

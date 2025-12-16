@@ -5,14 +5,14 @@ interface HexSection {
 
 import { saveToFile } from "../utils/http";
 import { generateHex } from "../utils/intelhex";
-
+import { WriteMethod, VerifyMethod } from "../types";
 import {
   //log,
   optErase,
   optWrite,
   optVerify,
-  verifyMethodSelect,
-  writeMethodSelect,
+  verifyMethodWrap,
+  writeMethodWrap,
   localFile,
   targetIdEl,
   targetIeeeEl,
@@ -169,16 +169,6 @@ interface CCDebuggerInfo {
   chipId: number;
   fwVersion: number;
   fwRevision: number;
-}
-
-export enum VerifyMethod {
-  BY_READ = "read",
-  BY_CRC = "crc",
-}
-
-export enum WriteMethod {
-  FAST = "fast",
-  SLOW = "slow",
 }
 
 export class CCDebugger {
@@ -1715,20 +1705,21 @@ export class CCDebugger {
         this.logger(`Writing firmware: ${firmwareFile.name}`);
         const reader = new FileReader();
 
+        let writeMethod = writeMethodWrap?.value as WriteMethod;
         if (firmwareFile.name.toLowerCase().endsWith(".bin")) {
           const content = await new Promise<ArrayBuffer>((resolve, reject) => {
             reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
             reader.onerror = reject;
             reader.readAsArrayBuffer(firmwareFile);
           });
-          await this.writeBin(new Uint8Array(content), writeMethodSelect);
+          await this.writeBin(new Uint8Array(content), writeMethod);
         } else {
           const content = await new Promise<string>((resolve, reject) => {
             reader.onload = (e) => resolve(e.target?.result as string);
             reader.onerror = reject;
             reader.readAsText(firmwareFile);
           });
-          await this.writeHex(content, writeMethodSelect);
+          await this.writeHex(content, writeMethod);
         }
 
         this.logger("Write complete!");
@@ -1747,20 +1738,21 @@ export class CCDebugger {
         const reader = new FileReader();
 
         let verifyResult = false;
+        let verifyMethod = verifyMethodWrap?.value as VerifyMethod;
         if (firmwareFile.name.toLowerCase().endsWith(".bin")) {
           const content = await new Promise<ArrayBuffer>((resolve, reject) => {
             reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
             reader.onerror = reject;
             reader.readAsArrayBuffer(firmwareFile);
           });
-          verifyResult = await this.verifyBin(new Uint8Array(content), verifyMethodSelect);
+          verifyResult = await this.verifyBin(new Uint8Array(content), verifyMethod);
         } else {
           const content = await new Promise<string>((resolve, reject) => {
             reader.onload = (e) => resolve(e.target?.result as string);
             reader.onerror = reject;
             reader.readAsText(firmwareFile);
           });
-          verifyResult = await this.verifyHex(content, verifyMethodSelect);
+          verifyResult = await this.verifyHex(content, verifyMethod);
         }
 
         if (verifyResult) {

@@ -2,7 +2,6 @@
 
 - PORT (int) — WebSocket/HTTP server port. Default: 8765.
 - ADVERTISE_HOST (string) — advertised host/IP. Optional; if empty the host is auto-detected.
-- **DEPRECATED!** SERIAL_SCAN_INTERVAL (int, ms) — interval to scan and expose local serial ports. Default: 5000 (0 = disabled).
 - DEBUG_MODE (bool) — enable debug logs. Default: false.
 
 ## Web interface
