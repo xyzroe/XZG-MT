@@ -10,9 +10,11 @@ import { SilabsTools } from "./tools/sl";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
 import { ArduinoTools } from "./tools/arduino";
+import { TelinkTools, TelinkPgmTools } from "./tools/telink";
+
 import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
-import { deriveControlConfig, ControlConfig } from "./utils/control";
+import { deriveControlConfig, ControlConfig, enterBootloader, makeReset } from "./utils/control";
 import { httpGetWithFallback, saveToFile } from "./utils/http";
 import { crc32 as computeCrc32 } from "./utils/crc";
 
@@ -52,7 +54,7 @@ import {
   bootloaderVersionEl,
   getModelBtn,
   btnNvWrite,
-  btnFlash,
+  startFlashBtn,
   bslUrlSelect,
   rstUrlSelect,
   baudUrlSelect,
@@ -72,7 +74,7 @@ import {
   targetIeeeEl,
   debuggerDetectSpinner,
   resetDebugBtn,
-  btnReadFlash,
+  readFlashBtn,
   verifyMethodWrap,
   writeMethodWrap,
   mdnsRefreshBtn,
@@ -87,18 +89,25 @@ import {
   autoBslToggle,
   implyGateToggle,
   findBaudToggle,
-  espFilesContainer,
+  multiFilesContainer,
   updateUIForFamily,
   log,
   setBridgeStatus,
   setBridgeLoading,
   deviceDetectBusy,
   updateConnectionUI,
+  updatePortInfo,
   debuggerOptionWrap,
   portInfoEl,
   forceWrite,
   arduinoBootSelect,
+  telinkFamilySelect,
+  telinkMethodSelect,
+  updateTelinkOptionsUI,
+  eraseMethodWrap,
+  swireFlashBtn,
 } from "./ui";
+import { EraseMethod, TelinkMethod, TelinkFamily } from "./types";
 
 // Global state variables and UI elements
 // --- Control strategy mapping ---
@@ -113,6 +122,10 @@ let ccLoader: CCLoader | null = null;
 
 // Arduino tools instance
 let arduinoTools: ArduinoTools | null = null;
+
+// Telink tools instance
+let telinkTools: TelinkTools | null = null;
+let telinkPgmTools: TelinkPgmTools | null = null;
 
 export let activeConnection: "serial" | "tcp" | null = null;
 let esploader: ESPLoader | null = null;
@@ -131,10 +144,11 @@ chooseSerialBtn.addEventListener("click", async () => {
   }
   try {
     if (!("serial" in navigator)) throw new Error("Web Serial not supported");
-    const br = parseInt(bitrateInput.value, 10) || 115200;
+    let br = parseInt(bitrateInput.value, 10) || 115200;
     deviceDetectBusy(true);
     const chosen = await (navigator as any).serial.requestPort();
     if (!chosen) throw new Error("No port selected");
+
     const family = getSelectedFamily();
     if (family === "esp") {
       log("Port selected, initializing ESP transport...");
@@ -146,6 +160,10 @@ chooseSerialBtn.addEventListener("click", async () => {
       };
       esploader = new ESPLoader({ transport, baudrate: br, terminal, romBaudrate: br });
       log("Connecting to ESP...");
+
+      activeConnection = "serial";
+      // updateConnectionUI();
+      updatePortInfo(br);
 
       const chipDesc = await esploader.main("default_reset");
 
@@ -181,91 +199,18 @@ chooseSerialBtn.addEventListener("click", async () => {
           flashSizeEl.classList.add("border-warning", "bg-warning-subtle");
         }
       }
-
-      activeConnection = "serial";
       updateConnectionUI();
+
       deviceDetectBusy(false);
       return;
     }
 
     if (family === "arduino") {
-      log("Port selected, initializing Arduino connection...");
-      const br = parseInt(arduinoBootSelect.value, 10) || 115200;
-      log(`Opening serial port at ${br}bps...`);
-      await chosen.open({ baudRate: br });
-      serial?.close();
-      serial = new SerialWrap(br);
-      serial.useExistingPortAndStart(chosen);
-
-      // Low-level RX/TX logs
-      serial.onData((d) => {
-        log(`RX: ${bufToHex(d)}`, "rx");
-      });
-      serial.onTx((d) => {
-        log(`TX: ${bufToHex(d)}`, "tx");
-      });
-
-      log("Serial port opened, connecting to Arduino bootloader...");
-
-      // Give bootloader time to initialize after port open
-      await sleep(250);
-
-      // Create Arduino tools instance
-      arduinoTools = new ArduinoTools(serial);
-      arduinoTools.setLogger(log);
-      arduinoTools.setProgressCallback((percent, msg) => {
-        if (progressEl) {
-          progressEl.style.width = `${percent}%`;
-          progressEl.textContent = msg;
-        }
-      });
-      arduinoTools.setSetLinesHandler((dtr, rts) => {
-        if (serial) {
-          serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
-        }
-      });
-
-      // Get board info
-      try {
-        const boardInfo = await arduinoTools.getBoardInfo();
-        if (boardInfo) {
-          if (chipModelEl) chipModelEl.value = boardInfo.chipName;
-          // if (portInfoEl) portInfoEl.value = `Arduino @ ${br}bps`;
-
-          // Set flash size
-          if (flashSizeEl && boardInfo.flashSize) {
-            const sizeKB = (boardInfo.flashSize / 1024).toFixed(0);
-            flashSizeEl.value = `${sizeKB}KB (${boardInfo.flashSize} bytes)`;
-          }
-
-          // Set device ID (pseudo-serial number)
-          if (ieeeMacEl && boardInfo.serialNumber) {
-            ieeeMacEl.value = boardInfo.serialNumber;
-          }
-
-          // Set bootloader version
-          if (bootloaderVersionEl && boardInfo.swMajor !== undefined && boardInfo.swMinor !== undefined) {
-            bootloaderVersionEl.value = `${boardInfo.swMajor}.${boardInfo.swMinor}`;
-          }
-
-          log(`Arduino board connected: ${boardInfo.chipName}`);
-
-          // Refresh network firmware list
-          await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
-            log("Network FW list fetch failed: " + (e?.message || String(e)))
-          );
-        } else {
-          log("Warning: Could not read board information");
-        }
-      } catch (e: any) {
-        log("Board detection error: " + (e?.message || String(e)));
-      }
-
-      activeConnection = "serial";
-      updateConnectionUI();
-      optErase.disabled = true;
-      deviceDetectBusy(false);
-      return;
+      log("Initializing Arduino connection...");
+      br = parseInt(arduinoBootSelect.value, 10) || 115200;
+    } else if (family === "telink") {
+      log("Initializing Telink connection...");
+      br = 230400;
     }
 
     await chosen.open({ baudRate: br });
@@ -282,7 +227,8 @@ chooseSerialBtn.addEventListener("click", async () => {
     log("Serial selected and opened");
     // Mark connection active immediately on open
     activeConnection = "serial";
-    updateConnectionUI();
+    //updateConnectionUI();
+    updatePortInfo(br);
 
     await runConnectSequence();
   } catch (e: any) {
@@ -298,6 +244,10 @@ disconnectBtn.addEventListener("click", async () => {
   ti_tools = null;
   detectedTiChipFamily = null;
   arduinoTools = null;
+  telinkTools = null;
+
+  // Clear image
+  hexImage = null;
 
   if (activeConnection === "serial") {
     try {
@@ -333,7 +283,9 @@ disconnectBtn.addEventListener("click", async () => {
     currentConnMeta = {};
     log("TCP disconnected");
   }
-  hexImage = null;
+
+  updatePortInfo();
+  deviceDetectBusy(false);
   updateConnectionUI();
 });
 
@@ -362,7 +314,8 @@ connectTcpBtn.addEventListener("click", async () => {
     log(`TCP connected to ${host}:${port}`);
 
     activeConnection = "tcp";
-    updateConnectionUI();
+    // updateConnectionUI();
+    updatePortInfo();
     await runConnectSequence();
   } catch (e: any) {
     log(`TCP error: ${e?.message || String(e)}`);
@@ -477,16 +430,7 @@ enterBslBtn?.addEventListener("click", async () => {
 resetBtn?.addEventListener("click", async () => {
   await withButtonStatus(resetBtn!, async () => {
     try {
-      if (getSelectedFamily() === "ti_old") {
-        if (ccDebugger) {
-          await ccDebugger?.reset(false);
-        } else if (ccLoader) {
-          log("Reset not supported for CC Loader");
-          return false;
-        }
-      } else {
-        await performReset();
-      }
+      await performReset();
     } catch (e: any) {
       log("Reset error: " + (e?.message || String(e)));
       return false;
@@ -497,13 +441,9 @@ resetBtn?.addEventListener("click", async () => {
 pingBtn?.addEventListener("click", async () => {
   await withButtonStatus(pingBtn!, async () => {
     const family = getSelectedFamily();
-    if (family === "esp") {
-      log("Ping not supported for ESP");
+    if (family !== "ti") {
+      log("Ping not supported for this family");
       return;
-    }
-    if (family === "sl") {
-      log("Ping is not supported for Silabs yet");
-      throw new Error("Unsupported for Silabs");
     }
     if (!ti_tools) throw new Error("TiTools not initialized");
     log("Pinging application...");
@@ -544,6 +484,8 @@ getVersionBtn?.addEventListener("click", async () => {
           log(`OpenThread RCP version: ${rcpInfo.version}`);
           return;
         }
+        const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
+        await changeBaud(originalBaudRate);
       }
 
       throw new Error("Version not available");
@@ -564,18 +506,10 @@ getVersionBtn?.addEventListener("click", async () => {
   });
 });
 
-// Get Model action: detect chip and memory without flashing
+// Get Model action: detect chip and memory
 getModelBtn?.addEventListener("click", async () => {
   await withButtonStatus(getModelBtn!, async () => {
-    if (getSelectedFamily() === "ti_old") {
-      if (ccDebugger) {
-        await ccDebugger?.refreshInfo();
-      } else if (ccLoader) {
-        await ccLoader?.getChipInfo();
-      }
-    } else {
-      await readChipInfo();
-    }
+    await readChipInfo();
   });
 });
 
@@ -730,8 +664,8 @@ btnIeeeWrite?.addEventListener("click", async () => {
 });
 
 // Flash start button with status feedback
-btnFlash.addEventListener("click", async () => {
-  await withButtonStatus(btnFlash, async () => {
+startFlashBtn.addEventListener("click", async () => {
+  await withButtonStatus(startFlashBtn, async () => {
     const family = getSelectedFamily();
     // TI old family (CC253x) - use CC Debugger
     if (family === "ti_old") {
@@ -810,7 +744,7 @@ btnFlash.addEventListener("click", async () => {
         // Leave programming mode
         await sleep(100);
 
-        await arduinoTools.resetArduino();
+        await arduinoTools.reset();
         // Device will reset automatically after leaving programming mode
       } catch (e: any) {
         log("Arduino flash error: " + (e?.message || String(e)));
@@ -819,6 +753,83 @@ btnFlash.addEventListener("click", async () => {
         setTimeout(() => flashWarning?.classList.add("d-none"), 500);
       }
 
+      return true;
+    } else if (family === "telink") {
+      // Telink flashing
+      if (!telinkTools && !telinkPgmTools) throw new Error("Any TelinkTools not initialized");
+      // Load files from multiFilesContainer
+
+      if (optErase.checked && eraseMethodWrap?.value === EraseMethod.FULL) {
+        try {
+          log("Erasing flash...");
+          if (telinkTools) await telinkTools.eraseAllFlash();
+          else if (telinkPgmTools) await telinkPgmTools.eraseAllFlash();
+          log("Erase complete.");
+        } catch (e: any) {
+          log("Telink erase error: " + (e?.message || String(e)));
+          throw e;
+        }
+      }
+
+      if (optWrite.checked) {
+        const files: { filename: string; data: string; startAddress: number }[] = [];
+        if (multiFilesContainer) {
+          if (files.length === 0) {
+            const rows = document.querySelectorAll(".multi-file-row");
+            for (let i = 0; i < rows.length; i++) {
+              const row = rows[i];
+              const addrInput = row.querySelector(".multi-addr-input") as HTMLInputElement;
+              const fileInput = row.querySelector(".multi-file-input") as HTMLInputElement;
+
+              const file = fileInput.files?.[0];
+              if (!file) continue; // Skip empty rows
+
+              let addrStr = addrInput.value.trim();
+              if (!addrStr) addrStr = "0x0";
+              const addr = parseInt(addrStr, 16);
+              if (isNaN(addr)) throw new Error(`Invalid address: ${addrStr}`);
+
+              log(`Reading ${file.name} for address 0x${addr.toString(16)}...`);
+              const data = await readAsBinaryString(file);
+              files.push({ filename: file.name, data: data, startAddress: addr });
+            }
+          }
+
+          // Check if we have at least one file
+          if (files.length === 0) {
+            throw new Error("No firmware files selected. Please select firmware files first.");
+          }
+
+          // Flash each file
+          flashWarning?.classList.remove("d-none");
+          try {
+            for (const file of files) {
+              log(`Flashing file: ${file.filename}, ${file.data.length} bytes...`);
+              // Convert string to Uint8Array for flash method
+              const dataArray = new Uint8Array(file.data.length);
+              for (let i = 0; i < file.data.length; i++) {
+                dataArray[i] = file.data.charCodeAt(i) & 0xff;
+              }
+              let sectorErase = false;
+              if (optErase.checked && eraseMethodWrap?.value === EraseMethod.SECTOR) {
+                sectorErase = true;
+              }
+              if (telinkTools) await telinkTools.flash(dataArray, file.startAddress, sectorErase, optVerify.checked);
+              else if (telinkPgmTools)
+                await telinkPgmTools.flash(dataArray, file.startAddress, sectorErase, optVerify.checked);
+              log(`Flashing of ${file.filename} complete!`);
+            }
+
+            if (telinkTools) await telinkTools.reset();
+            else if (telinkPgmTools) await telinkPgmTools.mcuReboot();
+          } catch (e: any) {
+            log("Telink flash error: " + (e?.message || String(e)));
+            throw e;
+          } finally {
+            setTimeout(() => flashWarning?.classList.add("d-none"), 500);
+          }
+        }
+      }
       return true;
     } else {
       try {
@@ -884,6 +895,8 @@ btnFlash.addEventListener("click", async () => {
                 if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
                 log(`OpenThread RCP version: ${rcpInfo.version}`);
               }
+              const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
+              await changeBaud(originalBaudRate);
             }
           }
         }
@@ -893,6 +906,51 @@ btnFlash.addEventListener("click", async () => {
         throw e;
       }
     }
+  });
+});
+
+swireFlashBtn.addEventListener("click", async () => {
+  await withButtonStatus(swireFlashBtn!, async () => {
+    // try {
+    const family = getSelectedFamily();
+    if (family === "telink") {
+      // Telink flashing
+      if (!telinkTools) throw new Error("TelinkTools not initialized");
+      log("Preparing to flash uart2swire...");
+      let file;
+      try {
+        try {
+          // we need to load ./bins/floader_825x.bin or ./bins/floader_826x.bin as unit8array and pass to telinkTools
+          // log("Loading Telink bootloader...");
+          const progFileUrl = "./bins/uart2swire.bin";
+
+          //  const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
+          const img = await downloadFirmwareFromUrl(progFileUrl, 0xff);
+          file = img.data;
+        } catch (e) {
+          log(`Failed to load uart2swire: ${e}`);
+          throw e;
+        }
+        // Load files from multiFilesContainer
+        await telinkTools.eraseAllFlash();
+        // const data = await readAsBinaryString(file);
+        flashWarning?.classList.remove("d-none");
+        await telinkTools.flash(file, 0x0, false, optVerify.checked);
+        log(`Flashing of uart2swire complete!`);
+        await telinkTools.reset();
+        return true;
+      } catch (e: any) {
+        log("Telink flash error: " + (e?.message || String(e)));
+        throw e;
+      } finally {
+        setTimeout(() => flashWarning?.classList.add("d-none"), 500);
+      }
+    }
+
+    // } catch (e: any) {
+    //   log("SWIRE error: " + (e?.message || String(e)));
+    //   throw e;
+    // }
   });
 });
 
@@ -996,8 +1054,8 @@ connectDebuggerBtn?.addEventListener("click", async () => {
 });
 
 // Read Flash button handler
-btnReadFlash?.addEventListener("click", async () => {
-  await withButtonStatus(btnReadFlash!, async () => {
+readFlashBtn?.addEventListener("click", async () => {
+  await withButtonStatus(readFlashBtn!, async () => {
     flashWarning?.classList.remove("d-none");
     if (ccLoader) {
       // Use Arduino-based CC Loader
@@ -1014,6 +1072,10 @@ btnReadFlash?.addEventListener("click", async () => {
       await changeBaud(originalBaudRate);
     } else if (arduinoTools) {
       await arduinoTools?.dumpFlash();
+    } else if (telinkTools) {
+      await telinkTools.dumpFlash();
+    } else if (telinkPgmTools) {
+      await telinkPgmTools.dumpFlash();
     }
 
     setTimeout(() => flashWarning?.classList.add("d-none"), 500);
@@ -1099,7 +1161,7 @@ connectLoaderBtn?.addEventListener("click", async () => {
       log("Serial selected and opened");
       // Mark connection active immediately on open
       activeConnection = "serial";
-      updateConnectionUI();
+
       const link = getActiveLink();
       if (!link) {
         throw new Error("No active connection. Please connect Serial or TCP first.");
@@ -1167,7 +1229,7 @@ mdnsSelect?.addEventListener("change", () => {
   updateConnectionUI();
 });
 
-btnAddEspFile?.addEventListener("click", addEspFileRow);
+btnAddEspFile?.addEventListener("click", addMultiFileRow);
 
 function applyControlConfig(cfg: ControlConfig) {
   if (pinModeSelect && cfg.pinMode !== undefined) pinModeSelect.checked = cfg.pinMode;
@@ -1315,18 +1377,24 @@ function loadCtrlSettings() {
     const findBaudValue = localStorage.getItem("findBaud");
     if (findBaudToggle && findBaudValue !== null) findBaudToggle.checked = findBaudValue === "1";
 
-    if (bitrateInput) bitrateInput.value = localStorage.getItem("bitrateInput") || bitrateInput.value;
+    const bitrateValue = localStorage.getItem("bitrateInput");
+    if (bitrateInput && bitrateValue !== null) bitrateInput.value = bitrateValue;
 
     const savedFamily = localStorage.getItem("chip_family");
     if (savedFamily) {
-      const { setSelectedFamilyValue } = require("./ui");
-      const validFamily =
-        savedFamily === "sl" || savedFamily === "esp" || savedFamily === "ti_old" || savedFamily === "arduino"
-          ? savedFamily
-          : "ti";
+      const { setSelectedFamilyValue, FAMILY_VALUES } = require("./ui");
+      const validFamily = FAMILY_VALUES.includes(savedFamily as any) ? savedFamily : "ti";
       setSelectedFamilyValue(validFamily);
       updateUIForFamily();
     }
+
+    const telinkMethodValue = localStorage.getItem("telinkMethodSelect");
+    if (telinkMethodSelect && telinkMethodValue !== null) {
+      telinkMethodSelect.value = telinkMethodValue;
+      updateTelinkOptionsUI(telinkMethodValue);
+    }
+    const telinkFamilyValue = localStorage.getItem("telinkFamilySelect");
+    if (telinkFamilySelect && telinkFamilyValue !== null) telinkFamilySelect.value = telinkFamilyValue;
   } catch {
     // ignore
   }
@@ -1342,7 +1410,11 @@ export function saveCtrlSettings() {
     if (implyGateToggle) localStorage.setItem("implyGate", implyGateToggle.checked ? "1" : "0");
     if (findBaudToggle) localStorage.setItem("findBaud", findBaudToggle.checked ? "1" : "0");
     if (bitrateInput) localStorage.setItem("bitrateInput", bitrateInput.value.trim());
+
     localStorage.setItem("chip_family", getSelectedFamily());
+
+    if (telinkMethodSelect) localStorage.setItem("telinkMethodSelect", telinkMethodSelect.value);
+    if (telinkFamilySelect) localStorage.setItem("telinkFamilySelect", telinkFamilySelect.value);
   } catch {
     // ignore
   }
@@ -1465,6 +1537,10 @@ function updateOptionsStateForFile(selected: boolean) {
     }
     if (verifyMethodWrap) verifyMethodWrap.disabled = true;
     if (writeMethodWrap) writeMethodWrap.disabled = true;
+    if (eraseMethodWrap) {
+      eraseMethodWrap.value = EraseMethod.FULL;
+      eraseMethodWrap.disabled = true;
+    }
   } else {
     optWrite.checked = true;
     optWrite.disabled = false;
@@ -1474,6 +1550,7 @@ function updateOptionsStateForFile(selected: boolean) {
     }
     if (verifyMethodWrap) verifyMethodWrap.disabled = false;
     if (writeMethodWrap) writeMethodWrap.disabled = false;
+    if (eraseMethodWrap) eraseMethodWrap.disabled = false;
   }
 }
 
@@ -1529,11 +1606,14 @@ async function enterBsl(): Promise<void> {
   const family = getSelectedFamily();
   //log(`Using line sequences for family: ${family}`);
   // Use line sequences via direct serial or remote bridge pins
-  if (family === "sl") {
-    await sl_tools?.enterBootloader(implyGateToggle?.checked ?? false);
-  }
-  if (family === "ti") {
-    await ti_tools?.enterBootloader(implyGateToggle?.checked ?? false);
+  // if (family === "sl") {
+  //   await sl_tools?.enterBootloader(implyGateToggle?.checked ?? false);
+  // }
+  // if (family === "ti") {
+  //   await ti_tools?.enterBootloader(implyGateToggle?.checked ?? false);
+  // }
+  if (family === "ti" || family === "sl") {
+    await enterBootloader(implyGateToggle?.checked ?? false);
   }
 
   if (family === "esp") {
@@ -1580,26 +1660,29 @@ async function performReset(): Promise<void> {
   const family = getSelectedFamily();
   //log(`Using line sequences for family: ${family}`);
   // Use line sequences via direct serial or remote bridge pins
-  if (family === "ti") {
-    await ti_tools?.reset(implyGateToggle?.checked ?? false);
-  }
-  if (family === "sl") {
-    await sl_tools?.reset(implyGateToggle?.checked ?? false);
-  }
-  if (family === "esp") {
-    if (!esploader) {
-      log("ESP: Tools not initialized");
-      return;
-    }
+  // if (family === "ti") {
+  //   await ti_tools?.reset(implyGateToggle?.checked ?? false);
+  // } else if (family === "sl") {
+  //   await sl_tools?.reset(implyGateToggle?.checked ?? false);
+  if (family === "ti" || family === "sl") {
+    await makeReset(implyGateToggle?.checked ?? false);
+  } else if (family === "esp") {
     log("ESP: Resetting...");
     await (esploader as any).after("hard_reset");
-  }
-  if (family === "arduino") {
-    if (!arduinoTools) {
-      log("Arduino: Tools not initialized");
-      return;
+  } else if (family === "arduino") {
+    await arduinoTools?.reset();
+  } else if (family === "ti_old") {
+    if (ccDebugger) {
+      await ccDebugger?.reset(false);
+    } else if (ccLoader) {
+      log("Reset not supported for CC Loader");
     }
-    await arduinoTools.resetArduino();
+  } else if (family === "telink") {
+    if (telinkTools) {
+      await telinkTools.reset();
+    } else if (telinkPgmTools) {
+      await telinkPgmTools?.mcuReboot();
+    }
   }
   // UNO: DTR=off, RTS=off
 
@@ -1644,6 +1727,91 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       );
     } else if (family === "esp") {
       log("ESP: Chip info detected during connection");
+    } else if (family === "ti_old") {
+      if (ccDebugger) {
+        await ccDebugger?.refreshInfo();
+      } else if (ccLoader) {
+        await ccLoader?.getChipInfo();
+      }
+    } else if (family === "arduino") {
+      if (!arduinoTools) throw new Error("ArduinoTools not initialized");
+      try {
+        const boardInfo = await arduinoTools.getBoardInfo();
+        if (boardInfo) {
+          if (chipModelEl) chipModelEl.value = boardInfo.chipName;
+
+          if (flashSizeEl && boardInfo.flashSize) {
+            const sizeKB = (boardInfo.flashSize / 1024).toFixed(0);
+            flashSizeEl.value = `${sizeKB}KB (${boardInfo.flashSize} bytes)`;
+          }
+
+          if (ieeeMacEl && boardInfo.serialNumber) {
+            ieeeMacEl.value = boardInfo.serialNumber;
+          }
+
+          if (bootloaderVersionEl && boardInfo.swMajor !== undefined && boardInfo.swMinor !== undefined) {
+            bootloaderVersionEl.value = `${boardInfo.swMajor}.${boardInfo.swMinor}`;
+          }
+
+          log(`Arduino board connected: ${boardInfo.chipName}`);
+
+          // Refresh network firmware list
+          await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
+            log("Network FW list fetch failed: " + (e?.message || String(e)))
+          );
+        } else {
+          log("Warning: Could not read board information");
+        }
+      } catch (e: any) {
+        log("Board detection error: " + (e?.message || String(e)));
+      }
+    } else if (family === "telink") {
+      // Get device info
+      // if (!telinkTools) throw new Error("TelinkTools not initialized");
+      if (telinkTools) {
+        try {
+          const boardInfo = await telinkTools.getChipInfo();
+          if (boardInfo) {
+            if (chipModelEl) chipModelEl.value = boardInfo.chipName;
+
+            if (flashSizeEl && boardInfo.flashSize) {
+              const sizeKB = (boardInfo.flashSize / 1024).toFixed(0);
+              flashSizeEl.value = `${sizeKB}KB (${boardInfo.flashSize} bytes)`;
+            }
+
+            if (bootloaderVersionEl) {
+              bootloaderVersionEl.value = `Floader v${boardInfo.floaderVersion}`;
+            }
+          } else {
+            log("Warning: Could not read board information");
+          }
+        } catch (e: any) {
+          log("Telink board detection error: " + (e?.message || String(e)));
+        }
+      } else if (telinkPgmTools) {
+        try {
+          await telinkPgmTools.pgmReboot();
+          const pgmInfo = await telinkPgmTools.getVersion();
+          if (pgmInfo) {
+            if (bootloaderVersionEl) {
+              bootloaderVersionEl.value = `PGM: ${pgmInfo.chipName} (ID 0x${pgmInfo.chipId
+                .toString(16)
+                .padStart(4, "0")}) v${pgmInfo.version[0]}.${pgmInfo.version[1]}`;
+            }
+          }
+          const boardInfo = await telinkPgmTools.getChipInfo();
+          if (boardInfo) {
+            if (chipModelEl) chipModelEl.value = boardInfo.chipName;
+
+            if (flashSizeEl && boardInfo.flashSize) {
+              const sizeKB = (boardInfo.flashSize / 1024).toFixed(0);
+              flashSizeEl.value = `${sizeKB}KB (${boardInfo.flashSize} bytes)`;
+            }
+          }
+        } catch (e: any) {
+          log("Telink PGM board detection error: " + (e?.message || String(e)));
+        }
+      }
     }
   } catch (e: any) {
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
@@ -1734,6 +1902,76 @@ async function runConnectSequence(): Promise<void> {
     }
 
     const family = getSelectedFamily();
+
+    if (family === "arduino") {
+      // Give bootloader time to initialize after port open
+      await sleep(250);
+
+      // Create Arduino tools instance
+      arduinoTools = new ArduinoTools(getActiveLink());
+      arduinoTools.setLogger(log);
+      arduinoTools.setProgressCallback((percent, msg) => {
+        if (progressEl) {
+          progressEl.style.width = `${percent}%`;
+          progressEl.textContent = msg;
+        }
+      });
+      arduinoTools.setSetLinesHandler((dtr, rts) => {
+        if (serial) {
+          serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
+        }
+      });
+
+      optErase.disabled = true;
+    } else if (family === "telink") {
+      if (telinkTools) {
+        telinkTools.dispose();
+        telinkTools = null;
+      }
+
+      if (telinkMethodSelect.value === TelinkMethod.UART) {
+        telinkTools = new TelinkTools(getActiveLink());
+        telinkTools.setLogger(log);
+        telinkTools.setProgressCallback((percent, msg) => {
+          if (progressEl) {
+            progressEl.style.width = `${percent}%`;
+            progressEl.textContent = msg;
+          }
+        });
+        telinkTools.setSetLinesHandler((dtr, rts) => {
+          if (serial) {
+            serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
+          }
+        });
+
+        // Clear any garbage that might have been received
+        await sleep(100);
+
+        // Get Model based on family selection
+        const familyValue = Number(telinkFamilySelect.value);
+        await telinkTools.setModel(familyValue);
+      } else if (telinkMethodSelect.value === TelinkMethod.SWIRE) {
+        telinkPgmTools = new TelinkPgmTools(getActiveLink());
+        telinkPgmTools.setLogger(log);
+        telinkPgmTools.setProgressCallback((percent, msg) => {
+          if (progressEl) {
+            progressEl.style.width = `${percent}%`;
+            progressEl.textContent = msg;
+          }
+        });
+        telinkPgmTools.setSetLinesHandler((dtr, rts) => {
+          if (serial) {
+            serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
+          }
+        });
+      }
+    }
+
+    if (family === "arduino" || family === "telink") {
+      await readChipInfo();
+      return;
+    }
+
     if (family === "ti") {
       // Initialize TiTools if needed
       if (!ti_tools) ti_tools = new TiTools(getActiveLink());
@@ -1818,6 +2056,7 @@ async function runConnectSequence(): Promise<void> {
       } catch {
         log("App ping skipped");
       }
+      await sleep(1000);
       try {
         if (!ti_tools) throw new Error("TiTools not initialized");
         log("Checking firmware version...");
@@ -1838,6 +2077,8 @@ async function runConnectSequence(): Promise<void> {
               if (firmwareVersionEl) firmwareVersionEl.value = rcpInfo.version;
               log(`OpenThread RCP version: ${rcpInfo.version}`);
             }
+            const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
+            await changeBaud(originalBaudRate);
           }
         }
       } catch {
@@ -1861,6 +2102,7 @@ async function runConnectSequence(): Promise<void> {
       }
     }
   } finally {
+    updateConnectionUI();
     deviceDetectBusy(false);
   }
 }
@@ -1870,8 +2112,8 @@ async function runConnectSequence(): Promise<void> {
 async function flash(detectedTiFamily?: TiChipFamily | null) {
   // Show warning
   if (flashWarning) flashWarning.classList.remove("d-none");
-
-  if (getSelectedFamily() === "esp") {
+  const family = getSelectedFamily();
+  if (family === "esp") {
     if (optErase.checked) {
       await eraseEsp();
     }
@@ -1888,11 +2130,11 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 
   if (!hexImage) throw new Error("Load HEX first");
 
-  if (getSelectedFamily() === "ti") {
+  if (family === "ti") {
     // If possible to use high baud, switch to it before flashing
     await changeBaud(500000, 460800);
   }
-  if (getSelectedFamily() === "sl") {
+  if (family === "sl") {
     // SL bootloader needs 115200 for flashing
     await changeBaud(115200);
   }
@@ -1914,7 +2156,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 
   // Branch for Silabs vs TI vs ESP
 
-  if (getSelectedFamily() === "sl") {
+  if (family === "sl") {
     if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
 
     log(`Flashing Silabs firmware: ${data.length} bytes`);
@@ -2223,7 +2465,7 @@ async function ieeeWriteSecondary(address: string): Promise<void> {
 // DTR = BSL(FLASH), RTS = RESET; (active low);
 // without NPN - rts=0 reset=0, dtr=0 bsl=0
 // with NPN invert - rts=0 reset=1, dtr=0 bsl=1
-const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
+export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
   const rstLevelEff = invertLevel?.checked ? !rstLevel : rstLevel;
   const bslLevelEff = invertLevel?.checked ? !bslLevel : bslLevel;
   // just for simplicity
@@ -2657,31 +2899,31 @@ function addControlTemplateOptgroups(target: HTMLSelectElement, def: string | nu
 
 // --- ESP File Management ---
 
-function createEspFileRow() {
+function createMultiFileRow() {
   const row = document.createElement("div");
-  row.className = "d-flex gap-2 mb-2 esp-file-row align-items-stretch";
+  row.className = "d-flex gap-2 mb-2 multi-file-row align-items-stretch";
   row.innerHTML = `
-    <input type="text" class="form-control font-monospace esp-addr-input" placeholder="0x1000" style="width: 100px;" value="0x0">
-    <input class="form-control esp-file-input flex-grow-1" type="file" accept=".bin" />
+    <input type="text" class="form-control font-monospace multi-addr-input" placeholder="0x1000" style="width: 100px;" value="0x0">
+    <input class="form-control multi-file-input flex-grow-1" type="file" accept=".bin" />
     <button class="btn btn-outline-danger remove-row" type="button"><i class="bi bi-x-circle"></i></button>
   `;
   row.querySelector(".remove-row")?.addEventListener("click", () => {
     row.remove();
-    if (espFilesContainer) {
+    if (multiFilesContainer) {
       // Ensure at least one row remains
-      if (espFilesContainer.children.length === 0) {
+      if (multiFilesContainer.children.length === 0) {
         updateOptionsStateForFile(false);
-        addEspFileRow();
+        addMultiFileRow();
       }
     }
   });
-  row.querySelector(".esp-file-input")?.addEventListener("change", () => {
+  row.querySelector(".multi-file-input")?.addEventListener("change", () => {
     // if no file selected, update options state
     // Check all ESP file rows for any selected files
-    const allRows = document.querySelectorAll(".esp-file-row");
+    const allRows = document.querySelectorAll(".multi-file-row");
     let hasAnyFile = false;
     for (const r of Array.from(allRows)) {
-      const fileInput = r.querySelector(".esp-file-input") as HTMLInputElement;
+      const fileInput = r.querySelector(".multi-file-input") as HTMLInputElement;
       if (fileInput?.files?.[0]) {
         hasAnyFile = true;
         break;
@@ -2692,14 +2934,14 @@ function createEspFileRow() {
   return row;
 }
 
-function addEspFileRow() {
-  if (!espFilesContainer) return;
-  espFilesContainer.appendChild(createEspFileRow());
+function addMultiFileRow() {
+  if (!multiFilesContainer) return;
+  multiFilesContainer.appendChild(createMultiFileRow());
 }
 
 // Add initial row if empty
-if (espFilesContainer && espFilesContainer.children.length === 0) {
-  addEspFileRow();
+if (multiFilesContainer && multiFilesContainer.children.length === 0) {
+  addMultiFileRow();
 }
 
 function readAsBinaryString(file: File): Promise<string> {
@@ -2752,11 +2994,11 @@ async function flashEsp() {
 
   // If no cloud firmware, check local files
   if (fileArray.length === 0) {
-    const rows = document.querySelectorAll(".esp-file-row");
+    const rows = document.querySelectorAll(".multi-file-row");
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const addrInput = row.querySelector(".esp-addr-input") as HTMLInputElement;
-      const fileInput = row.querySelector(".esp-file-input") as HTMLInputElement;
+      const addrInput = row.querySelector(".multi-addr-input") as HTMLInputElement;
+      const fileInput = row.querySelector(".multi-file-input") as HTMLInputElement;
 
       const file = fileInput.files?.[0];
       if (!file) continue; // Skip empty rows

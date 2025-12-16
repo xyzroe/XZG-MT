@@ -2,6 +2,8 @@ import { Link } from "../types/index";
 import { sleep, toHex } from "../utils/index";
 import { saveToFile } from "../utils/http";
 import { SpinelClient, OpenThreadRcpInfo } from "./spinel";
+import { enterBootloader, makeReset } from "../utils/control";
+import { implyGateToggle } from "../ui";
 
 export type TiChipFamily = "cc26xx" | "cc2538";
 
@@ -487,7 +489,7 @@ export class TiTools {
 
   // BSL protocol state
   private rxBuf: number[] = [];
-  private rxDataHandler: (d: Uint8Array) => void;
+  private readonly rxDataHandler: (d: Uint8Array) => void;
 
   // NVRAM helper
   public nvram: NVRAM;
@@ -495,8 +497,19 @@ export class TiTools {
   constructor(link: Link) {
     this.link = link;
     this.rxDataHandler = (d: Uint8Array) => this.rxBuf.push(...d);
-    this.link.onData(this.rxDataHandler);
+    this.ensureListener();
     this.nvram = new NVRAM(link);
+  }
+
+  /**
+   * Re-subscribe to link data events.
+   * Call this after transport reconnection (e.g., after baud rate change over TCP).
+   */
+  public ensureListener(): void {
+    if (this.link.offData) {
+      this.link.offData(this.rxDataHandler);
+    }
+    this.link.onData(this.rxDataHandler);
   }
 
   public setLogger(logger: (msg: string) => void) {
@@ -615,9 +628,12 @@ export class TiTools {
 
   // cc2538-bsl wire protocol: sync with 0x55 0x55 then expect ACK
   public async sync(): Promise<void> {
+    // Re-subscribe to link data in case transport was reconnected (e.g., after baud change over TCP)
+    this.ensureListener();
     this.rxBuf = [];
     await this.link.write(new Uint8Array([0x55, 0x55]));
-    const ok = await this.waitForAck(1000);
+    await sleep(500);
+    const ok = await this.waitForAck(2000);
     if (!ok) throw new Error("CCTOOLS: no ACK on sync");
     await sleep(20);
   }
@@ -1045,41 +1061,41 @@ export class TiTools {
     return this.nvram.writeAll(obj, log, progress);
   }
 
-  public async enterBootloader(implyGate: boolean): Promise<void> {
-    this.logger(`TI entry bootloader, implyGate=${implyGate}`);
-    if (!implyGate) {
-      await this.setLines(true, true);
-      await sleep(250);
-      await this.setLines(true, false);
-      await sleep(250);
-      await this.setLines(false, false);
-      await sleep(250);
-      await this.setLines(true, false);
-      await sleep(500);
-      await this.setLines(true, true);
-      await sleep(500);
-    }
-    if (implyGate) {
-      await this.setLines(true, true);
-      await sleep(250);
-      await this.setLines(true, false);
-      await sleep(250);
-      await this.setLines(false, true);
-      await sleep(450);
-      await this.setLines(false, false);
-      await sleep(250);
-    }
-  }
+  // public async enterBootloader(implyGate: boolean): Promise<void> {
+  //   this.logger(`TI entry bootloader, implyGate=${implyGate}`);
+  //   if (!implyGate) {
+  //     await this.setLines(true, true);
+  //     await sleep(250);
+  //     await this.setLines(true, false);
+  //     await sleep(250);
+  //     await this.setLines(false, false);
+  //     await sleep(250);
+  //     await this.setLines(true, false);
+  //     await sleep(500);
+  //     await this.setLines(true, true);
+  //     await sleep(500);
+  //   }
+  //   if (implyGate) {
+  //     await this.setLines(true, true);
+  //     await sleep(250);
+  //     await this.setLines(true, false);
+  //     await sleep(250);
+  //     await this.setLines(false, true);
+  //     await sleep(450);
+  //     await this.setLines(false, false);
+  //     await sleep(250);
+  //   }
+  // }
 
-  public async reset(implyGate: boolean): Promise<void> {
-    this.logger(`TI reset, implyGate=${implyGate}`);
-    await this.setLines(true, true);
-    await sleep(500);
-    await this.setLines(false, true);
-    await sleep(500);
-    await this.setLines(true, true);
-    await sleep(1000);
-  }
+  // public async reset(implyGate: boolean): Promise<void> {
+  //   this.logger(`TI reset, implyGate=${implyGate}`);
+  //   await this.setLines(true, true);
+  //   await sleep(500);
+  //   await this.setLines(false, true);
+  //   await sleep(500);
+  //   await this.setLines(true, true);
+  //   await sleep(1000);
+  // }
 
   // ============== Flash Dump Methods ==============
 
@@ -1141,7 +1157,8 @@ export class TiTools {
     this.logger("Starting flash dump...");
     this.progressCallback(0, "Reading device info...");
 
-    await this.enterBootloader(false);
+    // await this.enterBootloader(false);
+    await enterBootloader(implyGateToggle?.checked ?? false);
     await sleep(500);
     // First, sync and get device info
     //await this.sync();

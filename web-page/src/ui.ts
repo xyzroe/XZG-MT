@@ -1,11 +1,15 @@
 // UI Elements
 
+// Family types
+export const FAMILY_VALUES = ["ti", "sl", "esp", "ti_old", "arduino", "telink"] as const;
+export type FamilyValue = (typeof FAMILY_VALUES)[number];
+
 // Family section
 export const familySection = document.getElementById("familySection") as HTMLElement | null;
 export const familyDropdown = document.getElementById("familyDropdown") as HTMLElement | null;
 export const familyDropdownBtn = document.getElementById("familyDropdownBtn") as HTMLButtonElement | null;
 export const familyDropdownMenu = document.getElementById("familyDropdownMenu") as HTMLElement | null;
-let selectedFamilyValue = "ti";
+let selectedFamilyValue: FamilyValue = "ti";
 
 // General section
 export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
@@ -26,6 +30,11 @@ export const chooseSerialBtn = document.getElementById("chooseSerial") as HTMLBu
 const serialBaudWrap = document.getElementById("serialBaudWrap") as HTMLDivElement | null;
 const arduinoBootWrap = document.getElementById("arduinoBootWrap") as HTMLDivElement | null;
 export const arduinoBootSelect = document.getElementById("arduinoBootSelect") as HTMLInputElement;
+const telinkOptionsWrap = document.getElementById("telinkOptionsWrap") as HTMLDivElement | null;
+export const telinkMethodSelect = document.getElementById("telinkMethodSelect") as HTMLInputElement;
+export const telinkMethodWrap = document.getElementById("telinkMethodWrap") as HTMLDivElement | null;
+export const telinkFamilySelect = document.getElementById("telinkFamilySelect") as HTMLInputElement;
+export const telinkFamilyWrap = document.getElementById("telinkFamilyWrap") as HTMLDivElement | null;
 
 // TCP section
 export const tcpSection = document.getElementById("tcpSection") as HTMLElement | null;
@@ -120,8 +129,8 @@ const fwNotesCloseEl = document.getElementById("fwNotesClose");
 const fwNotesCloseXEl = document.getElementById("fwNotesCloseX");
 
 // ESP firmware section
-const espFirmwareSection = document.getElementById("espFirmwareSection") as HTMLDivElement | null;
-export const espFilesContainer = document.getElementById("espFilesContainer") as HTMLDivElement | null;
+const multiFileSection = document.getElementById("multiFileSection") as HTMLDivElement | null;
+export const multiFilesContainer = document.getElementById("multiFilesContainer") as HTMLDivElement | null;
 export const btnAddEspFile = document.getElementById("btnAddEspFile") as HTMLButtonElement | null;
 
 // Flash options
@@ -134,10 +143,12 @@ export const optVerify = document.getElementById("optVerify") as HTMLInputElemen
 export const debuggerOptionWrap = document.getElementById("debuggerOptionWrap") as HTMLDivElement | null;
 export const verifyMethodWrap = document.getElementById("verifyMethod") as HTMLSelectElement | null;
 export const writeMethodWrap = document.getElementById("writeMethod") as HTMLSelectElement | null;
-export const verifyMethodSelect = verifyMethodWrap?.value as VerifyMethod;
-export const writeMethodSelect = writeMethodWrap?.value as WriteMethod;
 
-export const btnFlash = document.getElementById("btnFlash") as HTMLButtonElement;
+// Erase method
+export const eraseOptionWrap = document.getElementById("eraseOptionWrap") as HTMLDivElement | null;
+export const eraseMethodWrap = document.getElementById("eraseMethod") as HTMLSelectElement | null;
+
+export const startFlashBtn = document.getElementById("startFlashBtn") as HTMLButtonElement;
 export const flashWarning = document.getElementById("flashWarning") as HTMLDivElement | null;
 export const progressEl = document.getElementById("progress") as HTMLDivElement;
 
@@ -166,7 +177,8 @@ export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement |
 export const getVersionBtn = document.getElementById("getVersionBtn") as HTMLButtonElement | null;
 export const getModelBtn = document.getElementById("getModelBtn") as HTMLButtonElement | null;
 export const resetDebugBtn = document.getElementById("resetDebugBtn") as HTMLButtonElement | null;
-export const btnReadFlash = document.getElementById("btnReadFlash") as HTMLButtonElement;
+export const readFlashBtn = document.getElementById("readFlashBtn") as HTMLButtonElement;
+export const swireFlashBtn = document.getElementById("swireFlashBtn") as HTMLButtonElement;
 
 // Logs section
 const logSection = document.getElementById("logSection") as HTMLElement | null;
@@ -188,15 +200,12 @@ import {
   activeConnection,
 } from "./flasher";
 
-import { VerifyMethod, WriteMethod } from "./tools/cc-debugger";
+import { EraseMethod, TelinkMethod } from "./types";
 
 import { getSelectedFwNotes } from "./netfw";
 
 // Event listeners
-pinModeSelect?.addEventListener("change", () => {
-  saveCtrlSettings();
-  updateConnectionUI();
-});
+pinModeSelect?.addEventListener("change", saveCtrlSettings);
 bslUrlInput?.addEventListener("change", saveCtrlSettings);
 rstUrlInput?.addEventListener("change", saveCtrlSettings);
 baudUrlInput?.addEventListener("change", saveCtrlSettings);
@@ -206,6 +215,15 @@ bridgeHostInput?.addEventListener("input", scheduleBridgeRefresh);
 bridgePortInput?.addEventListener("input", scheduleBridgeRefresh);
 findBaudToggle?.addEventListener("change", saveCtrlSettings);
 bitrateInput?.addEventListener("change", saveCtrlSettings);
+
+telinkMethodSelect?.addEventListener("change", () => {
+  updateTelinkOptionsUI(telinkMethodSelect.value);
+  saveCtrlSettings();
+});
+
+telinkFamilySelect?.addEventListener("change", () => {
+  saveCtrlSettings();
+});
 
 // Family dropdown logic
 if (familyDropdownBtn && familyDropdownMenu && familyDropdown) {
@@ -243,7 +261,7 @@ if (familyDropdownBtn && familyDropdownMenu && familyDropdown) {
       // Update selected state
       items.forEach((i) => i.classList.remove("selected"));
       item.classList.add("selected");
-      selectedFamilyValue = value as "ti" | "sl" | "esp" | "ti_old" | "arduino";
+      selectedFamilyValue = value as FamilyValue;
 
       // Close dropdown
       familyDropdown?.classList.remove("open");
@@ -259,11 +277,21 @@ if (familyDropdownBtn && familyDropdownMenu && familyDropdown) {
   initialItem?.classList.add("selected");
 }
 
-export function getSelectedFamilyValue(): "ti" | "sl" | "esp" | "ti_old" | "arduino" {
-  return selectedFamilyValue as "ti" | "sl" | "esp" | "ti_old" | "arduino";
+export function updateTelinkOptionsUI(method: string) {
+  if (method === TelinkMethod.UART) {
+    toggleElement(swireFlashBtn, true);
+    toggleElement(telinkFamilyWrap, true);
+  } else if (method === TelinkMethod.SWIRE) {
+    toggleElement(swireFlashBtn, false);
+    toggleElement(telinkFamilyWrap, false);
+  }
 }
 
-export function setSelectedFamilyValue(value: "ti" | "sl" | "esp" | "ti_old" | "arduino") {
+export function getSelectedFamilyValue(): FamilyValue | "" {
+  return selectedFamilyValue;
+}
+
+export function setSelectedFamilyValue(value: FamilyValue) {
   selectedFamilyValue = value;
   if (familyDropdownMenu && familyDropdownBtn) {
     const item = familyDropdownMenu.querySelector(`[data-value="${value}"]`) as HTMLElement;
@@ -317,273 +345,215 @@ bridgeInfoModal?.addEventListener("click", (e) => {
   if (e.target === bridgeInfoModal) closeModalById("bridgeInfoModal");
 });
 
-export function updateUIForFamily() {
-  // Toggle firmware sections based on family
-  const family = getSelectedFamily();
-
-  if (family === "ti") {
-    // Sections
-    if (generalSection) generalSection.classList.remove("d-none");
-    if (connectionSection) connectionSection.classList.remove("d-none");
-    if (tcpSection) tcpSection.classList.remove("d-none");
-    if (serialSection) serialSection.className = serialSection.className.replace("col-md-12", "col-md-6");
-    if (deviceSection) deviceSection.classList.remove("d-none");
-    if (debuggerSection) debuggerSection.classList.add("d-none");
-    if (localFirmwareSection) {
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
-      localFirmwareSection.classList.remove("d-none");
-    }
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
-    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
-    if (ieeeSection) ieeeSection.classList.remove("d-none");
-    if (ieeeForceWrap) ieeeForceWrap.classList.add("d-none");
-    if (ieeeDescription) ieeeDescription.textContent = "Read and write secondary IEEE address.";
-    if (nvramSection) nvramSection.classList.remove("d-none");
-    // Fields
-    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
-    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
-    if (flashSizeWrap) {
-      flashSizeWrap.className = flashSizeWrap.className.replace("col-md-6", "col-md-4");
-      flashSizeWrap.classList.remove("d-none");
-    }
-    if (ieeeMacWrap) {
-      ieeeMacWrap.className = ieeeMacWrap.className.replace("col-md-6", "col-md-4");
-      ieeeMacWrap.classList.remove("d-none");
-    }
-    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
-    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
-    if (firmwareVersionWrap) {
-      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-6", "col-md-4");
-      firmwareVersionWrap.classList.remove("d-none");
-    }
-    if (bootloaderVersionWrap) {
-      bootloaderVersionWrap.classList.add("d-none");
-    }
-    if (localFileHelp) {
-      localFileHelp.textContent = "Use a local file (*.hex or *.bin).";
-    }
-    if (localFile) {
-      localFile.accept = ".hex,.bin";
-    }
-    if (netFwSourceEl) {
-      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/fw_files";
-      netFwSourceEl.textContent = "XZG-MT/fw_files";
-    }
-    // Toggles
-    if (autoBslWrap) autoBslWrap.classList.remove("d-none");
-    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
-    // Buttons
-    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
-    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
-
-    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    if (getModelBtn) getModelBtn.classList.remove("d-none");
-    if (getVersionBtn) getVersionBtn.classList.remove("d-none");
-    if (pingBtn) pingBtn.classList.remove("d-none");
-  }
-  if (family === "sl") {
-    // Sections
-    if (generalSection) generalSection.classList.remove("d-none");
-    if (connectionSection) connectionSection.classList.remove("d-none");
-    if (tcpSection) tcpSection.classList.remove("d-none");
-    if (serialSection) serialSection.className = serialSection.className.replace("col-md-12", "col-md-6");
-    if (deviceSection) deviceSection.classList.remove("d-none");
-    if (debuggerSection) debuggerSection.classList.add("d-none");
-    if (localFirmwareSection) {
-      localFirmwareSection.classList.remove("d-none");
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
-    }
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
-    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
-    if (ieeeSection) ieeeSection.classList.remove("d-none");
-    if (ieeeForceWrap) ieeeForceWrap.classList.remove("d-none");
-    if (ieeeDescription) ieeeDescription.textContent = "Read and write primary IEEE address. Use with caution!";
-    if (nvramSection) nvramSection.classList.add("d-none");
-    // Fields
-    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
-    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
-    if (flashSizeWrap) flashSizeWrap.classList.add("d-none");
-    if (ieeeMacWrap) ieeeMacWrap.classList.add("d-none");
-    if (flashOptionsWrap) flashOptionsWrap.classList.add("d-none");
-    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
-    if (firmwareVersionWrap) {
-      firmwareVersionWrap.className = firmwareVersionWrap.className.replace("col-md-4", "col-md-6");
-      firmwareVersionWrap.classList.remove("d-none");
-    }
-    if (bootloaderVersionWrap) {
-      bootloaderVersionWrap.className = bootloaderVersionWrap.className.replace("col-md-4", "col-md-6");
-      bootloaderVersionWrap.classList.remove("d-none");
-    }
-    if (localFileHelp) {
-      localFileHelp.textContent = "Use a local file (*.ota or *.gbl).";
-    }
-    if (localFile) {
-      localFile.accept = ".ota,.gbl";
-    }
-    if (netFwSourceEl) {
-      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/fw_files";
-      netFwSourceEl.textContent = "XZG-MT/fw_files";
-    }
-    // Toggles
-    if (autoBslWrap) autoBslWrap.classList.remove("d-none");
-    if (findBaudWrap) findBaudWrap.classList.remove("d-none");
-    // Buttons
-    if (btnReadFlash) btnReadFlash.classList.add("d-none");
-    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
-
-    if (enterBslBtn) enterBslBtn.classList.remove("d-none");
-    // if (getModelBtn) getModelBtn.classList.add("d-none");
-    if (getVersionBtn) getVersionBtn.classList.remove("d-none");
-    if (pingBtn) pingBtn.classList.add("d-none");
-  }
-  if (family === "esp") {
-    // Sections
-    if (generalSection) generalSection.classList.add("d-none");
-    if (connectionSection) connectionSection.classList.remove("d-none");
-
-    if (tcpSection) tcpSection.classList.add("d-none");
-    if (serialSection) serialSection.className = serialSection.className.replace("col-md-6", "col-md-12");
-    if (deviceSection) deviceSection.classList.remove("d-none");
-    if (debuggerSection) debuggerSection.classList.add("d-none");
-    if (localFirmwareSection) localFirmwareSection.classList.add("d-none");
-    // if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
-    if (espFirmwareSection) espFirmwareSection.classList.remove("d-none");
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
-    // espFilesContainer?.classList.replace("col-md-12", "col-md-6");
-    if (ieeeSection) ieeeSection.classList.add("d-none");
-    if (nvramSection) nvramSection.classList.add("d-none");
-    // Fields
-    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
-    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
-    if (flashSizeWrap) {
-      flashSizeWrap.className = flashSizeWrap.className.replace("col-md-4", "col-md-6");
-      flashSizeWrap.classList.remove("d-none");
-    }
-    if (ieeeMacWrap) {
-      ieeeMacWrap.className = ieeeMacWrap.className.replace("col-md-4", "col-md-6");
-      ieeeMacWrap.classList.remove("d-none");
-    }
-    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
-    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
-    if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
-    if (bootloaderVersionWrap) bootloaderVersionWrap.classList.add("d-none");
-
-    if (netFwSourceEl) {
-      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/cc_loader";
-      netFwSourceEl.textContent = "XZG-MT/cc_loader";
-    }
-
-    // Toggles
-    if (autoBslWrap) autoBslWrap.classList.add("d-none");
-    if (findBaudWrap) findBaudWrap.classList.add("d-none");
-    // Buttons
-    if (btnReadFlash) btnReadFlash.classList.add("d-none");
-    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
-
-    if (enterBslBtn) enterBslBtn.classList.add("d-none");
-    if (getModelBtn) getModelBtn.classList.add("d-none");
-    if (getVersionBtn) getVersionBtn.classList.add("d-none");
-    if (pingBtn) pingBtn.classList.add("d-none");
-  }
-  if (family === "ti_old") {
-    // Sections
-    if (generalSection) generalSection.classList.add("d-none");
-    if (connectionSection) connectionSection.classList.add("d-none");
-    if (deviceSection) deviceSection.classList.add("d-none");
-    if (debuggerSection) debuggerSection.classList.remove("d-none");
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.add("d-none");
-    if (localFirmwareSection) {
-      localFirmwareSection.classList.remove("d-none");
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-6", "col-md-12");
-    }
-    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
-    if (ieeeSection) ieeeSection.classList.add("d-none");
-    if (nvramSection) nvramSection.classList.add("d-none");
-    // Fields
-    if (serialBaudWrap) serialBaudWrap.classList.remove("d-none");
-    if (arduinoBootWrap) arduinoBootWrap.classList.add("d-none");
-    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
-    if (debuggerOptionWrap) debuggerOptionWrap.classList.remove("d-none");
-    if (localFileHelp) {
-      localFileHelp.textContent = "Use a local file (*.hex or *.bin).";
-    }
-    if (localFile) {
-      localFile.accept = ".hex,.bin";
-    }
-    //Buttons
-    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
-    if (resetDebugBtn) resetDebugBtn.classList.remove("d-none");
-    if (getModelBtn) getModelBtn.classList.remove("d-none");
-
-    if (enterBslBtn) enterBslBtn.classList.add("d-none");
-    if (getVersionBtn) getVersionBtn.classList.add("d-none");
-    if (pingBtn) pingBtn.classList.add("d-none");
-  }
-  if (family === "arduino") {
-    // Sections
-    if (generalSection) generalSection.classList.add("d-none");
-    if (connectionSection) connectionSection.classList.remove("d-none");
-
-    if (tcpSection) tcpSection.classList.add("d-none");
-    if (serialSection) serialSection.className = serialSection.className.replace("col-md-6", "col-md-12");
-    if (deviceSection) deviceSection.classList.remove("d-none");
-    if (debuggerSection) debuggerSection.classList.add("d-none");
-    if (localFirmwareSection) {
-      localFirmwareSection.classList.remove("d-none");
-      localFirmwareSection.className = localFirmwareSection.className.replace("col-md-12", "col-md-6");
-    }
-    if (cloudFirmwareSection) cloudFirmwareSection.classList.remove("d-none");
-    if (espFirmwareSection) espFirmwareSection.classList.add("d-none");
-
-    if (ieeeSection) ieeeSection.classList.add("d-none");
-    if (nvramSection) nvramSection.classList.add("d-none");
-    // Fields
-    if (serialBaudWrap) serialBaudWrap.classList.add("d-none");
-    if (arduinoBootWrap) arduinoBootWrap.classList.remove("d-none");
-
-    if (flashSizeWrap) {
-      // flashSizeWrap.className = flashSizeWrap.className.replace("col-md-4", "col-md-6");
-      flashSizeWrap.classList.remove("d-none");
-    }
-    if (ieeeMacWrap) {
-      // ieeeMacWrap.className = ieeeMacWrap.className.replace("col-md-4", "col-md-6");
-      ieeeMacWrap.classList.remove("d-none");
-    }
-    if (bootloaderVersionWrap) {
-      bootloaderVersionWrap.className = bootloaderVersionWrap.className.replace("col-md-6", "col-md-4");
-      bootloaderVersionWrap.classList.remove("d-none");
-    }
-    if (flashOptionsWrap) flashOptionsWrap.classList.remove("d-none");
-    if (debuggerOptionWrap) debuggerOptionWrap.classList.add("d-none");
-    if (firmwareVersionWrap) firmwareVersionWrap.classList.add("d-none");
-
-    if (netFwSourceEl) {
-      netFwSourceEl.href = "https://github.com/xyzroe/XZG-MT/tree/cc_loader";
-      netFwSourceEl.textContent = "XZG-MT/cc_loader";
-    }
-
-    if (localFileHelp) {
-      localFileHelp.textContent = "Use a local file (*.hex).";
-    }
-    if (localFile) {
-      localFile.accept = ".hex";
-    }
-
-    // Toggles
-    if (autoBslWrap) autoBslWrap.classList.add("d-none");
-    if (findBaudWrap) findBaudWrap.classList.add("d-none");
-    // Buttons
-    if (btnReadFlash) btnReadFlash.classList.remove("d-none");
-    if (resetDebugBtn) resetDebugBtn.classList.add("d-none");
-
-    if (enterBslBtn) enterBslBtn.classList.add("d-none");
-    if (getModelBtn) getModelBtn.classList.add("d-none");
-    if (getVersionBtn) getVersionBtn.classList.add("d-none");
-    if (pingBtn) pingBtn.classList.add("d-none");
+// Helper functions for UI manipulation
+export function toggleElement(el: HTMLElement | null, show: boolean) {
+  if (!el) return;
+  if (show) {
+    el.classList.remove("d-none");
+  } else {
+    el.classList.add("d-none");
   }
 }
 
-//migrated
+function replaceClass(el: HTMLElement | null, oldClass: string, newClass: string) {
+  if (!el) return;
+  el.className = el.className.replace(oldClass, newClass);
+}
+
+function setMultipleClasses(
+  config: Array<{ el: HTMLElement | null; show?: boolean; oldClass?: string; newClass?: string }>
+) {
+  config.forEach(({ el, show, oldClass, newClass }) => {
+    if (show !== undefined) toggleElement(el, show);
+    if (oldClass && newClass) replaceClass(el, oldClass, newClass);
+  });
+}
+
+function setText(el: HTMLElement | HTMLInputElement | null, text: string) {
+  if (!el) return;
+  if ("textContent" in el) {
+    el.textContent = text;
+  }
+}
+
+function setAttr(el: HTMLInputElement | null, attr: string, value: string) {
+  if (!el) return;
+  el.setAttribute(attr, value);
+}
+
+function setLink(el: HTMLAnchorElement | null, href: string, text: string) {
+  if (!el) return;
+  el.href = href;
+  el.textContent = text;
+}
+
+// Reset all UI elements to default state
+function resetToDefaultUI() {
+  setMultipleClasses([
+    // Sections - default: most visible
+    { el: generalSection, show: true },
+    { el: connectionSection, show: true },
+    { el: tcpSection, show: true },
+    { el: serialSection, show: true },
+    { el: deviceSection, show: true },
+    { el: debuggerSection, show: false },
+    { el: localFirmwareSection, show: true },
+    { el: cloudFirmwareSection, show: true },
+    { el: multiFileSection, show: false },
+    { el: ieeeSection, show: false },
+    { el: ieeeForceWrap, show: false },
+    { el: nvramSection, show: false },
+    // Fields - default: basic visible
+    { el: serialBaudWrap, show: true },
+    { el: arduinoBootWrap, show: false },
+    { el: telinkOptionsWrap, show: false },
+    { el: flashSizeWrap, show: true },
+    { el: ieeeMacWrap, show: true },
+    { el: flashOptionsWrap, show: true },
+    { el: debuggerOptionWrap, show: false },
+    { el: eraseOptionWrap, show: false },
+    { el: firmwareVersionWrap, show: false },
+    { el: bootloaderVersionWrap, show: false },
+    // Toggles - default: visible
+    { el: autoBslWrap, show: true },
+    { el: findBaudWrap, show: true },
+    // Buttons - default: basic visible
+    { el: readFlashBtn, show: true },
+    { el: resetDebugBtn, show: false },
+    { el: enterBslBtn, show: true },
+    { el: getModelBtn, show: false },
+    { el: getVersionBtn, show: true },
+    { el: pingBtn, show: false },
+    { el: swireFlashBtn, show: false },
+  ]);
+
+  // Reset column classes to default
+  replaceClass(serialSection, "col-md-12", "col-md-6");
+  replaceClass(localFirmwareSection, "col-md-12", "col-md-6");
+
+  // Reset field sizes to default (col-md-6)
+  replaceClass(flashSizeWrap, "col-md-4", "col-md-6");
+  replaceClass(ieeeMacWrap, "col-md-4", "col-md-6");
+  replaceClass(firmwareVersionWrap, "col-md-4", "col-md-6");
+  replaceClass(bootloaderVersionWrap, "col-md-4", "col-md-6");
+}
+
+export function updateUIForFamily() {
+  // Reset to default state first
+  resetToDefaultUI();
+
+  if (selectedFamilyValue === "ti") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: ieeeSection, show: true },
+      { el: nvramSection, show: true },
+      { el: flashSizeWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: ieeeMacWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: firmwareVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: getModelBtn, show: true },
+      { el: pingBtn, show: true },
+    ]);
+
+    setText(ieeeDescription, "Read and write secondary IEEE address.");
+    setText(localFileHelp, "Use a local file (*.hex or *.bin).");
+    setAttr(localFile, "accept", ".hex,.bin");
+    setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/fw_files", "XZG-MT/fw_files");
+  } else if (selectedFamilyValue === "sl") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: ieeeSection, show: true },
+      { el: ieeeForceWrap, show: true },
+      { el: flashSizeWrap, show: false },
+      { el: ieeeMacWrap, show: false },
+      { el: flashOptionsWrap, show: false },
+      { el: firmwareVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-6" },
+      { el: bootloaderVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-6" },
+      { el: readFlashBtn, show: false },
+    ]);
+
+    setText(ieeeDescription, "Read and write primary IEEE address. Use with caution!");
+    setText(localFileHelp, "Use a local file (*.ota or *.gbl).");
+    setAttr(localFile, "accept", ".ota,.gbl");
+    setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/fw_files", "XZG-MT/fw_files");
+  } else if (selectedFamilyValue === "esp") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: generalSection, show: false },
+      { el: tcpSection, show: false },
+      { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
+      { el: localFirmwareSection, show: false },
+      { el: multiFileSection, show: true },
+      { el: autoBslWrap, show: false },
+      { el: findBaudWrap, show: false },
+      { el: readFlashBtn, show: false },
+      { el: enterBslBtn, show: false },
+      { el: getVersionBtn, show: false },
+    ]);
+
+    setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/cc_loader", "XZG-MT/cc_loader");
+  } else if (selectedFamilyValue === "ti_old") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: generalSection, show: false },
+      { el: connectionSection, show: false },
+      { el: tcpSection, show: false },
+      { el: deviceSection, show: false },
+      { el: debuggerSection, show: true },
+      { el: cloudFirmwareSection, show: false },
+      { el: localFirmwareSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
+      { el: debuggerOptionWrap, show: true },
+      { el: autoBslWrap, show: false },
+      { el: findBaudWrap, show: false },
+      { el: resetDebugBtn, show: true },
+      { el: getModelBtn, show: true },
+      { el: enterBslBtn, show: false },
+      { el: getVersionBtn, show: false },
+    ]);
+
+    setText(localFileHelp, "Use a local file (*.hex or *.bin).");
+    setAttr(localFile, "accept", ".hex,.bin");
+  } else if (selectedFamilyValue === "arduino") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: generalSection, show: false },
+      { el: tcpSection, show: false },
+      { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
+      { el: serialBaudWrap, show: false },
+      { el: arduinoBootWrap, show: true },
+      { el: flashSizeWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: ieeeMacWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: bootloaderVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
+      { el: autoBslWrap, show: false },
+      { el: findBaudWrap, show: false },
+      { el: enterBslBtn, show: false },
+      { el: getModelBtn, show: true },
+      { el: getVersionBtn, show: false },
+    ]);
+
+    setText(localFileHelp, "Use a local file (*.hex).");
+    setAttr(localFile, "accept", ".hex");
+    setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/cc_loader", "XZG-MT/cc_loader");
+  } else if (selectedFamilyValue === "telink") {
+    // Only differences from default
+    setMultipleClasses([
+      { el: generalSection, show: false },
+      { el: tcpSection, show: false },
+      { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
+      { el: autoBslWrap, show: false },
+      { el: serialBaudWrap, show: false },
+      { el: telinkOptionsWrap, show: true },
+      { el: ieeeMacWrap, show: false },
+      { el: bootloaderVersionWrap, show: true },
+      { el: localFirmwareSection, show: false },
+      { el: cloudFirmwareSection, show: false },
+      { el: multiFileSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
+      { el: eraseOptionWrap, show: true },
+      { el: getModelBtn, show: true },
+      { el: getVersionBtn, show: false },
+      { el: enterBslBtn, show: false },
+    ]);
+  }
+}
 
 declare global {
   interface Window {
@@ -840,56 +810,43 @@ export function deviceDetectBusy(busy: boolean) {
   deviceDetectSpinner.classList.toggle("d-none", !busy);
 }
 
-export function updateConnectionUI() {
-  const family = getSelectedFamily();
-  if (family === "esp") {
-    optErase.checked = false;
-    optWrite.checked = false;
-    optWrite.disabled = true;
-    optVerify.checked = false;
-    optVerify.disabled = true;
-  }
+// Helper: enable/disable entire section by toggling pointer-events and aria-disabled
+const setSectionDisabled = (el: HTMLElement | null, disabled: boolean) => {
+  if (!el) return;
+  el.classList.toggle("opacity-50", disabled);
+  el.classList.toggle("pe-none", disabled);
+  el.setAttribute("aria-disabled", String(disabled));
+  // Additionally, disable all controls within to prevent focus via keyboard
+  const ctrls = el.querySelectorAll<HTMLElement>(
+    'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]'
+  );
+  ctrls.forEach((c) => {
+    if (c === disconnectBtn) return; // never disable Disconnect here
+    // Only set disabled on form controls that support it
+    if (
+      c instanceof HTMLButtonElement ||
+      c instanceof HTMLInputElement ||
+      c instanceof HTMLSelectElement ||
+      c instanceof HTMLTextAreaElement ||
+      c instanceof HTMLFieldSetElement
+    ) {
+      (
+        c as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLFieldSetElement
+      ).disabled = disabled;
+    }
+    if (disabled) c.setAttribute("tabindex", "-1");
+    else if (c.hasAttribute("tabindex")) c.removeAttribute("tabindex");
+  });
+};
 
+export function updatePortInfo(baudrate?: number) {
   const anyActive = !!activeConnection;
 
-  // Helper: enable/disable entire section by toggling pointer-events and aria-disabled
-  const setSectionDisabled = (el: HTMLElement | null, disabled: boolean) => {
-    if (!el) return;
-    el.classList.toggle("opacity-50", disabled);
-    el.classList.toggle("pe-none", disabled);
-    el.setAttribute("aria-disabled", String(disabled));
-    // Additionally, disable all controls within to prevent focus via keyboard
-    const ctrls = el.querySelectorAll<HTMLElement>(
-      'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]'
-    );
-    ctrls.forEach((c) => {
-      if (c === disconnectBtn) return; // never disable Disconnect here
-      // Only set disabled on form controls that support it
-      if (
-        c instanceof HTMLButtonElement ||
-        c instanceof HTMLInputElement ||
-        c instanceof HTMLSelectElement ||
-        c instanceof HTMLTextAreaElement ||
-        c instanceof HTMLFieldSetElement
-      ) {
-        (
-          c as HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLFieldSetElement
-        ).disabled = disabled;
-      }
-      if (disabled) c.setAttribute("tabindex", "-1");
-      else if (c.hasAttribute("tabindex")) c.removeAttribute("tabindex");
-    });
-  };
-
-  // Sections: Serial and TCP (entire columns)
-
+  // Section disabling
   setSectionDisabled(serialSection, anyActive);
   setSectionDisabled(tcpSection, anyActive);
   setSectionDisabled(generalSection, anyActive);
   setSectionDisabled(familySection, anyActive);
-
-  // Keep TCP settings panel hidden when a connection is active
-  //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
 
   // Unified Disconnect button visible only when connected, red style when shown
   const showDisc = anyActive;
@@ -908,13 +865,31 @@ export function updateConnectionUI() {
       portInfoEl.value = host && port ? `tcp://${host}:${port}` : "tcp://";
     } else {
       // Web Serial has no stable system path; show logical info
-      let br = parseInt(bitrateInput.value, 10) || 115200;
-      if (getSelectedFamily() === "arduino") {
-        br = parseInt(arduinoBootSelect.value, 10) || 115200;
-      }
+      let br = 0;
+      // let br = parseInt(bitrateInput.value, 10) || 115200;
+      // if (getSelectedFamily() === "arduino") {
+      if (baudrate) br = baudrate;
+      // else br = parseInt(arduinoBootSelect.value, 10) || 115200;
+      // }
       portInfoEl.value = `serial @ ${br}bps`;
     }
   }
+}
+
+export function updateConnectionUI() {
+  const family = getSelectedFamily();
+  if (family === "esp") {
+    optErase.checked = false;
+    optWrite.checked = false;
+    optWrite.disabled = true;
+    optVerify.checked = false;
+    optVerify.disabled = true;
+  }
+
+  const anyActive = !!activeConnection;
+
+  // Keep TCP settings panel hidden when a connection is active
+  //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
 
   // Clear Device Info fields on disconnect
   if (!anyActive) {

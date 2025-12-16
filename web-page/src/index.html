@@ -99,6 +99,10 @@
                                     <img src="imgs/arduino.png" alt="Arduino" class="dropdown-icon">
                                     <span>Arduino</span>
                                 </div>
+                                <div class="custom-dropdown-item" data-value="telink">
+                                    <img src="imgs/telink.png" alt="Telink" class="dropdown-icon">
+                                    <span>Telink</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -118,7 +122,7 @@
                         <div id="findBaudWrap" class="d-flex align-items-center justify-content-center gap-2">
                             <div class="form-check form-switch d-flex align-items-center justify-content-center">
                                 <input id="findBaudToggle" class="form-check-input" type="checkbox" role="switch"
-                                    aria-label="Find baud rate" checked />
+                                    aria-label="Find baud rate" />
                             </div>
                             <span class="text-muted">Find Baud Rate</span>
                             <!-- Help tooltip for Find Baud Rate -->
@@ -172,7 +176,7 @@
 
                     <div id="serialControlsWrap">
                         <!-- Serial controls will be shown/hidden by JS depending on protocol -->
-                        <div id="serialMobileMsg" class="serial-note alert alert-secondary d-none mb-2" role="status">
+                        <div id="serialMobileMsg" class="serial-note alert alert-secondary d-none mb-4" role="status">
                             <div class="text-center">
                                 Web Serial (USB) is yet not available on mobile devices 😞 <br><br>
                                 Google Chrome and Android teams, please make it possible! 🙏
@@ -197,14 +201,29 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div id="arduinoBootWrap" class="col d-flex justify-content-center">
-                                    <div class="col-auto">
-                                        <label class="col-form-label px-2" for="arduinoBootSelect">Bootloader</label>
-                                    </div>
-                                    <div class="col-auto">
-                                        <select id="arduinoBootSelect" class="form-select" style="width:170px">
+                                <div id="arduinoBootWrap" class="col-12 d-flex flex-wrap justify-content-center gap-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <label class="col-form-label" for="arduinoBootSelect">Bootloader</label>
+                                        <select id="arduinoBootSelect" class="form-select">
                                             <option value="57600">Old (57600)</option>
                                             <option value="115200" selected>Classic (115200)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="telinkOptionsWrap"
+                                    class="col-12 d-flex flex-wrap justify-content-center gap-3">
+                                    <div class="d-flex align-items-center gap-2" id="telinkMethodWrap">
+                                        <label class="col-form-label" for="telinkMethodSelect">Method</label>
+                                        <select id="telinkMethodSelect" class="form-select">
+                                            <option value="uart" selected>UART</option>
+                                            <option value="swire">SWire</option>
+                                        </select>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2" id="telinkFamilyWrap">
+                                        <label class="col-form-label" for="telinkFamilySelect">Family</label>
+                                        <select id="telinkFamilySelect" class="form-select">
+                                            <option value="8250" selected>825X</option>
+                                            <option value="8260">826X</option>
                                         </select>
                                     </div>
                                 </div>
@@ -226,7 +245,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="row mt-auto">
+                            <div class="row mt-auto my-3">
                                 <div class="col d-flex justify-content-center">
                                     <button id="chooseSerial" class="btn btn-primary">
                                         <i class="bi bi-usb-plug-fill me-1"></i>Choose Serial
@@ -235,7 +254,7 @@
                             </div>
                         </div>
                         <!-- Message for HTTP mode -->
-                        <div id="serialHttpMsg" class="alert alert-secondary text-center d-none" role="status">
+                        <div id="serialHttpMsg" class="alert alert-secondary text-center d-none mb-0" role="status">
                             <span style="font-size:1.2em;">⚡️ Web Serial unavailable!</span><br>
                             To use Web Serial:<br>
                             🌐 Open <a href="https://mt.xyzroe.cc">https://mt.xyzroe.cc</a><br>
@@ -403,7 +422,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-auto">
+                        <div class="row mt-auto my-3">
                             <div class="col d-flex justify-content-center">
                                 <button id="connectTcp" class="btn btn-secondary">
                                     <i class="bi bi-link-45deg me-1"></i>Connect
@@ -423,9 +442,9 @@
                 </div>
             </div>
             <!-- Disconnect button centered below the two columns -->
-            <div class="row mt-3 justify-content-center">
+            <div class="row justify-content-center">
                 <div class="col-auto d-flex justify-content-center">
-                    <button id="disconnectBtn" class="btn btn-outline-secondary btn-lg d-none">
+                    <button id="disconnectBtn" class="btn btn-outline-secondary btn-lg my-2 d-none">
                         <i class="bi bi-power me-1"></i>Disconnect
                     </button>
                 </div>
@@ -433,8 +452,10 @@
 
         </div>
 
+
         <div class="section" id="debuggerSection">
-            <div class="d-flex align-items-center justify-content-between mb-3" style="height:1em">
+
+            <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
                 <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>Debugger <span id="debuggerDetectSpinner"
                         class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status"
                         aria-hidden="true"></span></h3>
@@ -503,7 +524,7 @@
                 Web USB is not available on mobile devices, please use desktop 🚀
             </div> -->
             <!-- Message for HTTP mode -->
-            <div id="usbHttpMsg" class="alert alert-secondary text-center d-none" role="status">
+            <div id="usbHttpMsg" class="alert alert-secondary text-center d-none mb-0" role="status">
                 <span style="font-size:1.2em;">⚡️ Web USB unavailable!</span><br>
                 To use CC Debugger:<br>
                 🌐 Open <a href="https://mt.xyzroe.cc">https://mt.xyzroe.cc</a><br>
@@ -511,6 +532,7 @@
                 possible)
             </div>
         </div>
+
 
         <div class="section" id="deviceSection">
             <h2 class="h6"><i class="bi bi-router me-1"></i>Device Info <span id="deviceDetectSpinner"
@@ -552,9 +574,9 @@
         <div id="firmwareSection" class="section opacity-50 pe-none" aria-disabled="true">
             <h2 class="h6">Firmware</h2>
             <div class="row g-3">
-                <div class="col-md-6 d-none" id="espFirmwareSection">
+                <div class="col-md-6 d-none" id="multiFileSection">
                     <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
-                    <div id="espFilesContainer">
+                    <div id="multiFilesContainer">
                         <!-- Rows added via JS -->
                     </div>
                     <button id="btnAddEspFile" class="btn btn-sm btn-outline-secondary mt-2">
@@ -606,30 +628,39 @@
                     </div>
                 </div>
             </div>
+            <div class="row mt-3" id="eraseOptionWrap">
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="col-form-label" for="eraseMethod">Erase</label>
+                        <select id="eraseMethod" class="form-select">
+                            <option value="full">Full</option>
+                            <option value="sector">Sector based</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             <div class="row mt-3" id="debuggerOptionWrap">
-                <div class="row mt-3 justify-content-center" id="debuggerOptionWrap">
-                    <div class="col-12 d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
-                        <div class="col-10 col-md-4 d-flex justify-content-center align-items-center gap-2">
-                            <label class="col-form-label px-2 mb-0" for="writeMethod">Write</label>
-                            <select id="writeMethod" class="form-select">
-                                <option value="fast">Fast (DMA-based)</option>
-                                <option value="slow">Slow (safer)</option>
-                            </select>
-                        </div>
-                        <div class="col-10 col-md-4 d-flex justify-content-center align-items-center gap-2">
-                            <label class="col-form-label px-2 mb-0" for="verifyMethod">Verify</label>
-                            <select id="verifyMethod" class="form-select">
-                                <option value="crc">Fast (by CRC, DMA-based)</option>
-                                <option value="read">Slow (read byte-by-byte)</option>
-                            </select>
-                        </div>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="col-form-label" for="writeMethod">Write</label>
+                        <select id="writeMethod" class="form-select">
+                            <option value="fast">Fast (DMA-based)</option>
+                            <option value="slow">Slow (safer)</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="col-form-label" for="verifyMethod">Verify</label>
+                        <select id="verifyMethod" class="form-select">
+                            <option value="crc">Fast (by CRC, DMA-based)</option>
+                            <option value="read">Slow (read byte-by-byte)</option>
+                        </select>
                     </div>
                 </div>
             </div>
 
             <div class="row mt-4">
                 <div class="col d-flex justify-content-center">
-                    <button id="btnFlash" class="btn btn-success btn-lg">
+                    <button id="startFlashBtn" class="btn btn-success btn-lg">
                         <i class="bi bi-lightning-charge me-1"></i>Start
                     </button>
                 </div>
@@ -747,8 +778,11 @@
                 <button id="pingBtn" class="btn btn-outline-secondary">
                     <i class="bi bi-wifi me-1"></i>Ping
                 </button>
-                <button id="btnReadFlash" class="btn btn-outline-dark">
+                <button id="readFlashBtn" class="btn btn-outline-dark">
                     <i class="bi bi-sd-card-fill me-1"></i>Dump flash
+                </button>
+                <button id="swireFlashBtn" class="btn btn-outline-warning">
+                    <i class="bi bi-upload me-1"></i>Flash uart2swire
                 </button>
             </div>
         </div>

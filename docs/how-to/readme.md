@@ -8,8 +8,9 @@ This section provides detailed, step-by-step guides for using XZG-MT to accompli
 
 Here are the guides currently available:
 
-- [Using CC Debugger for Flashing CC2530 Chips](cc_debuger.md) - Learn how to use TI CC Debugger or SmartRF04EB to program CC2530 family chips.
-- [Using CC Loader for Flashing CC2530 Chips](cc_loader.md) - Instructions for using Arduino/ESP-based CC Loader as an alternative to dedicated debuggers.
+- [Using CC Debugger with CC2530 chips](cc_debuger.md) - Learn how to use TI CC Debugger or SmartRF04EB to program CC2530 family chips.
+- [Using CC Loader with CC2530 chips](cc_loader.md) - Instruction for using Arduino/ESP-based CC Loader as an alternative to dedicated debuggers.
+- [Working with Telink Devices](telink.md) - Flash Telink chips using UART-based SWire emulation or the UART2SWire programmer.
 
 ## 🚀 Planned Guides
 

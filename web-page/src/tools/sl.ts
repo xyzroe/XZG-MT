@@ -5,6 +5,7 @@ import { crc16 } from "../utils/crc";
 import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/xmodem";
 import { changeBaud } from "../flasher";
 import { SpinelClient } from "./spinel";
+import { makeReset } from "../utils/control";
 
 // Re-export SpinelClient for backwards compatibility
 export { SpinelClient } from "./spinel";
@@ -427,7 +428,8 @@ export class SilabsTools {
 
     // Reset the device to trigger automatic CPC frame
     if (doReset) {
-      await this.reset(implyGate);
+      // await this.reset(implyGate);
+      await makeReset(implyGate);
       await sleep(1000); // Wait for device to boot and send CPC frame
     }
 
@@ -436,7 +438,7 @@ export class SilabsTools {
     }
 
     // Initialize EZSP and get version
-    const { version, mfgString, boardName } = await this.ezspClient.readVersion();
+    const { version, mfgString, boardName } = await this.ezspClient.readVersion(implyGate);
 
     // Log all information
     this.logger(`Application version: ${version}`);
@@ -514,7 +516,8 @@ export class SilabsTools {
 
     // Reset the device
     if (doReset) {
-      await this.reset(implyGate);
+      // await this.reset(implyGate);
+      await makeReset(implyGate);
       await sleep(1000); // Router needs more time to boot
     }
 
@@ -546,7 +549,8 @@ export class SilabsTools {
     try {
       // Reset the device to trigger automatic CPC frame
       if (doReset) {
-        await this.reset(implyGate);
+        // await this.reset(implyGate);
+        await makeReset(implyGate);
         await sleep(1000); // Wait for device to boot and send CPC frame
       }
 
@@ -590,7 +594,8 @@ export class SilabsTools {
     try {
       // Reset the device
       if (doReset) {
-        await this.reset(implyGate);
+        // await this.reset(implyGate);
+        await makeReset(implyGate);
         await sleep(1000); // Router needs more time to boot
       }
 
@@ -617,25 +622,25 @@ export class SilabsTools {
    * Try to detect RCP firmware type and get version
    * Tries: OT-RCP (Spinel) -> MultiPAN (CPC)
    */
-  public async getRcpVersion(): Promise<string> {
-    // Try pure Spinel first (OT-RCP)
-    try {
-      const version = await this.getSpinelVersion();
-      return `OT-RCP: ${version}`;
-    } catch (e) {
-      console.log("Spinel failed, trying CPC:", e);
-    }
+  // public async getRcpVersion(): Promise<string> {
+  //   // Try pure Spinel first (OT-RCP)
+  //   try {
+  //     const version = await this.getSpinelVersion();
+  //     return `OT-RCP: ${version}`;
+  //   } catch (e) {
+  //     console.log("Spinel failed, trying CPC:", e);
+  //   }
 
-    // Try CPC (MultiPAN RCP)
-    try {
-      const version = await this.getCpcVersion();
-      return version;
-    } catch (e) {
-      console.log("CPC failed:", e);
-    }
+  //   // Try CPC (MultiPAN RCP)
+  //   try {
+  //     const version = await this.getCpcVersion();
+  //     return version;
+  //   } catch (e) {
+  //     console.log("CPC failed:", e);
+  //   }
 
-    throw new Error("Failed to detect RCP firmware version");
-  }
+  //   throw new Error("Failed to detect RCP firmware version");
+  // }
 
   /**
    * Firmware type for Silicon Labs devices
@@ -729,110 +734,112 @@ export class SilabsTools {
     throw new Error(`Failed to detect firmware.`);
   }
 
-  public async enterBootloader(implyGate: boolean): Promise<void> {
-    this.logger("Silabs entry bootloader, implyGate=" + implyGate);
+  // public async enterBootloader(implyGate: boolean): Promise<void> {
+  //   this.logger("Silabs entry bootloader, implyGate=" + implyGate);
 
-    // Assume standard scheme:
-    // RTS controls RESET (Active Low - 0 resets)
-    // DTR controls BOOT/GPIO (Active Low - 0 activates bootloader)
+  //   // Assume standard scheme:
+  //   // RTS controls RESET (Active Low - 0 resets)
+  //   // DTR controls BOOT/GPIO (Active Low - 0 activates bootloader)
 
-    // 1. Initial state: All released (High)
-    // (RTS=1, DTR=1) -> (false, false) in setLines logic, if false=High/Inactive
-    // In setLines: rstLevel=true -> RTS=1 (High), rstLevel=false -> RTS=0 (Low)
-    // Usually: true = active level (Low for reset), false = inactive (High)
-    // But let's check your setLines logic.
-    // In flasher.ts: log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} ...`)
-    // Usually USB-UART adapters invert signals, but drivers operate with logical levels.
+  //   // 1. Initial state: All released (High)
+  //   // (RTS=1, DTR=1) -> (false, false) in setLines logic, if false=High/Inactive
+  //   // In setLines: rstLevel=true -> RTS=1 (High), rstLevel=false -> RTS=0 (Low)
+  //   // Usually: true = active level (Low for reset), false = inactive (High)
+  //   // But let's check your setLines logic.
+  //   // In flasher.ts: log(`CTRL(tcp): setting RTS=${rst ? "1" : "0"} ...`)
+  //   // Usually USB-UART adapters invert signals, but drivers operate with logical levels.
 
-    // Let's try the classic sequence for "bare" UART (without auto-reset scheme like ESP):
+  //   // Let's try the classic sequence for "bare" UART (without auto-reset scheme like ESP):
 
-    if (!implyGate) {
-      // Step 0: Make sure everything is at high level (VCC), chip is running
-      // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
-      await this.setLines(false, false);
-      await sleep(100);
+  //   if (!implyGate) {
+  //     // Step 0: Make sure everything is at high level (VCC), chip is running
+  //     // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
+  //     await this.setLines(false, false);
+  //     await sleep(300);
 
-      // Step 1: Press RESET (RTS -> Low/GND)
-      // Don't touch DTR yet (or keep High)
-      // RTS=1 (Low/GND), DTR=0 (High/3.3V)
-      await this.setLines(true, false);
-      await sleep(100);
+  //     // Step 1: Press RESET (RTS -> Low/GND)
+  //     // Don't touch DTR yet (or keep High)
+  //     // RTS=1 (Low/GND), DTR=0 (High/3.3V)
+  //     await this.setLines(true, false);
+  //     await sleep(300);
 
-      // Step 2: Press BOOT (DTR -> Low/GND), while RESET is still pressed
-      // RTS=1 (Low/GND), DTR=1 (Low/GND)
-      await this.setLines(true, true);
-      await sleep(100);
+  //     // Step 2: Press BOOT (DTR -> Low/GND), while RESET is still pressed
+  //     // RTS=1 (Low/GND), DTR=1 (Low/GND)
+  //     await this.setLines(true, true);
+  //     await sleep(300);
 
-      // Step 3: Release RESET (RTS -> High/3.3V), but keep BOOT pressed!
-      // Chip wakes up, sees pressed BOOT and enters bootloader.
-      // RTS=0 (High/3.3V), DTR=1 (Low/GND)
-      await this.setLines(false, true);
-      await sleep(200); // Give time for bootloader to initialize
+  //     // Step 3: Release RESET (RTS -> High/3.3V), but keep BOOT pressed!
+  //     // Chip wakes up, sees pressed BOOT and enters bootloader.
+  //     // RTS=0 (High/3.3V), DTR=1 (Low/GND)
+  //     await this.setLines(false, true);
+  //     await sleep(600); // Give time for bootloader to initialize
 
-      // Step 4: Release BOOT (DTR -> High/3.3V)
-      // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
-      await this.setLines(false, false);
-      await sleep(100);
-    }
+  //     // Step 4: Release BOOT (DTR -> High/3.3V)
+  //     // RTS=0 (High/3.3V), DTR=0 (High/3.3V)
+  //     await this.setLines(false, false);
+  //     await sleep(300);
+  //   }
 
-    // Logic for scheme with two transistors:
+  //   // Logic for scheme with two transistors:
 
-    // Truth table for such scheme:
-    // DTR=0, RTS=0 -> Idle (VCC, VCC)
-    // DTR=0, RTS=1 -> Reset (VCC, GND) -> CHIP IN RESET
-    // DTR=1, RTS=0 -> Boot  (GND, VCC) -> CHIP IN BOOT MODE
-    // DTR=1, RTS=1 -> Idle  (VCC, VCC) -> Protection from simultaneous pressing
-    if (implyGate) {
-      // 1. Initial state (Idle)
-      await this.setLines(false, false);
-      await sleep(100);
+  //   // Truth table for such scheme:
+  //   // DTR=0, RTS=0 -> Idle (VCC, VCC)
+  //   // DTR=0, RTS=1 -> Reset (VCC, GND) -> CHIP IN RESET
+  //   // DTR=1, RTS=0 -> Boot  (GND, VCC) -> CHIP IN BOOT MODE
+  //   // DTR=1, RTS=1 -> Idle  (VCC, VCC) -> Protection from simultaneous pressing
+  //   if (implyGate) {
+  //     // 1. Initial state (Idle)
+  //     await this.setLines(false, false);
+  //     await sleep(300);
 
-      // 2. Press RESET (RTS=True, DTR=False)
-      // Chip stops
-      await this.setLines(true, false);
-      await sleep(100);
+  //     // 2. Press RESET (RTS=True, DTR=False)
+  //     // Chip stops
+  //     await this.setLines(true, false);
+  //     await sleep(300);
 
-      // 3. Switch to BOOT mode (RTS=False, DTR=True)
-      // At this moment Reset is released (becomes High), and Boot is pressed to ground (Low).
-      // Chip starts, sees low level on Boot pin and enters bootloader.
-      await this.setLines(false, true);
-      await sleep(250); // Give time for bootloader to initialize
+  //     // 3. Switch to BOOT mode (RTS=False, DTR=True)
+  //     // At this moment Reset is released (becomes High), and Boot is pressed to ground (Low).
+  //     // Chip starts, sees low level on Boot pin and enters bootloader.
+  //     await this.setLines(false, true);
+  //     await sleep(600); // Give time for bootloader to initialize
 
-      // 4. Release everything (Idle)
-      // Boot pin returns to VCC
-      await this.setLines(false, false);
-      await sleep(100);
-    }
-  }
+  //     // 4. Release everything (Idle)
+  //     // Boot pin returns to VCC
+  //     await this.setLines(false, false);
+  //     await sleep(300);
+  //   }
+  // }
 
-  public async reset(implyGate: boolean): Promise<void> {
-    this.logger("Silabs reset, implyGate=" + implyGate);
-    await sleep(1000);
-    if (!implyGate) {
-      // Just pull Reset
-      await this.setLines(false, false); // Release Reset
-      await sleep(500);
-      await this.setLines(true, false); // Press Reset
-      await sleep(200);
-      await this.setLines(false, false); // Release Reset
-      await sleep(500);
-    }
+  // public async reset(implyGate: boolean): Promise<void> {
+  //   this.logger("Silabs reset, implyGate=" + implyGate);
 
-    if (implyGate) {
-      // Simple reset for transistor scheme
-      // 1. Idle
-      await this.setLines(false, false);
-      await sleep(50);
+  //   if (!implyGate) {
+  //     // Just pull Reset
+  //     await this.setLines(false, false); // Release Reset
+  //     await sleep(300);
+  //     await this.setLines(true, false); // Press Reset
+  //     await sleep(300);
+  //     await this.setLines(false, false); // Release Reset
+  //     await sleep(300);
+  //   }
 
-      // 2. Reset (RTS=True, DTR=False)
-      await this.setLines(true, false);
-      await sleep(200);
+  //   if (implyGate) {
+  //     // Simple reset for transistor scheme
+  //     // 1. Idle
+  //     await this.setLines(false, false);
+  //     await sleep(300);
 
-      // 3. Back to Idle
-      await this.setLines(false, false);
-      await sleep(300);
-    }
-  }
+  //     // 2. Reset (RTS=True, DTR=False)
+  //     await this.setLines(true, false);
+  //     await sleep(300);
+
+  //     // 3. Back to Idle
+  //     await this.setLines(false, false);
+  //     await sleep(300);
+  //   }
+
+  //   await sleep(1000);
+  // }
 }
 
 const ASH_FLAG = 0x7e;
@@ -939,10 +946,13 @@ class EzspAshClient {
     await sleep(500);
   }
 
-  public async initialize(): Promise<{ version: number; stackType: number; stackVersion: number }> {
+  public async initialize(
+    implyGate: boolean = false
+  ): Promise<{ version: number; stackType: number; stackVersion: number }> {
     // Only reset if not already initialized
     if (!this.initialized) {
-      await this.reset();
+      // await this.reset();
+      await makeReset(implyGate);
     }
 
     const frameId = 0x00;
@@ -1005,12 +1015,13 @@ class EzspAshClient {
     return undefined;
   }
 
-  public async readVersion(): Promise<{ version: string; mfgString?: string; boardName?: string }> {
+  public async readVersion(
+    implyGate: boolean = false
+  ): Promise<{ version: string; mfgString?: string; boardName?: string }> {
     await this.ensureReady();
 
     // Initialize EZSP protocol first
-    const { version: protocolVersion, stackType, stackVersion } = await this.initialize();
-
+    const { version: protocolVersion, stackType, stackVersion } = await this.initialize(implyGate);
     // Parse stack version into readable format
     const digits = [
       (stackVersion >> 12) & 0xf,

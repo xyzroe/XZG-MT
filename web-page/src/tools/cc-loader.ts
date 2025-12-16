@@ -1,5 +1,5 @@
 import { sleep } from "../utils/index";
-import { parseIntelHex } from "../utils/intelhex";
+import { parseIntelHex, generateHex } from "../utils/intelhex";
 import { saveToFile } from "../utils/http";
 
 import { optWrite, optVerify, localFile, targetIdEl, targetIeeeEl, debugModelEl, debugManufEl } from "../ui";
