@@ -9,14 +9,13 @@ permissions:
   contents: read
 
 jobs:
-  notify:
-    name: Send Notifications
+  prepare:
+    name: Prepare Notification Assets
     runs-on: ubuntu-latest
-    if: success()
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    outputs:
+      version: ${{ steps.release_data.outputs.version }}
+      url: ${{ steps.release_data.outputs.url }}
+      title: ${{ steps.release_data.outputs.title }}
     steps:
       - name: Get release data
         id: release_data
@@ -38,14 +37,45 @@ jobs:
           for i in {1..5}; do
             if curl -s -L -o release-image.png "$IMAGE_URL"; then
               if [ -s release-image.png ]; then
-                echo "✅ Image downloaded successfully (attempt $i)"
-                ls -lh release-image.png
-                break
+                if file --mime-type release-image.png | grep -q "image/"; then
+                  echo "✅ Image downloaded successfully (attempt $i)"
+                  ls -lh release-image.png
+                  break
+                else
+                  echo "⚠️ Downloaded file is not an image (attempt $i)"
+                  cat release-image.png
+                fi
               fi
             fi
             echo "⏳ Attempt $i failed, waiting 3 seconds..."
             sleep 3
           done
+          
+          if [ ! -f release-image.png ] || ! file --mime-type release-image.png | grep -q "image/"; then
+            echo "❌ Failed to download a valid image."
+            exit 1
+          fi
+
+      - name: Upload release image
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-image
+          path: release-image.png
+          retention-days: 1
+
+  notify-telegram:
+    name: Send Telegram Notification
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: success()
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    steps:
+      - name: Download release image
+        uses: actions/download-artifact@v4
+        with:
+          name: release-image
 
       - name: Send Telegram Notification about release
         if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
@@ -56,18 +86,31 @@ jobs:
           format: markdown
           photo: release-image.png
           message: |
-            *${{ steps.release_data.outputs.title }}: ${{ steps.release_data.outputs.version }}*
+            *${{ needs.prepare.outputs.title }}: ${{ needs.prepare.outputs.version }}*
             
-            [View on GitHub](${{ steps.release_data.outputs.url }})
+            [View on GitHub](${{ needs.prepare.outputs.url }})
+
+  notify-discord:
+    name: Send Discord Notification
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: success()
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Download release image
+        uses: actions/download-artifact@v4
+        with:
+          name: release-image
 
       - name: Send Discord Notification
         if: env.DISCORD_WEBHOOK != ''
         uses: tsickert/discord-webhook@v6.0.0
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          embed-title: ${{ steps.release_data.outputs.title }}
-          embed-description: ${{ steps.release_data.outputs.version }}
-          embed-url: ${{ steps.release_data.outputs.url }}
+          embed-title: ${{ needs.prepare.outputs.title }}
+          embed-description: ${{ needs.prepare.outputs.version }}
+          embed-url: ${{ needs.prepare.outputs.url }}
           embed-color: 3066993
           embed-image-url: attachment://release-image.png
           filename: release-image.png
