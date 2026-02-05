@@ -1,12 +1,13 @@
-// Fire a GET with a timeout; on CORS-related failures, retry with no-cors and accept opaque response.
+// Fire a GET/POST with a timeout; on CORS-related failures, retry with no-cors and accept opaque response.
 export async function httpGetWithFallback(
   url: string,
-  timeoutMs = 8000
+  timeoutMs = 8000,
+  method: "GET" | "POST" = "GET",
 ): Promise<{ text: string | null; opaque: boolean }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const resp = await fetch(url, { signal: controller.signal });
+    const resp = await fetch(url, { method, signal: controller.signal });
     if (!resp.ok) {
       const body = await resp.text().catch(() => "");
       throw new Error(`HTTP ${resp.status} ${resp.statusText}${body ? ` - ${body}` : ""}`);
@@ -19,7 +20,7 @@ export async function httpGetWithFallback(
     const msg = err?.message || String(e);
     if (/Failed to fetch|TypeError|CORS|NetworkError/i.test(msg)) {
       try {
-        await fetch(url, { mode: "no-cors", signal: controller.signal });
+        await fetch(url, { method, mode: "no-cors", signal: controller.signal });
         return { text: null, opaque: true };
       } catch {
         throw e;
@@ -48,7 +49,7 @@ export function saveToFile(
   prefix: string,
   chipModel?: string,
   ieeeAddress?: string,
-  extraInfo?: string
+  extraInfo?: string,
 ): string {
   // Sanitize chip model: replace spaces with dashes, remove non-alphanumeric chars
   const modelSafe = (chipModel || "unknown")
