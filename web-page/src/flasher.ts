@@ -106,6 +106,9 @@ import {
   updateTelinkOptionsUI,
   eraseMethodWrap,
   swireFlashBtn,
+  rstMethodSelect,
+  bslMethodSelect,
+  baudMethodSelect,
 } from "./ui";
 import { EraseMethod, TelinkMethod, TelinkFamily } from "./types";
 
@@ -169,7 +172,7 @@ chooseSerialBtn.addEventListener("click", async () => {
 
       if (chipModelEl) chipModelEl.value = chipDesc || (esploader as any).chip.CHIP_NAME || "ESP Unknown";
       refreshNetworkFirmwareList(chipModelEl?.value).catch((e) =>
-        log("Network FW list fetch failed: " + (e?.message || String(e)))
+        log("Network FW list fetch failed: " + (e?.message || String(e))),
       );
       if (ieeeMacEl) {
         try {
@@ -386,7 +389,7 @@ btnNvRead?.addEventListener("click", async () => {
         "json",
         "NVRAM",
         chipModelEl?.value,
-        ieeeMacEl?.value
+        ieeeMacEl?.value,
       );
 
       log("NVRAM backup saved to " + filename);
@@ -495,12 +498,12 @@ getVersionBtn?.addEventListener("click", async () => {
       const result = await sl_tools.probe(
         "auto",
         findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
-        implyGateToggle?.checked ?? true
+        implyGateToggle?.checked ?? true,
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
       if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
       await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
-        log("Network FW list fetch failed: " + (e?.message || String(e)))
+        log("Network FW list fetch failed: " + (e?.message || String(e))),
       );
     }
   });
@@ -726,7 +729,7 @@ startFlashBtn.addEventListener("click", async () => {
                 log(
                   `Verify error at 0x${i.toString(16)}: expected 0x${firmware[i]
                     .toString(16)
-                    .padStart(2, "0")}, got 0x${readData[i].toString(16).padStart(2, "0")}`
+                    .padStart(2, "0")}, got 0x${readData[i].toString(16).padStart(2, "0")}`,
                 );
               }
             }
@@ -867,12 +870,12 @@ startFlashBtn.addEventListener("click", async () => {
           const result = await sl_tools.probe(
             "auto",
             findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
-            implyGateToggle?.checked ?? true
+            implyGateToggle?.checked ?? true,
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
           if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
           await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
-            log("Network FW list fetch failed: " + (e?.message || String(e)))
+            log("Network FW list fetch failed: " + (e?.message || String(e))),
           );
         }
         if (family == "ti") {
@@ -1298,10 +1301,10 @@ function buildCtrlUrl(template: string, setVal?: number): string {
   return t;
 }
 
-async function sendCtrlUrl(template: string, setVal?: number): Promise<void> {
+async function sendCtrlUrl(template: string, setVal?: number, method: "GET" | "POST" = "GET"): Promise<void> {
   const url = buildCtrlUrl(template, setVal);
-  //log(`HTTP: GET ${url}`);
-  const r = await httpGetWithFallback(url);
+  //log(`HTTP: ${method} ${url}`);
+  const r = await httpGetWithFallback(url, 8000, method);
   if (r.opaque) {
     //log(`HTTP control response: opaque (no-cors)`);
     return;
@@ -1579,12 +1582,12 @@ async function enterBsl(): Promise<void> {
   const bslTpl = (bslUrlInput?.value || "").trim();
   if (activeConnection === "serial") {
     log(
-      `Entering BSL: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+      `Entering BSL: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`,
     );
   } else if (activeConnection === "tcp") {
     const strategy = pinModeSelect?.checked ? "mode" : "pin";
     log(
-      `Entering BSL: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+      `Entering BSL: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`,
     );
   }
 
@@ -1599,7 +1602,8 @@ async function enterBsl(): Promise<void> {
     if (pinModeSelect?.checked) {
       log("Using remote pin mode to enter BSL");
       const hasSet = /\{SET\}/.test(bslTpl);
-      await sendCtrlUrl(bslTpl, hasSet ? 1 : undefined);
+      const bslMethod = (bslMethodSelect?.value as "GET" | "POST") || "GET";
+      await sendCtrlUrl(bslTpl, hasSet ? 1 : undefined, bslMethod);
       return;
     }
   }
@@ -1632,12 +1636,12 @@ async function performReset(): Promise<void> {
   const rstTpl = (rstUrlInput?.value || "").trim();
   if (activeConnection === "serial") {
     log(
-      `Resetting: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+      `Resetting: conn=serial auto=${autoBslToggle?.checked} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`,
     );
   } else if (activeConnection === "tcp") {
     const strategy = pinModeSelect?.checked ? "mode" : "pin";
     log(
-      `Resetting: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`
+      `Resetting: conn=tcp strategy=${strategy} implyGate=${implyGateToggle?.checked} findBaud=${findBaudToggle?.checked}`,
     );
   }
 
@@ -1652,7 +1656,8 @@ async function performReset(): Promise<void> {
     if (pinModeSelect?.checked) {
       // Remote pin mode ON: send single request(s) to RST URL; if {SET} present, choose appropriate level
       const hasSet = /\{SET\}/.test(rstTpl);
-      await sendCtrlUrl(rstTpl, hasSet ? 1 : undefined);
+      const rstMethod = (rstMethodSelect?.value as "GET" | "POST") || "GET";
+      await sendCtrlUrl(rstTpl, hasSet ? 1 : undefined, rstMethod);
 
       return;
     }
@@ -1707,7 +1712,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
           flashSizeEl.value = `${info.flashSizeBytes} bytes (${(info.flashSizeBytes / 1024).toFixed(2)} KB)`;
         if (ieeeMacEl && info.ieeeMac) ieeeMacEl.value = info.ieeeMac;
         await refreshNetworkFirmwareList(info.chipModel || "").catch((e) =>
-          log("Network FW list fetch failed: " + (e?.message || String(e)))
+          log("Network FW list fetch failed: " + (e?.message || String(e))),
         );
         if (info.family) detectedFamily = info.family;
       } else {
@@ -1723,7 +1728,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       if (chipModelEl) chipModelEl.value = info.chipName;
       if (bootloaderVersionEl) bootloaderVersionEl.value = info.bootloaderVersion || "";
       refreshNetworkFirmwareList(info.chipName).catch((e) =>
-        log("Network FW list fetch failed: " + (e?.message || String(e)))
+        log("Network FW list fetch failed: " + (e?.message || String(e))),
       );
     } else if (family === "esp") {
       log("ESP: Chip info detected during connection");
@@ -1757,7 +1762,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
 
           // Refresh network firmware list
           await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
-            log("Network FW list fetch failed: " + (e?.message || String(e)))
+            log("Network FW list fetch failed: " + (e?.message || String(e))),
           );
         } else {
           log("Warning: Could not read board information");
@@ -1964,6 +1969,10 @@ async function runConnectSequence(): Promise<void> {
             serial.setSignals({ dataTerminalReady: dtr, requestToSend: rts });
           }
         });
+        // await telinkPgmTools.setUartBaud(460800);
+        // await sleep(500);
+        // await changeBaud(460800);
+        // await sleep(500);
       }
     }
 
@@ -2090,12 +2099,12 @@ async function runConnectSequence(): Promise<void> {
         const result = await sl_tools.probe(
           "auto",
           findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
-          implyGateToggle?.checked ?? true
+          implyGateToggle?.checked ?? true,
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
         if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
         await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
-          log("Network FW list fetch failed: " + (e?.message || String(e)))
+          log("Network FW list fetch failed: " + (e?.message || String(e))),
         );
       } catch (e: any) {
         log("Silabs probe failed: " + (e?.message || String(e)));
@@ -2521,8 +2530,11 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
     const bslVal = bslHasSet ? (bsl ? 1 : 0) : undefined;
     const rstVal = rstHasSet ? (rst ? 1 : 0) : undefined;
 
-    const p1 = sendCtrlUrl(bslTpl, bslVal);
-    const p2 = sendCtrlUrl(rstTpl, rstVal);
+    const bslMethod = (bslMethodSelect?.value as "GET" | "POST") || "GET";
+    const rstMethod = (rstMethodSelect?.value as "GET" | "POST") || "GET";
+
+    const p1 = sendCtrlUrl(bslTpl, bslVal, bslMethod);
+    const p2 = sendCtrlUrl(rstTpl, rstVal, rstMethod);
 
     await Promise.all([p1, p2]);
     return;
@@ -2552,7 +2564,8 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   // const hasRstSet = /\{SET\}/.test(rstTpl);
   // log(`CTRL(tcp): changing baud -> ${baud} using template ${tpl}`);
   // send control URL (may be opaque/no-cors)
-  await sendCtrlUrl(tpl, hasSet ? baud : undefined).catch((e: any) => {
+  const baudMethod = (baudMethodSelect?.value as "GET" | "POST") || "GET";
+  await sendCtrlUrl(tpl, hasSet ? baud : undefined, baudMethod).catch((e: any) => {
     log("Baud change failed: " + (e?.message || String(e)));
     sleep(1000);
   });

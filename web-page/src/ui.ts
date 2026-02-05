@@ -67,8 +67,11 @@ export const bslUrlSelect = document.getElementById("bslUrlSelect") as HTMLSelec
 export const rstUrlSelect = document.getElementById("rstUrlSelect") as HTMLSelectElement | null;
 export const baudUrlSelect = document.getElementById("baudUrlSelect") as HTMLSelectElement | null;
 export const bslUrlInput = document.getElementById("bslUrlInput") as HTMLInputElement | null;
+export const bslMethodSelect = document.getElementById("bslMethodSelect") as HTMLSelectElement | null;
 export const rstUrlInput = document.getElementById("rstUrlInput") as HTMLInputElement | null;
+export const rstMethodSelect = document.getElementById("rstMethodSelect") as HTMLSelectElement | null;
 export const baudUrlInput = document.getElementById("baudUrlInput") as HTMLInputElement | null;
+export const baudMethodSelect = document.getElementById("baudMethodSelect") as HTMLSelectElement | null;
 
 export const connectTcpBtn = document.getElementById("connectTcp") as HTMLButtonElement;
 
@@ -361,7 +364,7 @@ function replaceClass(el: HTMLElement | null, oldClass: string, newClass: string
 }
 
 function setMultipleClasses(
-  config: Array<{ el: HTMLElement | null; show?: boolean; oldClass?: string; newClass?: string }>
+  config: Array<{ el: HTMLElement | null; show?: boolean; oldClass?: string; newClass?: string }>,
 ) {
   config.forEach(({ el, show, oldClass, newClass }) => {
     if (show !== undefined) toggleElement(el, show);
@@ -573,7 +576,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const tcpControls =
     tcpControlsWrap &&
     tcpControlsWrap.querySelectorAll(
-      ".d-flex, #tcpSettingsPanel, .row.g-2.align-items-center.mb-4, .row.g-2.align-items-center.mb-4, .col-12.mb-4, #ctrlUrlRow, .row.mt-auto"
+      ".d-flex, #tcpSettingsPanel, .row.g-2.align-items-center.mb-4, .row.g-2.align-items-center.mb-4, .col-12.mb-4, #ctrlUrlRow, .row.mt-auto",
     );
 
   const serialControls = serialControlsWrap && serialControlsWrap.querySelector(".serial-controls");
@@ -818,7 +821,7 @@ const setSectionDisabled = (el: HTMLElement | null, disabled: boolean) => {
   el.setAttribute("aria-disabled", String(disabled));
   // Additionally, disable all controls within to prevent focus via keyboard
   const ctrls = el.querySelectorAll<HTMLElement>(
-    'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]'
+    'button, input, select, textarea, fieldset, optgroup, option, details, [contenteditable="true"], [tabindex]',
   );
   ctrls.forEach((c) => {
     if (c === disconnectBtn) return; // never disable Disconnect here
