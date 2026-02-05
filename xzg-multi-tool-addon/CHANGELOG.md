@@ -1,3 +1,13 @@
+## v0.3.5
+
+## 🚀 Features
+
+- feat: add method selection for BSL, RST, and baud rate operations (#94) by @xyzroe
+
+## 📘 Documentation
+
+- docs: some reorganization (#95) by @xyzroe
+
 ## v0.3.4
 
 ## 🚀 Features
