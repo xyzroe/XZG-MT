@@ -199,15 +199,24 @@ Thank you — every little contribution helps keep the project alive and maintai
 
 If you find this project useful, please consider giving it a ⭐ on GitHub!
 
-<div align="center">
-<a href="https://www.star-history.com/#xyzroe/XZG-MT&Date">
+<a href="https://www.star-history.com/#xyzroe/XZG-MT&Date" align="center">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date&theme=dark" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=xyzroe/XZG-MT&type=Date" />
  </picture>
 </a>
-</div>
+
+## 🎉 Credits
+
+Thanks to all the contributors who make this project possible!
+
+<a href="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors?repo_id=1046815115&limit=30" target="_blank" style="display: block" align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors/thumbnail.png?repo_id=1046815115&limit=30&image_size=auto&color_scheme=dark" width="655" height="auto">
+    <img alt="Active Contributors of xyzroe/XZG-MT - Last 28 days" src="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors/thumbnail.png?repo_id=1046815115&limit=30&image_size=auto&color_scheme=light" width="655" height="auto">
+  </picture>
+</a>
 
 ## 🛠️ Tech badges
 
