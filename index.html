@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <!-- Google Tag Manager -->
+    <script>
+      (function(w, d, s, l, i) {
+        w[l] = w[l] || [];
+        w[l].push({
+          'gtm.start': new Date().getTime(),
+          event: 'gtm.js'
+        });
+        var f = d.getElementsByTagName(s)[0],
+          j = d.createElement(s),
+          dl = l != 'dataLayer' ? '&l=' + l : '';
+        j.async = true;
+        j.src =
+          'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
+        f.parentNode.insertBefore(j, f);
+      })(window, document, 'script', 'dataLayer', 'GTM-KJHBZBZN');
+    </script>
+    <!-- End Google Tag Manager -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XZG Multi-tool</title>
+    <meta name="color-scheme" content="light dark">
+    <link rel="stylesheet" href="css/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script>
+      // Early theme bootstrap: use cookie if set, otherwise system preference
+      (function() {
+        try {
+          var m = document.cookie.match(/(?:^|; )theme=(light|dark)/);
+          var cookieTheme = m ? m[1] : null;
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = cookieTheme || (prefersDark ? 'dark' : 'light');
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = theme;
+        } catch (e) {
+          /* no-op */ }
+      })();
+    </script>
+    <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-JX4GN8MT8G"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+
+      gtag('config', 'G-JX4GN8MT8G');
+    </script>
+    <link rel="icon" type="image/png" href="fav/favicon-96x96.png" sizes="96x96">
+    <link rel="icon" type="image/svg+xml" href="fav/favicon.svg">
+    <link rel="shortcut icon" href="fav/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="fav/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="XZG MT">
+    <link rel="manifest" href="fav/site.webmanifest">
+  </head>
+  <!-- Google tag (gtag.js) -->
+
+
+
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KJHBZBZN" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
+    <div class="container" style="max-width: 860px">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="h4 m-0">
+          <img src="fav/favicon.svg" alt="XZG logo" class="me-2" style="height:1.5em;width:auto;vertical-align:middle">
+          <span style="width:auto;vertical-align:middle">XZG Multi-tool</span>
+        </h1>
+        <div class="theme-toggle" title="Toggle theme">
+          <input id="themeSwitch" type="checkbox" aria-label="Toggle theme">
+          <label class="theme-toggle-label" for="themeSwitch">
+            <i class="bi bi-sun-fill"></i>
+            <span class="handle"></span>
+            <i class="bi bi-moon-stars-fill"></i>
+          </label>
+        </div>
+      </div>
+      <!--Family selection-->
+      <div class="section">
+        <div id="familySection" class="col-md-12 d-flex flex-column">
+          <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
+            <h3 class="h6 m-0"><i class="bi bi-cpu-fill me-1"></i>Family</h3>
+          </div>
+          <div class="col-12 mb-1">
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <div class="custom-dropdown" id="familyDropdown">
+                <button class="custom-dropdown-toggle" type="button" id="familyDropdownBtn">
+                  <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                  <span class="dropdown-text">TI CCXX52</span>
+                  <i class="bi bi-chevron-down ms-auto"></i>
+                </button>
+                <div class="custom-dropdown-menu" id="familyDropdownMenu">
+                  <div class="custom-dropdown-item" data-value="ti">
+                    <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                    <span>TI CCXX52</span>
+                  </div>
+                  <div class="custom-dropdown-item" data-value="sl">
+                    <img src="imgs/si.png" alt="Silicon Labs" class="dropdown-icon">
+                    <span>SL</span>
+                  </div>
+                  <div class="custom-dropdown-item" data-value="esp">
+                    <img src="imgs/esp.png" alt="Espressif" class="dropdown-icon">
+                    <span>ESP</span>
+                  </div>
+                  <div class="custom-dropdown-item" data-value="ti_old">
+                    <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                    <span>TI CC25XX</span>
+                  </div>
+                  <div class="custom-dropdown-item" data-value="arduino">
+                    <img src="imgs/arduino.png" alt="Arduino" class="dropdown-icon">
+                    <span>Arduino</span>
+                  </div>
+                  <div class="custom-dropdown-item" data-value="telink">
+                    <img src="imgs/telink.png" alt="Telink" class="dropdown-icon">
+                    <span>Telink</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- General section -->
+      <div class="section" id="connectionSection">
+        <div class="row g-3 align-items-stretch">
+          <!-- General column -->
+          <div id="generalSection" class="col-md-12 d-flex flex-column">
+            <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
+              <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>General</h3>
+            </div>
+            <div class="col-12 mb-2">
+              <div id="findBaudWrap" class="d-flex align-items-center justify-content-center gap-2">
+                <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                  <input id="findBaudToggle" class="form-check-input" type="checkbox" role="switch" aria-label="Find baud rate">
+                </div>
+                <span class="text-muted">Find Baud Rate</span>
+                <!-- Help tooltip for Find Baud Rate -->
+                <button id="findBaudHelp" type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-trigger="hover focus click" data-bs-html="true" title="<strong>Find Baud Rate:</strong> Automatically detects the baud rate of the device (only for application mode).">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                  <span class="visually-hidden">Help</span>
+                </button>
+              </div>
+            </div>
+            <div class="col-12 mb-2">
+              <div id="implyGateWrap" class="d-flex align-items-center justify-content-center gap-2">
+                <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                  <input id="implyGateToggle" class="form-check-input" type="checkbox" role="switch" aria-label="Imply gate">
+                </div>
+                <span class="text-muted">Imply gate</span>
+                <!-- Help tooltip for Imply Gate -->
+                <button id="implyGateHelp" type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" title="<strong>Imply Gate:</strong> If your dongle has an odd connection between RTS DTR and reset and IO15 (imply gate) enable this option.<br>E.g. ITead Sonoff Zigbee 3.0 USB Dongle">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                  <span class="visually-hidden">Help</span>
+                </button>
+              </div>
+            </div>
+            <div class="col-12 mb-2">
+              <div id="invertLevelWrap" class="d-flex align-items-center justify-content-center gap-2">
+                <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                  <input id="invertLevel" class="form-check-input" type="checkbox" role="switch" aria-label="Invert levels">
+                </div>
+                <span class="text-muted">Invert levels</span>
+                <!-- Help tooltip for Invert Levels -->
+                <button id="invertLevelHelp" type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" title="<strong>Invert Levels:</strong> Some devices use inverted logic levels for RST and BSL control. Enable this option to invert the control signals.">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                  <span class="visually-hidden">Help</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Serial column -->
+          <div id="serialSection" class="col-md-6 d-flex flex-column">
+            <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
+              <h3 class="h6 m-0"><i class="bi bi-usb-symbol me-1"></i>Serial</h3>
+            </div>
+
+            <div id="serialControlsWrap">
+              <!-- Serial controls will be shown/hidden by JS depending on protocol -->
+              <div id="serialMobileMsg" class="serial-note alert alert-secondary d-none mb-4" role="status">
+                <div class="text-center">
+                  Web Serial (USB) is yet not available on mobile devices 😞 <br><br>
+                  Google Chrome and Android teams, please make it possible! 🙏
+                </div>
+              </div>
+              <div class="serial-controls mb-2">
+                <div class="row g-2 align-items-center mb-4">
+                  <div id="serialBaudWrap" class="col d-flex justify-content-center">
+                    <div class="col-auto">
+                      <label class="col-form-label px-2" for="bitrateInput">Baud</label>
+                    </div>
+                    <div class="col-auto">
+                      <select id="bitrateInput" class="form-select" style="width:160px">
+                        <option value="9600">9600</option>
+                        <option value="19200">19200</option>
+                        <option value="38400">38400</option>
+                        <option value="57600">57600</option>
+                        <option value="115200" selected="">115200</option>
+                        <option value="230400">230400</option>
+                        <option value="460800">460800</option>
+                        <option value="921600">921600</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="arduinoBootWrap" class="col-12 d-flex flex-wrap justify-content-center gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                      <label class="col-form-label" for="arduinoBootSelect">Bootloader</label>
+                      <select id="arduinoBootSelect" class="form-select">
+                        <option value="57600">Old (57600)</option>
+                        <option value="115200" selected="">Classic (115200)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="telinkOptionsWrap" class="col-12 d-flex flex-wrap justify-content-center gap-3">
+                    <div class="d-flex align-items-center gap-2" id="telinkMethodWrap">
+                      <label class="col-form-label" for="telinkMethodSelect">Method</label>
+                      <select id="telinkMethodSelect" class="form-select">
+                        <option value="uart" selected="">UART</option>
+                        <option value="swire">SWire</option>
+                      </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2" id="telinkFamilyWrap">
+                      <label class="col-form-label" for="telinkFamilySelect">Family</label>
+                      <select id="telinkFamilySelect" class="form-select">
+                        <option value="8250" selected="">825X</option>
+                        <option value="8260">826X</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 mb-4">
+                  <div id="autoBslWrap" class="d-flex align-items-center justify-content-center gap-2">
+                    <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                      <input id="autoBslToggle" class="form-check-input" type="checkbox" role="switch" aria-label="Auto BSL" checked="">
+                    </div>
+                    <span class="text-muted">Auto BSL</span>
+                    <!-- Help tooltip for Auto BSL -->
+                    <button id="autoBslHelp" type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" title="<strong>Auto BSL:</strong> Automatically puts the device into the Bootloader (BSL) before flashing and returns it to normal mode after.<br><strong>Disable</strong> if you prefer to enter BSL manually.">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                      <span class="visually-hidden">Help</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="row mt-auto my-3">
+                  <div class="col d-flex justify-content-center">
+                    <button id="chooseSerial" class="btn btn-primary">
+                      <i class="bi bi-usb-plug-fill me-1"></i>Choose Serial
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Message for HTTP mode -->
+              <div id="serialHttpMsg" class="alert alert-secondary text-center d-none mb-0" role="status">
+                <span style="font-size:1.2em;">⚡️ Web Serial unavailable!</span><br>
+                To use Web Serial:<br>
+                🌐 Open <a href="https://mt.xyzroe.cc">https://mt.xyzroe.cc</a><br>
+                🖥️ Or access via <a href="http://localhost:8765">localhost</a> (if
+                possible)
+              </div>
+            </div>
+          </div>
+          <!-- TCP column -->
+          <div id="tcpSection" class="col-md-6 d-flex flex-column">
+            <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
+              <h3 class="h6 m-0"><i class="bi bi-diagram-3 me-1"></i>TCP<span id="bridgeStatusIcon" class="align-self-center text-danger m-2" title="Bridge status">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </span></h3>
+              <div class="d-flex gap-2">
+                <button id="tcpInfoBtn" class="btn btn-outline-info btn-sm" title="Bridge info">
+                  <i class="bi bi-info-circle"></i>
+                </button>
+                <button id="tcpSettingsBtn" class="btn btn-outline-secondary btn-sm" title="Bridge settings">
+                  <i class="bi bi-gear"></i>
+                </button>
+              </div>
+            </div>
+            <div id="tcpControlsWrap">
+              <!-- TCP controls will be shown/hidden by JS depending on protocol -->
+              <div id="tcpSettingsPanel" class="mb-2 d-none">
+                <div class="row g-2 align-items-center">
+                  <div class="col-md-8">
+                    <input id="bridgeHostInput" class="form-control" placeholder="IP (e.g. 192.168.1.10)" value="127.0.0.1">
+                  </div>
+                  <div class="col-md-4">
+                    <input id="bridgePortInput" class="form-control" type="number" placeholder="Port (e.g. 8765)" value="8765">
+                  </div>
+                </div>
+                <div class="small text-muted mt-1">WS→TCP bridge address</div>
+              </div>
+              <div class="row g-2 align-items-center mb-3" title="Discovered via mDNS (zeroconf)">
+                <div class="col-12 d-flex gap-2">
+                  <select id="mdnsSelect" class="form-select">
+                    <option value="">— Discovered devices —</option>
+                  </select>
+                  <button id="mdnsRefresh" class="btn btn-outline-success" title="Refresh mDNS">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="row g-2 align-items-center mb-4" title="TCP target via local ws bridge">
+
+                <div class="col-12 d-flex gap-2">
+                  <input id="hostInput" class="form-control" placeholder="IP (e.g. 192.168.1.100)">
+
+                  <input style="width: 35%;" id="portInput" class="form-control" type="number" placeholder="Port (e.g. 6638)" value="6638">
+
+                  <button id="tcpLinksBtn" class="btn btn-outline-primary" title="RST/BSL/Baud links">
+                    <i class="bi bi-link-45deg"></i>
+                  </button>
+                </div>
+              </div>
+              <div id="tcpLinksPanel" class="d-none">
+
+
+                <!-- Control strategy: Pin vs Mode -->
+                <div class="text-muted mb-2">Control strategy</div>
+                <div class="col-12 mb-2">
+                  <div id="pinModeWrap" class="d-flex align-items-center justify-content-center gap-2">
+                    <span class="text-muted">Pin</span>
+                    <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                      <input id="pinModeSelect" class="form-check-input" type="checkbox" role="switch">
+                    </div>
+                    <span class="text-muted">Mode</span>
+                    <!-- Bootstrap tooltip trigger -->
+                    <button id="pinModeHelp" type="button" class="btn btn-sm btn-link p-0 ms-2" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true" title="<strong>Pin:</strong> Use when the device exposes endpoints to drive Zigbee chip pins directly (RST, BSL).<br><strong>Mode:</strong> Use when the device provides endpoints that perform a sequence to enter the desired mode.">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                      <span class="visually-hidden">Help</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Control templates row -->
+                <div id="ctrlUrlSelectRow">
+                  <div class="text-muted mb-2">Templates</div>
+                  <div class="row g-2 align-items-center mb-3">
+                    <div class="col-md-4 text-center">BSL</div>
+                    <div class="col-md-4 text-center">RST</div>
+                    <div class="col-md-4 text-center">Baud change</div>
+                  </div>
+                  <div class="row g-2 align-items-center mb-3">
+                    <div class="col-md-4">
+                      <select id="bslUrlSelect" class="form-select">
+                        <option value=""> - </option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <select id="rstUrlSelect" class="form-select">
+                        <option value=""> - </option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <select id="baudUrlSelect" class="form-select">
+                        <optgroup label="🟥 Baud change"></optgroup>
+                        <option value="none">None</option>
+                        <option value="bridge">Bridge</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Manual input fields -->
+                <div class="text-muted mb-2">Manual input</div>
+                <div id="ctrlUrlRow" class="mb-4">
+                  <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                    <select id="bslMethodSelect" class="form-select" style="width: auto;">
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                    </select>
+                    <input id="bslUrlInput" class="form-control" placeholder="BSL URL">
+                    <button class="btn btn-sm btn-link" type="button" aria-label="BSL help" data-bs-toggle="tooltip" data-bs-placement="right" title="URL called to direct control BSL pin with {SET} or enter BSL mode.">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                    <select id="rstMethodSelect" class="form-select" style="width: auto;">
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                    </select>
+                    <input id="rstUrlInput" class="form-control" placeholder="RST URL">
+                    <button class="btn btn-sm btn-link" type="button" aria-label="RST help" data-bs-toggle="tooltip" data-bs-placement="right" title="URL called to direct control RST pin with {SET} or reset the device.">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+                  <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                    <select id="baudMethodSelect" class="form-select" style="width: auto;">
+                      <option value="GET">GET</option>
+                      <option value="POST">POST</option>
+                    </select>
+                    <input id="baudUrlInput" class="form-control" placeholder="Baud Rate URL">
+                    <button class="btn btn-sm btn-link" type="button" aria-label="Baud help" data-bs-toggle="tooltip" data-bs-placement="right" title="If provided - URL used to change baud rate on the bridge/device. Use {SET} to insert the baud value.">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </button>
+                  </div>
+
+
+                  <div class="me-2 placeholders-row">
+
+                    <span class="badge bg-primary text-white font-monospace p-2 rounded mb-1" style="cursor: pointer;" onclick="copyToClipboard(this,'{HOST}')">{HOST}</span>
+                    <span class="badge bg-primary text-white font-monospace p-2 rounded mb-1" style="cursor: pointer;" onclick="copyToClipboard(this,'{PORT}')">{PORT}</span>
+                    <span class="badge bg-primary text-white font-monospace p-2 rounded mb-1" style="cursor: pointer;" onclick="copyToClipboard(this,'{BRIDGE}')">{BRIDGE}</span>
+                    <span class="badge bg-primary text-white font-monospace p-2 rounded mb-1" style="cursor: pointer;" onclick="copyToClipboard(this,'{SET}')">{SET}</span>
+
+                    <button class="btn btn-sm btn-link" type="button" aria-label="Placeholders help" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="right" title="Use placeholders to set the values in URLs:<br><br>{HOST} - device IP address <br><br> {PORT} - device TCP port <br><br> {BRIDGE} - bridge address (IP:PORT) <br><br> {SET} - value to set (0/1 for RST/ BSL / INT for BAUD)">
+                      <i class="bi bi-info-circle" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="row mt-auto my-3">
+                <div class="col d-flex justify-content-center">
+                  <button id="connectTcp" class="btn btn-secondary">
+                    <i class="bi bi-link-45deg me-1"></i>Connect
+                  </button>
+                </div>
+              </div>
+              <!-- Message for HTTPS mode -->
+              <div id="tcpHttpsMsg" class="alert alert-secondary text-center d-none" role="status">
+                <span style="font-size:1.2em;">⚡️ TCP mode unavailable!</span><br>
+                To use TCP mode:<br>
+                Install a bridge 🛠️ <br>
+                Then access via local IP address 🌐<br>
+                <br>
+                <em>More info via the button above</em>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Disconnect button centered below the two columns -->
+        <div class="row justify-content-center">
+          <div class="col-auto d-flex justify-content-center">
+            <button id="disconnectBtn" class="btn btn-outline-secondary btn-lg my-2 d-none">
+              <i class="bi bi-power me-1"></i>Disconnect
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="section" id="debuggerSection">
+
+        <div class="d-flex align-items-center justify-content-between mb-2" style="height:2em">
+          <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>Debugger <span id="debuggerDetectSpinner" class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status" aria-hidden="true"></span></h3>
+        </div>
+        <div id="debugger-controls">
+          <div class="row mt-auto my-3">
+            <div class="col-12 d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+
+              <div id="debuggerConnectWrap" class="col-md-6 d-flex justify-content-center">
+
+                <button id="connectDebugger" class="btn btn-primary mx-2">
+                  <i class="bi bi-usb-plug-fill me-1"></i>Connect Debugger
+                </button>
+                <button class="btn btn-sm btn-link" type="button" aria-label="CC Debugger help" data-bs-toggle="tooltip" data-bs-placement="left" title="Connect to a CC Debugger or SmartRF04EB device using Web USB for flashing.">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <div id="loaderConnectWrap" class="col-md-6 d-flex justify-content-center">
+                <button id="connectLoader" class="btn btn-warning mx-2">
+                  <i class="bi bi-usb-plug-fill me-1"></i>Connect Loader
+                </button>
+                <button class="btn btn-sm btn-link" type="button" aria-label="CC Loader help" data-bs-toggle="tooltip" data-bs-placement="left" title="Connect to an ESP8266/ESP32-based CC Loader device via Web Serial. Ensure the СС loader firmware is installed on the ESP device">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="row g-2 form-readonly mb-2">
+            <div class="col-md-3">
+              <label class="form-label">Model</label>
+              <input id="debugModel" class="form-control" type="text" readonly="">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Manufacturer</label>
+              <input id="debugManuf" class="form-control" type="text" readonly="">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Serial</label>
+              <input id="debugSerial" class="form-control" type="text" readonly="">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">FW version</label>
+              <input id="debugFwVersion" class="form-control" type="text" readonly="">
+            </div>
+          </div>
+          <h2 class="h6 mt-3"><i class="bi bi-router me-1"></i>Device Info
+          </h2>
+          <div class="row g-2 form-readonly">
+            <div class="col-md-5">
+              <label class="form-label">Model</label>
+              <input id="targetId" class="form-control" type="text" readonly="">
+            </div>
+            <div class="col-md-7">
+              <label class="form-label">IEEE</label>
+              <input id="targetIeee" class="form-control" type="text" readonly="">
+            </div>
+          </div>
+        </div>
+        <!-- Message for mobile mode -->
+        <!-- <div id="usbMobileMsg" class="serial-note alert alert-secondary d-none my-2" role="status">
+                Web USB is not available on mobile devices, please use desktop 🚀
+            </div> -->
+        <!-- Message for HTTP mode -->
+        <div id="usbHttpMsg" class="alert alert-secondary text-center d-none mb-0" role="status">
+          <span style="font-size:1.2em;">⚡️ Web USB unavailable!</span><br>
+          To use CC Debugger:<br>
+          🌐 Open <a href="https://mt.xyzroe.cc">https://mt.xyzroe.cc</a><br>
+          🖥️ Or access via <a href="http://localhost:8765">localhost</a> (if
+          possible)
+        </div>
+      </div>
+
+
+      <div class="section" id="deviceSection">
+        <h2 class="h6"><i class="bi bi-router me-1"></i>Device Info <span id="deviceDetectSpinner" class="spinner-border spinner-border-sm align-text-top ms-2 d-none" role="status" aria-hidden="true"></span>
+        </h2>
+        <div class="row g-2 form-readonly mb-2">
+          <div class="col-md-6">
+            <label class="form-label">Port</label>
+            <input id="portInfo" class="form-control" type="text" readonly="">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Model</label>
+            <input id="chipModel" class="form-control" type="text" readonly="">
+          </div>
+        </div>
+        <div class="row g-2 form-readonly">
+
+          <div class="col-md-4" id="flashSizeWrap">
+            <label class="form-label">Flash Size</label>
+            <input id="flashSize" class="form-control" type="text" readonly="">
+          </div>
+          <div class="col-md-4" id="ieeeMacWrap">
+            <label class="form-label">IEEE</label>
+            <input id="ieeeMac" class="form-control" type="text" readonly="">
+          </div>
+          <div class="col-md-6 d-none" id="bootloaderVersionWrap">
+            <label class="form-label">Bootloader</label>
+            <input id="bootloaderVersion" class="form-control" type="text" readonly="">
+          </div>
+          <div class="col-md-4" id="firmwareVersionWrap">
+            <label class="form-label">Firmware</label>
+            <input id="firmwareVersion" class="form-control" type="text" readonly="">
+          </div>
+        </div>
+      </div>
+
+
+      <div id="firmwareSection" class="section opacity-50 pe-none" aria-disabled="true">
+        <h2 class="h6">Firmware</h2>
+        <div class="row g-3">
+          <div class="col-md-6 d-none" id="multiFileSection">
+            <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
+            <div id="multiFilesContainer">
+              <!-- Rows added via JS -->
+            </div>
+            <button id="btnAddEspFile" class="btn btn-sm btn-outline-secondary mt-2">
+              <i class="bi bi-plus-lg me-1"></i>Add File
+            </button>
+            <div class="small text-muted mt-1">Use a local file(s) (*.bin).</div>
+            <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
+          </div>
+          <div class="col-md-6" id="localFirmwareSection">
+            <h3 class="h6 mb-2"><i class="bi bi-folder me-1"></i>Local</h3>
+            <input id="localFile" class="form-control" type="file" accept=".hex,.bin,.ota,.gbl">
+            <div id="localFileHelp" class="small text-muted mt-1"></div>
+            <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
+          </div>
+          <div class="col-md-6" id="cloudFirmwareSection">
+            <h3 class="h6 mb-2"><i class="bi bi-cloud me-1"></i>Cloud</h3>
+            <div class="d-flex gap-2">
+              <select id="netFwSelect" class="form-select">
+                <option value="">— Network firmware (select after detection) —</option>
+              </select>
+              <button id="netFwNotesBtn" class="btn btn-outline-info" disabled="" title="Show firmware info">
+                <i class="bi bi-info-circle"></i>
+              </button>
+              <button id="netFwRefresh" class="btn btn-outline-secondary" title="Refresh firmware list">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+            </div>
+            <div class="small text-muted mt-1">Source: <a id="netFwSource" href="https://github.com/xyzroe/XZG-MT/tree/fw_files" target="_blank" rel="noopener noreferrer">xyzroe/XZG-MT</a>, filtered by your chip model.
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3" id="flashOptionsWrap">
+          <div class="col d-flex justify-content-center">
+            <div class="d-flex align-items-center gap-4">
+              <div class="form-check m-0">
+                <input id="optErase" class="form-check-input" type="checkbox" checked="">
+                <label class="form-check-label" for="optErase">Erase</label>
+              </div>
+              <div class="form-check m-0">
+                <input id="optWrite" class="form-check-input" type="checkbox">
+                <label class="form-check-label" for="optWrite">Write</label>
+              </div>
+              <div class="form-check m-0">
+                <input id="optVerify" class="form-check-input" type="checkbox">
+                <label class="form-check-label" for="optVerify">Verify</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3" id="eraseOptionWrap">
+          <div class="d-flex flex-wrap justify-content-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+              <label class="col-form-label" for="eraseMethod">Erase</label>
+              <select id="eraseMethod" class="form-select">
+                <option value="full">Full</option>
+                <option value="sector">Sector based</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-3" id="debuggerOptionWrap">
+          <div class="d-flex flex-wrap justify-content-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+              <label class="col-form-label" for="writeMethod">Write</label>
+              <select id="writeMethod" class="form-select">
+                <option value="fast">Fast (DMA-based)</option>
+                <option value="slow">Slow (safer)</option>
+              </select>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <label class="col-form-label" for="verifyMethod">Verify</label>
+              <select id="verifyMethod" class="form-select">
+                <option value="crc">Fast (by CRC, DMA-based)</option>
+                <option value="read">Slow (read byte-by-byte)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col d-flex justify-content-center">
+            <button id="startFlashBtn" class="btn btn-success btn-lg">
+              <i class="bi bi-lightning-charge me-1"></i>Start
+            </button>
+          </div>
+        </div>
+        <div id="flashWarning" class="row mt-4 d-none">
+          <div class="col">
+            <div class="alert alert-warning d-flex align-items-center mb-0" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <small>Do not close or minimize this page during the process!</small>
+            </div>
+          </div>
+        </div>
+        <div class="row g-2 mt-3">
+          <div class="col">
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height: 1.25rem;">
+              <div id="progress" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ieeeSection" class="section opacity-50 pe-none" aria-disabled="true">
+        <h2 class="h6">IEEE</h2>
+        <div id="ieeeDescription" class="small text-muted mb-2"></div>
+        <div class="row g-2 mb-2">
+          <div class="col-md-6">
+            <label class="form-label">Current IEEE</label>
+            <input id="currentIeee" class="form-control mb-2" type="text" readonly="">
+            <div class="d-flex justify-content-center">
+              <button id="btnIeeeRead" class="btn btn-outline-primary mt-2">
+                <i class="bi bi-download me-1"></i>Read
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">New IEEE</label>
+            <input id="newIeee" class="form-control mb-2" type="text" placeholder="00:00:00:00:00:00:00:00">
+            <div class="d-flex justify-content-center align-items-center">
+
+              <button id="btnIeeeWrite" class="btn btn-outline-warning mt-2 mx-2">
+                <i class="bi bi-upload me-1"></i>Write
+              </button>
+              <div id="ieeeForceWrap" class="d-flex justify-content-center align-items-center d-none">
+                <div class="form-check m-0 mt-2">
+                  <input id="forceWrite" class="form-check-input" type="checkbox">
+                  <label class="form-check-label" for="forceWrite">Force ⚠️</label>
+                </div>
+                <button class="btn btn-sm btn-link mt-2" type="button" aria-label="Force IEEE help" data-bs-toggle="tooltip" data-bs-placement="left" title="This action is one-time and irreversible. Only use it if the new IEEE is rejected by the device.">
+                  <i class="bi bi-info-circle" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="nvramSection" class="section opacity-50 pe-none" aria-disabled="true">
+        <h2 class="h6">NVRAM</h2>
+        <div class="small text-muted mb-2">Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with
+          caution.
+        </div>
+        <!-- File picker is opened programmatically on Write button click -->
+        <div class="row g-2 align-items-end mb-2">
+          <div class="col-12">
+            <div class="d-flex gap-2 justify-content-evenly w-100 nv-actions">
+              <button id="btnNvRead" class="btn btn-outline-primary">
+                <i class="bi bi-download me-1"></i>Read from device
+              </button>
+              <button id="btnNvErase" class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i>Erase all
+              </button>
+              <button id="btnNvWrite" class="btn btn-outline-warning">
+                <i class="bi bi-upload me-1"></i>Write to device
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="row g-2 mt-2">
+          <div class="col">
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="height: 1.25rem;">
+              <div id="nvProgress" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div id="actionsSection" class="section opacity-50 pe-none" aria-disabled="true">
+        <h2 class="h6">Actions</h2>
+        <div class="small text-muted mb-2">Development actions for the connected device.</div>
+
+        <div class="d-flex justify-content-evenly flex-wrap actions-grid">
+          <button id="enterBslBtn" class="btn btn-outline-warning">
+            <i class="bi bi-wrench me-1"></i>Enter BSL
+          </button>
+          <button id="resetDebugBtn" class="btn btn-outline-warning">
+            <i class="bi bi-arrow-clockwise me-1"></i>Reset in debug
+          </button>
+          <button id="resetBtn" class="btn btn-outline-success">
+            <i class="bi bi-arrow-clockwise me-1"></i>Reset
+          </button>
+          <button id="getModelBtn" class="btn btn-outline-primary">
+            <i class="bi bi-cpu me-1"></i>Get Model
+          </button>
+          <button id="getVersionBtn" class="btn btn-outline-info">
+            <i class="bi bi-info-circle me-1"></i>Get Version
+          </button>
+          <button id="pingBtn" class="btn btn-outline-secondary">
+            <i class="bi bi-wifi me-1"></i>Ping
+          </button>
+          <button id="readFlashBtn" class="btn btn-outline-dark">
+            <i class="bi bi-sd-card-fill me-1"></i>Dump flash
+          </button>
+          <button id="swireFlashBtn" class="btn btn-outline-warning">
+            <i class="bi bi-upload me-1"></i>Flash uart2swire
+          </button>
+        </div>
+      </div>
+
+      <div class="section" id="logSection">
+        <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mb-3">
+          <h2 class="h6 mb-0">Logs</h2>
+          <div class="d-flex align-items-center gap-3 flex-wrap ms-auto">
+            <div class="form-check form-switch m-0">
+              <input id="autoScroll" class="form-check-input" type="checkbox" role="switch" checked="">
+              <label class="form-check-label" for="autoScroll">Auto scroll</label>
+            </div>
+            <div class="form-check form-switch m-0">
+              <input id="showIo" class="form-check-input" type="checkbox" role="switch">
+              <label class="form-check-label" for="showIo">Show TX/RX</label>
+            </div>
+          </div>
+          <div class="d-flex gap-2 ms-auto ms-md-0">
+            <button id="btnClearLog" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>Clear
+            </button>
+            <button id="btnCopyLog" class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-clipboard me-1"></i>Copy
+            </button>
+          </div>
+        </div>
+        <div id="consoleWrap" class="console-wrap">
+          <div id="log"></div>
+        </div>
+      </div>
+
+      <div class="section d-none" id="developmentSection">
+        <h2 class="h6"><i class="bi bi-cone-striped me-1"></i>Development</h2>
+        <div class="alert alert-info" role="alert">
+          <span style="font-size:1.2em;">🚧</span>
+          <strong>In Development:</strong> This functionality is currently in development and unavailable.
+        </div>
+      </div>
+
+
+
+      <footer class="app-footer mt-4 pt-3">
+        <div class="text-center small text-muted mb-2">
+          <span class="gradient-text">Have feedback, ideas, or want to support the project? Visit the links
+                    below!</span>
+        </div>
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div class="small">
+            Created with <span aria-hidden="true">❤️</span> by <a href="https://xyzroe.cc" target="_blank" rel="noopener">xyzroe</a> © 2025
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <span id="commitSha" class="text-muted small" title="Last commit SHA" style="letter-spacing:1px"></span>
+            <a href="https://github.com/xyzroe/XZG-MT" target="_blank" rel="noopener" aria-label="GitHub"><i class="bi bi-github"></i></a>
+            <a href="https://discord.gg/A5ge3cYRKW" target="_blank" rel="noopener" aria-label="Discord"><i class="bi bi-discord"></i></a>
+            <a href="https://t.me/xzg_fw" target="_blank" rel="noopener" aria-label="Telegram"><i class="bi bi-telegram"></i></a>
+          </div>
+        </div>
+
+        <div class="text-center small text-muted mt-2">
+          All trademarks and logos are the property of their respective owners.
+        </div>
+      </footer>
+
+      <!-- Bootstrap JS (tooltips, etc.) -->
+      <script src="js/bootstrap.bundle.min.js"></script>
+
+      <script type="module" src="flasher.js"></script>
+
+      <script>
+        // The latest commit SHA is substituted during build
+        document.addEventListener('DOMContentLoaded', function() {
+          var sha = '8e36775';
+          var version = '0.3.5';
+          var el = document.getElementById('commitSha');
+          if (el && sha) {
+            el.innerHTML = `v${version} (${sha})`;
+          }
+        });
+      </script>
+
+      <!-- Bridge info modal (lightweight) -->
+      <div id="bridgeInfoModal" class="modal-backdrop-lite d-none" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-card-lite" role="document" aria-labelledby="bridgeInfoTitle">
+          <div class="modal-header d-flex align-items-center justify-content-between">
+            <h3 id="bridgeInfoTitle" class="h6 m-0">
+              <i class="bi bi-info-circle me-1"></i>
+              WS↔TCP Bridge
+            </h3>
+            <button id="bridgeInfoCloseX" class="btn btn-sm btn-outline-secondary" aria-label="Close">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+          <div class="modal-body" style="max-height:50vh;overflow:auto;">
+            <p class="mb-2"></p>
+            To use TCP mode, you must run a local bridge application on your computer or network.
+            <p></p>
+
+            <p class="mb-1"><strong><em>Why:</em></strong></p>
+            <ul class="mb-2">
+              <li>Browsers cannot open raw TCP sockets.</li>
+              <li>The bridge exposes a WebSocket endpoint the page connects to and forwards traffic to the
+                TCP
+                device.</li>
+            </ul>
+
+            <p class="mb-1"><strong><em>What it provides:</em></strong></p>
+            <ul class="mb-2">
+              <li>WebSocket ↔ TCP forwarding.</li>
+              <li>mDNS (zeroconf) device discovery.</li>
+              <li>Expose local serial ports as TCP servers with HTTP based DTR/RTS control.</li>
+            </ul>
+            <p class="mb-2"><strong><em>Available installation options:</em></strong></p>
+
+            <div class="d-flex align-items-center justify-content-center gap-3 mb-3 flex-wrap">
+              <a alt="Open your Home Assistant instance and show the add add-on repository dialog." target="_blank" href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fxyzroe%2FXZG-MT">
+                <img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="HA Add-on badge">
+              </a>
+            </div>
+            <div class="d-flex align-items-center justify-content-center gap-3 mb-3 flex-wrap">
+              <!-- OS install "buttons" with icons + links in a row and larger buttons -->
+              <div class="d-flex gap-3">
+                <div class="text-center">
+                  <button type="button" class="btn btn-lg btn-outline-secondary mb-1" title="Windows" aria-label="Windows downloads">
+                    <i class="bi bi-windows me-2 fs-5" aria-hidden="true"></i>Windows
+                  </button>
+                  <div class="small d-flex justify-content-center align-items-center gap-2">
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-amd64.exe" class="link-secondary" title="Download Windows x64 binary">x64</a>
+                    <span class="text-muted">/</span>
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-arm64.exe" class="link-secondary" title="Download Windows arm64 binary">arm64</a>
+                    <span class="text-muted">/</span>
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-windows-386.exe" class="link-secondary" title="Download Windows x86 binary">x86</a>
+                  </div>
+                </div>
+
+                <div class="text-center">
+                  <button type="button" class="btn btn-lg btn-outline-secondary btn mb-1" title="macOS" aria-label="macOS downloads">
+                    <i class="bi bi-apple me-2 fs-5" aria-hidden="true"></i>macOS
+                  </button>
+                  <div class="small d-flex justify-content-center align-items-center gap-2">
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-darwin-arm64" class="link-secondary" title="Download macOS arm64 binary">arm64</a>
+                    <span class="text-muted">/</span>
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-darwin-amd64" class="link-secondary" title="Download macOS x64 binary">x64</a>
+                  </div>
+                </div>
+
+                <div class="text-center">
+                  <button type="button" class="btn btn-lg btn-outline-secondary btn mb-1" title="Linux" aria-label="Linux downloads">
+                    <i class="bi bi-ubuntu me-2 fs-5" aria-hidden="true"></i>Linux
+                  </button>
+                  <div class="small d-flex justify-content-center align-items-center gap-2">
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-amd64" class="link-secondary" title="Download Linux x64 binary">x64</a>
+                    <span class="text-muted">/</span>
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-arm64" class="link-secondary" title="Download Linux arm64 binary">arm64</a>
+                    <span class="text-muted">/</span>
+                    <a href="https://github.com/xyzroe/XZG-MT/releases/latest/download/XZG-MT-linux-386" class="link-secondary" title="Download Linux x86 binary">x86</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="mb-2">
+              On the <a href="https://github.com/xyzroe/XZG-MT/releases/latest/" target="_blank">releases
+                page</a>, binaries built for less common systems (for example, OpenWrt) are also available.
+            </p>
+
+            <p class="mb-2">
+              Alternatively, you can run the bridge in a Docker container or just run the Go project files.
+            </p>
+            <p class="mb-2">
+              See the project documentation for installation and usage instructions.
+            </p>
+            <p class="mb-0">
+              Project repository:
+              <a href="https://github.com/xyzroe/XZG-MT" target="_blank" rel="noopener">github.com/xyzroe/XZG-MT</a>
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button id="bridgeInfoClose" class="btn btn-secondary">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Firmware notes modal -->
+      <div id="fwNotesModal" class="modal-backdrop-lite d-none" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="modal-card-lite" role="document" aria-labelledby="fwNotesTitle">
+          <div class="modal-header d-flex align-items-center justify-content-between">
+            <h3 id="fwNotesTitle" class="h6 m-0">
+              <i class="bi bi-info-circle me-1"></i>
+              Firmware Info
+            </h3>
+            <button id="fwNotesCloseX" class="btn btn-sm btn-outline-secondary" aria-label="Close">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div id="fwNotesContent" style="max-height:50vh;overflow:auto;"></div>
+          </div>
+          <div class="modal-footer">
+            <button id="fwNotesClose" class="btn btn-secondary">Close</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+
+  </body>
+
+</html>
