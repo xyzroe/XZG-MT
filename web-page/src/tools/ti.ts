@@ -7,6 +7,27 @@ import { implyGateToggle } from "../ui";
 
 export type TiChipFamily = "cc26xx" | "cc2538";
 
+type Cc26xxGeneration = "cc26x2" | "cc26x4";
+
+const CC26XX_LAYOUTS = {
+  cc26x2: {
+    flashSizeRegister: 0x4003002c,
+    primaryIeeeAddress: 0x500012f0,
+    icepickDeviceId: 0x50001318,
+    userId: 0x57fb4,
+    flashPageSize: 8192,
+    flashSectorSize: 8192,
+  },
+  cc26x4: {
+    flashSizeRegister: 0x50000000,
+    primaryIeeeAddress: 0x50000af0,
+    icepickDeviceId: 0x50000b18,
+    userId: 0x50000a94,
+    flashPageSize: 2048,
+    flashSectorSize: 2048,
+  },
+} as const;
+
 // Re-export for backwards compatibility
 export type { OpenThreadRcpInfo } from "./spinel";
 
@@ -486,6 +507,7 @@ export class TiTools {
   private logger: (msg: string) => void = () => {};
   private progressCallback: (percent: number, msg: string) => void = () => {};
   private setLinesHandler: (rstLevel: boolean, bslLevel: boolean) => void = () => {};
+  private cc26xxGeneration: Cc26xxGeneration = "cc26x2";
 
   // BSL protocol state
   private rxBuf: number[] = [];
@@ -536,6 +558,7 @@ export class TiTools {
   private getChipDescription(chipIdPkt: Uint8Array, wafer_id: number, pg_rev: number, mode_cfg: number): string {
     const chip_id = ((chipIdPkt[0] << 8) | chipIdPkt[1]) >>> 0;
     if (chip_id === 0xb964 || chip_id === 0xb965) return "CC2538";
+    if (chip_id === 0x120a) return "CC2674P10";
     if (chip_id === 0x1202 && wafer_id === 0xbb77 && pg_rev === 0x1) return "CC2652P7";
     if (chip_id === 0x1282 && wafer_id === 0xbb77 && pg_rev === 0x1) return "CC1352P7";
     if (chip_id === 0x3202 && wafer_id === 0xbb41 && pg_rev === 0x3 && mode_cfg === 0xc1) return "CC2652P2_launchpad";
@@ -958,14 +981,11 @@ export class TiTools {
 
     if (chipIsCC26xx) {
       info.family = "cc26xx";
+      this.cc26xxGeneration = chipHex.startsWith("120a") ? "cc26x4" : "cc26x2";
+      const layout = CC26XX_LAYOUTS[this.cc26xxGeneration];
       try {
-        const FLASH_SIZE = 0x4003002c;
-        const IEEE_ADDR_PRIMARY = 0x500012f0;
-        const ICEPICK_DEVICE_ID = 0x50001318;
-        const TESXT_ID = 0x57fb4;
-
-        const dev = await this.memRead32(ICEPICK_DEVICE_ID);
-        const usr = await this.memRead32(TESXT_ID);
+        const dev = await this.memRead32(layout.icepickDeviceId);
+        const usr = await this.memRead32(layout.userId);
         if (dev && usr && dev.length >= 4 && usr.length >= 4) {
           const wafer_id = ((((dev[3] & 0x0f) << 16) | (dev[2] << 8) | (dev[1] & 0xf0)) >>> 4) >>> 0;
           const pg_rev = (dev[3] & 0xf0) >> 4;
@@ -974,17 +994,17 @@ export class TiTools {
           info.chipModel = model;
         }
 
-        const flashSz = await this.memRead32(FLASH_SIZE);
+        const flashSz = await this.memRead32(layout.flashSizeRegister);
         if (flashSz && flashSz.length >= 4) {
           const pages = flashSz[0];
-          const size = pages * 8192;
+          const size = pages * layout.flashPageSize;
           //if (size >= 64 * 1024) size -= 8192;
           this.logger(`Flash size estimate: ${size} bytes`);
           info.flashSizeBytes = size;
         }
 
-        const mac_lo = await this.memRead32(IEEE_ADDR_PRIMARY + 0);
-        const mac_hi = await this.memRead32(IEEE_ADDR_PRIMARY + 4);
+        const mac_lo = await this.memRead32(layout.primaryIeeeAddress);
+        const mac_hi = await this.memRead32(layout.primaryIeeeAddress + 4);
         if (mac_hi && mac_lo && mac_hi.length >= 4 && mac_lo.length >= 4) {
           const mac = [...mac_lo, ...mac_hi]
             .map((b) => b.toString(16).padStart(2, "0"))
@@ -1295,15 +1315,15 @@ export class TiTools {
     } else {
       // CC26xx: Secondary IEEE at (flash_size - 88 + 0x20)
       // First get flash size
-      const FLASH_SIZE = 0x4003002c;
-      const flashSz = await this.memRead32(FLASH_SIZE);
+      const layout = CC26XX_LAYOUTS[this.cc26xxGeneration];
+      const flashSz = await this.memRead32(layout.flashSizeRegister);
 
       if (!flashSz || flashSz.length < 4) {
         throw new Error("Failed to read flash size");
       }
 
       const pages = flashSz[0];
-      const flashSize = pages * 8192;
+      const flashSize = pages * layout.flashPageSize;
       const CCFG_LEN = 88;
       const IEEE_OFFSET = 0x20;
       const addr = flashSize - CCFG_LEN + IEEE_OFFSET;
@@ -1415,18 +1435,18 @@ export class TiTools {
       this.logger("Secondary IEEE address written successfully");
     } else {
       // CC26xx: Write to (flash_size - 88 + 0x20) in CCFG area
-      const FLASH_SIZE = 0x4003002c;
-      const flashSz = await this.memRead32(FLASH_SIZE);
+      const layout = CC26XX_LAYOUTS[this.cc26xxGeneration];
+      const flashSz = await this.memRead32(layout.flashSizeRegister);
 
       if (!flashSz || flashSz.length < 4) {
         throw new Error("Failed to read flash size");
       }
 
       const pages = flashSz[0];
-      const flashSize = pages * 8192;
+      const flashSize = pages * layout.flashPageSize;
       const CCFG_LEN = 88;
       const IEEE_OFFSET = 0x20;
-      const SECTOR_SIZE = 8192; // CC26xx flash sector size
+      const SECTOR_SIZE = layout.flashSectorSize;
 
       // CCFG is in the last sector
       const ccfgSectorAddr = flashSize - SECTOR_SIZE;
