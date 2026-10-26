@@ -83,6 +83,10 @@
                                     <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
                                     <span>TI CCXX52</span>
                                 </div>
+                                <div class="custom-dropdown-item" data-value="ti_m33">
+                                    <img src="imgs/ti.png" alt="Texas Instruments" class="dropdown-icon">
+                                    <span>TI CC2674P10 (M33)</span>
+                                </div>
                                 <div class="custom-dropdown-item" data-value="sl">
                                     <img src="imgs/si.png" alt="Silicon Labs" class="dropdown-icon">
                                     <span>SL</span>
@@ -162,6 +166,21 @@
                             <button id="invertLevelHelp" type="button" class="btn btn-sm btn-link p-0 ms-2"
                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
                                 title="<strong>Invert Levels:</strong> Some devices use inverted logic levels for RST and BSL control. Enable this option to invert the control signals.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Help</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-12 mb-2 d-none" id="bootloaderOnlyWrap">
+                        <div class="d-flex align-items-center justify-content-center gap-2">
+                            <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                                <input id="bootloaderOnlyToggle" class="form-check-input" type="checkbox"
+                                    role="switch" aria-label="Already in bootloader" />
+                            </div>
+                            <span class="text-muted">Already in BSL</span>
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-2" aria-label="Already in BSL help"
+                                data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                title="<strong>Already in BSL:</strong> The target is already running the TI ROM bootloader. Skip all reset/BSL control and application-mode probing, and keep using the current serial or TCP bootloader connection.">
                                 <i class="bi bi-info-circle" aria-hidden="true"></i>
                                 <span class="visually-hidden">Help</span>
                             </button>
