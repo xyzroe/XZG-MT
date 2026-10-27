@@ -5,7 +5,7 @@ import { SpinelClient, OpenThreadRcpInfo } from "./spinel";
 import { enterBootloader, makeReset } from "../utils/control";
 import { implyGateToggle } from "../ui";
 
-export type TiChipFamily = "cc26xx" | "cc2538";
+export type TiChipFamily = "cc26xx" | "cc26xx-m33" | "cc2538";
 
 // Re-export for backwards compatibility
 export type { OpenThreadRcpInfo } from "./spinel";
@@ -939,6 +939,10 @@ export class TiTools {
       .map((b: number) => b.toString(16).padStart(2, "0"))
       .join("");
     this.logger(`BSL OK. ChipId packet: ${chipHex}`);
+
+    if (chipHex === "120af000") {
+      throw new Error("CC2674P10 is a Cortex-M33 device; select the TI CC2674P10 (M33) family");
+    }
 
     const info: TiDeviceInfo = { chipIdHex: chipHex };
 
