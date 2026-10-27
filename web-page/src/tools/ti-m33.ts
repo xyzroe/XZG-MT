@@ -21,6 +21,9 @@ export interface M33RegisterOffsets {
     flashSize: number;
     secondaryIeee: number;
     bootloaderConfig: number;
+    eraseConfig: number;
+    eraseConfig1: number;
+    writeProtection: number;
 }
 
 export interface M33Capabilities {
@@ -48,6 +51,7 @@ export interface M33DeviceProfile {
     memory: M33MemoryMap;
     offsets: M33RegisterOffsets;
     capabilities: M33Capabilities;
+    protectedCcfgRanges: readonly (readonly [number, number])[];
 
     decodeWaferId(deviceId: Uint8Array): number;
 
@@ -80,6 +84,9 @@ export const CC2674P10_PROFILE = {
         flashSize: 0x2c,
         secondaryIeee: 0x18,
         bootloaderConfig: 0x28,
+        eraseConfig: 0x2c,
+        eraseConfig1: 0x30,
+        writeProtection: 0x04,
     },
     capabilities: {
         flash: true,
@@ -88,6 +95,7 @@ export const CC2674P10_PROFILE = {
         nvram: false,
         fullFlashRead: false,
     },
+    protectedCcfgRanges: [[0x2c, 0x40], [0x44, 0x7c]],
     decodeWaferId(deviceId: Uint8Array): number {
         return (((deviceId[3] & 0x0f) << 16) | (deviceId[2] << 8) | (deviceId[1] & 0xf0)) >>> 4;
     },
@@ -244,6 +252,34 @@ async function readMemoryRange(tools: TiTools, address: number, length: number):
 
 function isBootloaderEnabled(config: Uint8Array): boolean {
     return config.length === 4 && config[0] === 0xc5 && config[3] === 0xc5;
+}
+
+async function validateCcfgRewrite(
+    tools: TiTools,
+    profile: M33DeviceProfile,
+    original: Uint8Array,
+    planned: Uint8Array,
+): Promise<void> {
+    const {memory, offsets} = profile;
+    for (const ccfg of [original, planned]) {
+        const erase = uint32Le(ccfg.slice(offsets.eraseConfig, offsets.eraseConfig + 4));
+        const erase1 = uint32Le(ccfg.slice(offsets.eraseConfig1, offsets.eraseConfig1 + 4));
+        if ((erase & 0x101) !== 0x101 || (erase1 & 1) !== 1) {
+            throw new Error("CCFG disables bank/chip erase or protects CCFG; write was refused");
+        }
+    }
+    const protection = await readWord(tools, memory.flashConfigBase + offsets.writeProtection);
+    if ((uint32Le(protection) & 1) !== 0) throw new Error("Live CCFG is write/erase protected");
+    for (const [start, end] of profile.protectedCcfgRanges) {
+        if (original.subarray(start, end).some((value, index) => value !== planned[start + index])) {
+            throw new Error("Changes to M33 protection/security configuration are not supported");
+        }
+    }
+    const bootloader = original.subarray(offsets.bootloaderConfig, offsets.bootloaderConfig + 4);
+    if (isBootloaderEnabled(bootloader) &&
+        bootloader.some((value, index) => value !== planned[offsets.bootloaderConfig + index])) {
+        throw new Error("Changing the working M33 bootloader backdoor configuration is not supported");
+    }
 }
 
 function parseIeeeAddress(address: string): Uint8Array {
@@ -570,7 +606,9 @@ export async function writeM33SecondaryIeeeAddress(
         log(`Secondary IEEE address is already ${formatIeee(storedBytes)}; CCFG was not erased`);
         return liveDevice;
     }
+    const originalCcfg = copyBytes(ccfg);
     ccfg.set(storedBytes, offsets.secondaryIeee);
+    await validateCcfgRewrite(tools, liveDevice.profile, originalCcfg, ccfg);
 
     log(`Erasing independent CCFG sector at ${hex(memory.ccfgBase)}...`);
     await tools.sectorErase(memory.ccfgBase);
@@ -594,7 +632,11 @@ export async function writeM33SecondaryIeeeAddress(
 }
 
 // Validate writable ranges and build the exact image used for write and CRC verification.
-export function prepareM33Image(segments: M33Segment[], device: M33DeviceInfo): M33ImagePlan {
+export function prepareM33Image(
+    segments: M33Segment[],
+    device: M33DeviceInfo,
+    preservedCcfg?: Uint8Array,
+): M33ImagePlan {
     const {profile} = device;
     const {memory, offsets} = profile;
     if (
@@ -667,6 +709,13 @@ export function prepareM33Image(segments: M33Segment[], device: M33DeviceInfo): 
             if (existing !== device.secondaryIeeeRaw[offset]) restoredSecondaryIeee = true;
         }
         ccfg = overlayBytes(ccfg, memory.ccfgBase + offsets.secondaryIeee, device.secondaryIeeeRaw);
+    }
+
+    if (preservedCcfg) {
+        if (preservedCcfg.length !== memory.ccfgSizeBytes) throw new Error("Invalid preserved CCFG sector size");
+        const completeCcfg = copyBytes(preservedCcfg);
+        for (const segment of ccfg) completeCcfg.set(segment.data, segment.address - memory.ccfgBase);
+        ccfg = [{address: memory.ccfgBase, data: completeCcfg}];
     }
 
     ccfg.sort((left, right) => {
@@ -748,7 +797,14 @@ export async function programM33(
     ) {
         throw new Error("M33 device identity changed after firmware selection; operation was refused");
     }
-    const plan = prepareM33Image(segments, liveDevice);
+    // Validate the image before reading the preservation snapshot, and never erase on a bad read.
+    prepareM33Image(segments, liveDevice);
+    const {memory} = liveDevice.profile;
+    const preservedCcfg = await readMemoryRange(tools, memory.ccfgBase, memory.ccfgSizeBytes);
+    if (await tools.crc32Cc26xx(memory.ccfgBase, memory.ccfgSizeBytes) !== crc32(preservedCcfg)) {
+        throw new Error("CCFG read CRC32 mismatch; flashing was refused before erasing");
+    }
+    const plan = prepareM33Image(segments, liveDevice, preservedCcfg);
     options.log(
         `M33 image validated: ${plan.main.length} main segment(s), ${plan.ccfg.length} CCFG segment(s), ${plan.totalBytes} bytes`,
     );
@@ -769,6 +825,7 @@ export async function programM33(
         return;
     }
 
+    await validateCcfgRewrite(tools, liveDevice.profile, preservedCcfg, plan.ccfg[0].data);
     options.log("Erasing M33 main flash bank...");
     options.progress(0, "Erasing main flash");
     await tools.bankErase();

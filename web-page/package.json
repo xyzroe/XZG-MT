@@ -23,7 +23,8 @@
     "dev": "concurrently -n FLASHER,STATIC,FAV,SERVER \"npm run esbuild:watch\" \"npm run dev:static\" \"npm run dev:fav\" \"npm:preview\"",
     "preview": "browser-sync start --config bs-config.js",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild src/tools/*.spec.ts src/transport/*.spec.ts --bundle --platform=node --format=cjs --outdir=dist/tests && node --test dist/tests/tools/*.js dist/tests/transport/*.js"
   },
   "author": "xyzroe",
   "license": "MIT",

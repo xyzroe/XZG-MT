@@ -86,6 +86,9 @@ npm run typecheck
 
 # Linting
 npm run lint
+
+# Hardware-independent TI M33 and TCP transport regression tests
+npm test
 ```
 
 ## 🏛️ Architecture Overview
@@ -97,6 +100,7 @@ npm run lint
 - **netfw.ts** - Network firmware fetching and parsing
 - **tools/** - Device specific protocols
   - **ti.ts** - TI CC device communication protocol
+  - **ti-m33.ts** - Validated M33 profiles, sparse HEX images and independent CCFG programming
   - **sl.ts** - Silabs device communication protocol
   - **cc-debugger.ts** - CC Debugger communication protocol
   - **cc-loader.ts** - CC Loader communication protocol

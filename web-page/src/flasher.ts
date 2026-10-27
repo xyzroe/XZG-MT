@@ -146,6 +146,7 @@ let esploader: ESPLoader | null = null;
 let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
+let firmwareLoadId = 0;
 let m33Segments: M33Segment[] | null = null;
 let m33DeviceInfo: M33DeviceInfo | null = null;
 let sl_tools: SilabsTools | null = null;
@@ -262,6 +263,7 @@ disconnectBtn.addEventListener("click", async () => {
   telinkTools = null;
 
   // Clear image
+  firmwareLoadId++;
   hexImage = null;
   m33Segments = null;
   m33DeviceInfo = null;
@@ -342,6 +344,11 @@ connectTcpBtn.addEventListener("click", async () => {
 // Enable/disable notes button on select change
 netFwSelect?.addEventListener("change", async () => {
   if (!netFwSelect || !netFwNotesBtn) return;
+  const loadId = ++firmwareLoadId;
+  const selectedFamily = getSelectedFamily();
+  hexImage = null;
+  m33Segments = null;
+  updateOptionsStateForFile(false);
   const notes = getSelectedFwNotes();
   netFwNotesBtn.disabled = !notes;
   // Existing logic: load firmware
@@ -354,16 +361,23 @@ netFwSelect?.addEventListener("change", async () => {
     }
     const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
     const img = await downloadFirmwareFromUrl(link, fillByte);
+    if (loadId !== firmwareLoadId || selectedFamily !== getSelectedFamily()) return;
     hexImage = img;
     m33Segments = null;
     updateOptionsStateForFile(true);
     log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
   } catch (e: any) {
+    if (loadId !== firmwareLoadId) return;
     log("HEX download error: " + (e?.message || String(e)));
   }
 });
 
 localFile.addEventListener("change", async () => {
+  const loadId = ++firmwareLoadId;
+  const selectedFamily = getSelectedFamily();
+  hexImage = null;
+  m33Segments = null;
+  updateOptionsStateForFile(false);
   const f = localFile.files?.[0];
   if (!f) {
     updateOptionsStateForFile(false);
@@ -373,6 +387,7 @@ localFile.addEventListener("change", async () => {
     log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
     // Read explicitly using slice to ensure full file read
     const buf = await f.slice(0, f.size).arrayBuffer();
+    if (loadId !== firmwareLoadId || selectedFamily !== getSelectedFamily()) return;
     //log(`ArrayBuffer read: ${buf.byteLength} bytes`);
     // If lengths differ, fail early so we can debug
     if (buf.byteLength !== f.size) {
@@ -394,6 +409,7 @@ localFile.addEventListener("change", async () => {
     }
     updateOptionsStateForFile(true);
   } catch (e: any) {
+    if (loadId !== firmwareLoadId) return;
     hexImage = null;
     m33Segments = null;
     updateOptionsStateForFile(false);
@@ -533,6 +549,7 @@ getVersionBtn?.addEventListener("click", async () => {
       const result = await sl_tools.probe(
         "auto",
         findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+        true,
         implyGateToggle?.checked ?? true,
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -909,6 +926,7 @@ startFlashBtn.addEventListener("click", async () => {
           const result = await sl_tools.probe(
             "auto",
             findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+            true,
             implyGateToggle?.checked ?? true,
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -2177,6 +2195,7 @@ async function runConnectSequence(): Promise<void> {
         const result = await sl_tools.probe(
           "auto",
           findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+          true,
           implyGateToggle?.checked ?? true,
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -2304,7 +2323,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     return;
   }
 
-  await ti_tools.sync();
+  const liveInfo = await ti_tools.readDeviceInfo();
+  if (liveInfo.family !== chipFamily) throw new Error("TI device family changed; flashing was refused");
 
   if (optErase.checked) {
     if (chipFamily === "cc26xx") {
@@ -2589,7 +2609,7 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
       // make link and send using httpGetWithFallback
       await httpGetWithFallback(endUrl).catch((e: any) => {
         log("send request failed: " + (e?.message || String(e)));
-        sleep(1000);
+        throw e;
       });
       return;
     }
@@ -2616,7 +2636,8 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
 export async function changeBaud(local: number, remote: number = local): Promise<void> {
   try {
     if (activeConnection === "serial") {
-      await (serial as any)?.reopenWithBaudrate?.(local);
+      if (!serial) throw new Error("No serial connection");
+      await serial.reopenWithBaudrate(local);
       log(`Serial: switched baud to ${local}`);
       if (portInfoEl) portInfoEl.value = `serial @ ${local}bps`;
     } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
@@ -2624,7 +2645,8 @@ export async function changeBaud(local: number, remote: number = local): Promise
       log(`TCP: switched baud to ${remote}`);
     }
   } catch (e: any) {
-    log("Serial: failed to switch baud " + (e?.message || String(e)));
+    log("Failed to switch baud: " + (e?.message || String(e)));
+    throw e;
   }
 }
 
@@ -2639,7 +2661,7 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   const baudMethod = (baudMethodSelect?.value as "GET" | "POST") || "GET";
   await sendCtrlUrl(tpl, hasSet ? baud : undefined, baudMethod).catch((e: any) => {
     log("Baud change failed: " + (e?.message || String(e)));
-    sleep(1000);
+    throw e;
   });
   await sleep(1000);
 
@@ -2649,16 +2671,7 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   if (!host || !port) throw new Error("Host/port not set for reconnect");
 
   try {
-    try {
-      tcp.close();
-    } catch {
-      // ignore
-    }
-    const wsBase = getBridgeBase("ws");
-    tcp = new TcpClient(wsBase);
-    await tcp.connect(host, port).catch;
-    tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
-    tcp.onTx?.((d: Uint8Array) => log(`TX: ${bufToHex(d)}`, "tx"));
+    await tcp.reconnect(host, port);
     activeConnection = "tcp";
     updateConnectionUI();
     log(`TCP reconnected to ${host}:${port} after baud change`);

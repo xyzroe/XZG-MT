@@ -1268,7 +1268,7 @@ export class TiTools {
    * @returns 8-byte IEEE address
    */
   public async readSecondaryIeeeAddress(family: TiChipFamily): Promise<Uint8Array> {
-    if (!family) {
+    if (family !== "cc2538" && family !== "cc26xx") {
       throw new Error("Chip family must be specified. Call readDeviceInfo() first.");
     }
 
