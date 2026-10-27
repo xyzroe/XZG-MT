@@ -10,8 +10,8 @@ class MockWebSocket {
   binaryType = "";
   onopen = () => {};
   onerror = () => {};
-  onclose = (_event: { code: number }) => {};
-  onmessage = (_event: { data: ArrayBuffer }) => {};
+  onclose: (event: { code: number }) => void = () => {};
+  onmessage: (event: { data: ArrayBuffer }) => void = () => {};
   sent: Uint8Array[] = [];
   constructor(public url: string) { MockWebSocket.instances.push(this); }
   open() { this.readyState = 1; this.onopen(); }

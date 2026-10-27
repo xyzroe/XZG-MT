@@ -89,9 +89,13 @@ test("HEX rejects corrupt checksums, missing EOF, overlaps and data after EOF", 
   assert.throws(() => parseM33Hex(hexInput(record(1, 0), record(0, 0, [1]))), /after the EOF/);
 });
 
-test("HEX alignment merges adjacent partial words without losing data", () => {
+test("HEX retains explicit byte coverage and image preparation aligns main flash", async () => {
   const segments = parseM33Hex(hexInput(record(0, 1, [1]), record(0, 2, [2, 3]), record(1, 0)));
-  assert.deepEqual(segments, [{ address: 0, data: Uint8Array.of(0xff, 1, 2, 3) }]);
+  assert.deepEqual(segments, [{ address: 1, data: Uint8Array.of(1, 2, 3) }]);
+  const mock = deviceMock();
+  const device = await readM33DeviceInfo(mock.tools);
+  const plan = prepareM33Image([...segments, firmware()[1]], device, mock.ccfg);
+  assert.deepEqual(plan.main, [{ address: 0, data: Uint8Array.of(0xff, 1, 2, 3) }]);
 });
 
 test("profile rejects legacy and mismatched M33 devices", async () => {
@@ -123,6 +127,19 @@ test("programming preserves omitted CCFG and IEEE, writes zeros and verifies mai
   assert.deepEqual(mock.main.subarray(0, 8), firmware()[0].data);
   assert.ok(mock.events.indexOf("verify main") < mock.events.indexOf("erase ccfg"));
   assert.equal(mock.events.at(-1), "verify ccfg");
+});
+
+test("partial-word CCFG records preserve omitted bytes instead of padding them with FF", async () => {
+  const mock = deviceMock();
+  mock.ccfg.fill(0, 0x40, 0x44);
+  const original = mock.ccfg.slice();
+  const device = await readM33DeviceInfo(mock.tools);
+  const image = parseM33Hex(hexInput(
+    record(0, 0, [0, 0, 0, 0]), record(4, 0, [0x50, 0]),
+    record(0, 0x28, [...bootloader]), record(0, 0x40, [0]), record(1, 0),
+  ));
+  await programM33(mock.tools, image, device, options());
+  assert.deepEqual(mock.ccfg, original);
 });
 
 test("a bad or short preservation read aborts before any erase", async () => {

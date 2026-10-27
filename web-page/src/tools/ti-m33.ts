@@ -470,7 +470,7 @@ export function parseM33Hex(input: Uint8Array): M33Segment[] {
 
     if (!sawEof) throw new Error("Intel HEX is missing the EOF record");
     if (records.length === 0) throw new Error("Intel HEX contains no data");
-    return alignSegments(mergeAdjacentSegments(records));
+    return mergeAdjacentSegments(records);
 }
 
 // Resolve a registered M33 profile, then read profile-specific configuration fields.
@@ -649,7 +649,7 @@ export function prepareM33Image(
     }
     if (segments.length === 0) throw new Error("M33 firmware contains no data segments");
 
-    const main: M33Segment[] = [];
+    let main: M33Segment[] = [];
     let ccfg: M33Segment[] = [];
     let previousEnd = -1;
     const sorted = [...segments].sort((left, right) => left.address - right.address);
@@ -659,11 +659,9 @@ export function prepareM33Image(
             !Number.isSafeInteger(segment.address) ||
             !Number.isSafeInteger(end) ||
             segment.address < 0 ||
-            end <= segment.address ||
-            (segment.address & 3) !== 0 ||
-            (segment.data.length & 3) !== 0
+            end <= segment.address
         ) {
-            throw new Error(`Invalid or unaligned M33 segment at ${hex(segment.address)}`);
+            throw new Error(`Invalid M33 segment at ${hex(segment.address)}`);
         }
 
         if (segment.address < previousEnd) throw new Error(`M33 firmware segments overlap at ${hex(segment.address)}`);
@@ -682,6 +680,7 @@ export function prepareM33Image(
     }
 
     if (main.length === 0) throw new Error("M33 firmware does not contain a main-flash segment");
+    main = alignSegments(main);
     let imageBootloaderConfig: Uint8Array;
     try {
         imageBootloaderConfig = readSegmentBytes(ccfg, memory.ccfgBase + offsets.bootloaderConfig, 4);
