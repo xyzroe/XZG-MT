@@ -2218,6 +2218,10 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   if (family !== "ti_m33" && m33Segments) {
     throw new Error("The loaded file was parsed for TI M33; select the target family again and reload its firmware");
   }
+  const validatedTiFamily = detectedTiFamily ?? detectedTiChipFamily;
+  if (family === "ti" && validatedTiFamily !== "cc26xx" && validatedTiFamily !== "cc2538") {
+    throw new Error("TI device detection did not succeed; reconnect using the correct family before flashing");
+  }
 
   if ((family === "ti" || family === "ti_m33") && !isBootloaderOnlyMode()) {
     // If possible to use high baud, switch to it before flashing
