@@ -581,6 +581,7 @@ export class SilabsTools {
       throw new Error("NVM3 backup contains duplicate token keys");
     }
 
+    const validatedTokens: Array<{ key: number; entries: Array<{ index: number; data: number[] }> }> = [];
     for (let tokenNumber = 0; tokenNumber < backup.tokens.length; tokenNumber++) {
       const saved = backup.tokens[tokenNumber];
       if (!saved || !Number.isInteger(saved.key) || saved.key < 0 || saved.key > 0xffffffff ||
@@ -607,11 +608,15 @@ export class SilabsTools {
           new Set(saved.entries.map((entry) => entry.index)).size !== expectedEntries) {
         throw new Error(`Incomplete token data for 0x${saved.key.toString(16)}`);
       }
+      validatedTokens.push({ key: saved.key, entries: saved.entries });
+    }
 
-      for (const entry of saved.entries) {
-        await client.setTokenData(saved.key, entry.index, new Uint8Array(entry.data));
+    for (let tokenNumber = 0; tokenNumber < validatedTokens.length; tokenNumber++) {
+      const token = validatedTokens[tokenNumber];
+      for (const entry of token.entries) {
+        await client.setTokenData(token.key, entry.index, new Uint8Array(entry.data));
       }
-      onProgress(Math.round(((tokenNumber + 1) / backup.tokens.length) * 100), `Restored token ${tokenNumber + 1}/${backup.tokens.length}`);
+      onProgress(Math.round(((tokenNumber + 1) / validatedTokens.length) * 100), `Restored token ${tokenNumber + 1}/${validatedTokens.length}`);
     }
   }
 
