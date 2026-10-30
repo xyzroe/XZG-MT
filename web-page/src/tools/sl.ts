@@ -10,6 +10,27 @@ import { makeReset } from "../utils/control";
 // Re-export SpinelClient for backwards compatibility
 export { SpinelClient } from "./spinel";
 
+export type EzspEvent =
+  | { type: "energyScanResult"; channel: number; rssi: number }
+  | { type: "scanComplete"; channel: number; status: number }
+  | { type: "packet"; channel: number; linkQuality: number; rssi: number; data: Uint8Array };
+
+export type Nvm3TokenInfo = {
+  tokenIndex: number;
+  key: number;
+  isCounter: boolean;
+  isIndexed: boolean;
+  size: number;
+  arraySize: number;
+};
+
+export type Nvm3Backup = {
+  format: "xzg-mt-silabs-nvm3";
+  version: 1;
+  ezspVersion: number;
+  tokens: Array<Nvm3TokenInfo & { entries: Array<{ index: number; data: number[] }> }>;
+};
+
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
   IN_MENU = "in_menu",
@@ -27,6 +48,7 @@ export class SilabsTools {
   private uploadStatus: string | null = null;
   private ezspClient: EzspAshClient | null = null;
   private spinelClient: SpinelClient | null = null;
+  private packetMonitorActive = false;
 
   // XMODEM state
   private xmodemFirmware: Uint8Array | null = null;
@@ -508,6 +530,128 @@ export class SilabsTools {
     }
   }
 
+  public addEzspEventListener(listener: (event: EzspEvent) => void): () => void {
+    this.ensureListener();
+    const client = this.getEzspClient();
+    return client.addEventListener(listener);
+  }
+
+  public async backupNvm3(onProgress: (percent: number, message: string) => void = () => {}): Promise<Nvm3Backup> {
+    this.ensureListener();
+    const client = this.getEzspClient();
+    const { version } = await client.initialize();
+    const count = await client.getTokenCount();
+    if (count > 0x100) throw new Error(`Unsupported NVM3 token count: ${count}`);
+    const tokens: Nvm3Backup["tokens"] = [];
+
+    for (let tokenIndex = 0; tokenIndex < count; tokenIndex++) {
+      const info = await client.getTokenInfo(tokenIndex);
+      const entries: Array<{ index: number; data: number[] }> = [];
+      const entryCount = info.isIndexed ? info.arraySize : 1;
+      for (let index = 0; index < entryCount; index++) {
+        const data = await client.getTokenData(info.key, index);
+        if (data.length !== info.size) {
+          throw new Error(`Unexpected data size for NVM3 token 0x${info.key.toString(16)}`);
+        }
+        entries.push({ index, data: Array.from(data) });
+      }
+      tokens.push({ ...info, entries });
+      onProgress(Math.round(((tokenIndex + 1) / count) * 100), `Backed up token ${tokenIndex + 1}/${count}`);
+    }
+
+    return { format: "xzg-mt-silabs-nvm3", version: 1, ezspVersion: version, tokens };
+  }
+
+  public async restoreNvm3(backup: Nvm3Backup, onProgress: (percent: number, message: string) => void = () => {}): Promise<void> {
+    if (!backup || backup.format !== "xzg-mt-silabs-nvm3" || backup.version !== 1 || !Array.isArray(backup.tokens)) {
+      throw new Error("Unsupported Silabs NVM3 backup format");
+    }
+
+    this.ensureListener();
+    const client = this.getEzspClient();
+    await client.initialize();
+    const count = await client.getTokenCount();
+    if (backup.tokens.length !== count) throw new Error("NVM3 backup token table does not match this device");
+    const currentTokens = new Map<number, Nvm3TokenInfo>();
+    for (let tokenIndex = 0; tokenIndex < count; tokenIndex++) {
+      const info = await client.getTokenInfo(tokenIndex);
+      currentTokens.set(info.key, info);
+    }
+    if (new Set(backup.tokens.map((token) => token?.key)).size !== backup.tokens.length) {
+      throw new Error("NVM3 backup contains duplicate token keys");
+    }
+
+    const validatedTokens: Array<{ key: number; entries: Array<{ index: number; data: number[] }> }> = [];
+    for (let tokenNumber = 0; tokenNumber < backup.tokens.length; tokenNumber++) {
+      const saved = backup.tokens[tokenNumber];
+      if (!saved || !Number.isInteger(saved.key) || saved.key < 0 || saved.key > 0xffffffff ||
+          !Number.isInteger(saved.size) || saved.size < 0 || saved.size > 0xff ||
+          !Number.isInteger(saved.arraySize) || saved.arraySize < 0 || saved.arraySize > 0xff) {
+        throw new Error("Invalid token metadata in NVM3 backup");
+      }
+      const current = currentTokens.get(saved.key);
+      if (!current || current.tokenIndex !== saved.tokenIndex || current.size !== saved.size ||
+          current.isCounter !== saved.isCounter || current.isIndexed !== saved.isIndexed ||
+          current.arraySize !== saved.arraySize || !Array.isArray(saved.entries)) {
+        throw new Error(`Token 0x${saved.key.toString(16)} is missing or incompatible with this firmware`);
+      }
+      for (const entry of saved.entries) {
+        if (!entry || !Number.isInteger(entry.index) || entry.index < 0 ||
+            entry.index >= (current.isIndexed ? current.arraySize : 1) ||
+            !Array.isArray(entry.data) || entry.data.length !== current.size ||
+            entry.data.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 0xff)) {
+          throw new Error(`Invalid data for token 0x${saved.key.toString(16)}`);
+        }
+      }
+      const expectedEntries = current.isIndexed ? current.arraySize : 1;
+      if (saved.entries.length !== expectedEntries ||
+          new Set(saved.entries.map((entry) => entry.index)).size !== expectedEntries) {
+        throw new Error(`Incomplete token data for 0x${saved.key.toString(16)}`);
+      }
+      validatedTokens.push({ key: saved.key, entries: saved.entries });
+    }
+
+    for (let tokenNumber = 0; tokenNumber < validatedTokens.length; tokenNumber++) {
+      const token = validatedTokens[tokenNumber];
+      for (const entry of token.entries) {
+        await client.setTokenData(token.key, entry.index, new Uint8Array(entry.data));
+      }
+      onProgress(Math.round(((tokenNumber + 1) / validatedTokens.length) * 100), `Restored token ${tokenNumber + 1}/${validatedTokens.length}`);
+    }
+  }
+
+  public async startEnergyScan(
+    duration: number,
+    channelMask: number = 0x07fff800,
+    onProgress: (percent: number, message: string) => void = () => {},
+  ): Promise<void> {
+    this.ensureListener();
+    await this.getEzspClient().startEnergyScan(duration, channelMask, onProgress);
+  }
+
+  public async startPacketMonitor(channel: number): Promise<void> {
+    this.ensureListener();
+    await this.getEzspClient().startPacketMonitor(channel);
+    this.packetMonitorActive = true;
+  }
+
+  public async stopPacketMonitor(): Promise<void> {
+    if (this.ezspClient && this.packetMonitorActive) {
+      await this.ezspClient.stopPacketMonitor();
+      this.packetMonitorActive = false;
+    }
+  }
+
+  public dispose(): void {
+    this.ezspClient?.dispose();
+    this.spinelClient?.dispose();
+  }
+
+  private getEzspClient(): EzspAshClient {
+    if (!this.ezspClient) this.ezspClient = new EzspAshClient(this.link, this.logger);
+    return this.ezspClient;
+  }
+
   public async getSpinelVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
     this.spinelClient = new SpinelClient(this.link);
     const spinelHandler = (data: Uint8Array) => this.spinelClient?.handleData(data);
@@ -881,8 +1025,15 @@ class EzspAshClient {
   private pendingAckResolve: (() => void) | null = null;
   private pendingAckReject: ((err: Error) => void) | null = null;
   private ezspSeq = 0;
+  private protocolVersion = 4;
+  private callbackPending = false;
+  private readonly eventListeners = new Set<(event: EzspEvent) => void>();
+  private monitorPolling = false;
+  private monitorPollPromise: Promise<void> | null = null;
+  private monitorChannel = 0;
   private pendingResponse: {
     seq: number;
+    frameId: number;
     resolve: (payload: Uint8Array) => void;
     reject: (err: Error) => void;
     timer: number;
@@ -913,6 +1064,9 @@ class EzspAshClient {
     if (this.readyReject) {
       this.readyReject(new Error("EZSP client disposed"));
     }
+    this.callbackPending = false;
+    this.monitorPolling = false;
+    this.eventListeners.clear();
     this.readyResolve = null;
     this.readyReject = null;
     this.readyPromise = null;
@@ -963,6 +1117,7 @@ class EzspAshClient {
     }
 
     const actualVersion = response1[0];
+    this.protocolVersion = actualVersion;
     const stackType = response1[1];
     const stackVersion = response1[2] | (response1[3] << 8);
 
@@ -971,6 +1126,7 @@ class EzspAshClient {
       if (response2.length < 4 || response2[0] !== actualVersion) {
         throw new Error("EZSP version negotiation failed");
       }
+      this.protocolVersion = response2[0];
     }
 
     this.initialized = true;
@@ -1233,79 +1389,203 @@ class EzspAshClient {
     return (await this.getMfgCustomEui64()) === null;
   }
 
-  /**
-   * Read token data using getTokenData (0x0102)
-   */
-  private async getTokenData(tokenId: number, index: number): Promise<Uint8Array | null> {
-    const payload = new Uint8Array(8);
-    payload[0] = tokenId & 0xff;
-    payload[1] = (tokenId >> 8) & 0xff;
-    payload[2] = (tokenId >> 16) & 0xff;
-    payload[3] = (tokenId >> 24) & 0xff;
-    payload[4] = index & 0xff;
-    payload[5] = (index >> 8) & 0xff;
-    payload[6] = (index >> 16) & 0xff;
-    payload[7] = (index >> 24) & 0xff;
-
-    const response = await this.sendEzspCommand(0x0102, payload, 4000);
-
-    if (response.length < 1) {
-      return null;
+    public addEventListener(listener: (event: EzspEvent) => void): () => void {
+      this.eventListeners.add(listener);
+      return () => this.eventListeners.delete(listener);
     }
 
-    const status = response[0];
-    if (status !== 0x00) {
-      return null;
+    public async getTokenCount(): Promise<number> {
+      await this.ensureReady();
+      await this.initialize();
+      const response = await this.sendEzspCommand(0x0100, new Uint8Array(), 4000);
+      const countSize = this.protocolVersion >= 0x12 ? 4 : 1;
+      if (response.length < countSize) throw new Error("Invalid getTokenCount response");
+      return countSize === 4 ? this.readUInt32(response, 0) : response[0];
     }
 
-    // Response format (EZSP v9+): [status, value_length_low, value_length_high, ...value_data]
-    if (response.length < 3) {
-      return null;
+    public async getTokenInfo(tokenIndex: number): Promise<Nvm3TokenInfo> {
+      if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex > 0xff) {
+        throw new Error("Token table index must be between 0 and 255");
+      }
+      const response = await this.sendEzspCommand(0x0101, new Uint8Array([tokenIndex]), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
+      const status = this.readStatus(response);
+      if (status !== 0) throw new Error(`getTokenInfo failed with status 0x${status.toString(16)}`);
+      return {
+        tokenIndex,
+        key: this.readUInt32(response, offset),
+        isCounter: response[offset + 4] !== 0,
+        isIndexed: response[offset + 5] !== 0,
+        size: response[offset + 6],
+        arraySize: response[offset + 7],
+      };
     }
 
-    const valueLength = response[1] | (response[2] << 8);
-    if (response.length < 3 + valueLength) {
-      return null;
+    public async getTokenData(tokenId: number, index: number): Promise<Uint8Array> {
+      const response = await this.sendEzspCommand(0x0102, this.tokenIndexPayload(tokenId, index), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset + 4) throw new Error("Invalid getTokenData response");
+      const status = this.readStatus(response);
+      if (status !== 0) throw new Error(`getTokenData failed with status 0x${status.toString(16)}`);
+      const size = this.readUInt32(response, offset);
+      if (response.length < offset + 4 + size) throw new Error("Truncated getTokenData response");
+      return response.slice(offset + 4, offset + 4 + size);
     }
 
-    return response.slice(3, 3 + valueLength);
-  }
-
-  /**
-   * Write token data using setTokenData (0x0103)
-   */
-  private async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
-    const payload = new Uint8Array(4 + 4 + 1 + data.length);
-
-    // Token ID (little-endian)
-    payload[0] = tokenId & 0xff;
-    payload[1] = (tokenId >> 8) & 0xff;
-    payload[2] = (tokenId >> 16) & 0xff;
-    payload[3] = (tokenId >> 24) & 0xff;
-
-    // Index (little-endian)
-    payload[4] = index & 0xff;
-    payload[5] = (index >> 8) & 0xff;
-    payload[6] = (index >> 16) & 0xff;
-    payload[7] = (index >> 24) & 0xff;
-
-    // Length (1 byte) + Data
-    payload[8] = data.length;
-    payload.set(data, 9);
-
-    const response = await this.sendEzspCommand(0x0103, payload, 4000);
-
-    if (response.length < 1) {
-      throw new Error("Invalid setTokenData response");
+    public async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
+      if (data.length > 0xffffffff) throw new Error("Token data is too large");
+      const tokenData = this.tokenIndexPayload(tokenId, index);
+      const payload = new Uint8Array(tokenData.length + 4 + data.length);
+      payload.set(tokenData);
+      new DataView(payload.buffer).setUint32(tokenData.length, data.length, true);
+      payload.set(data, tokenData.length + 4);
+      const response = await this.sendEzspCommand(0x0103, payload, 4000);
+      if (response.length < this.statusSize()) throw new Error("Invalid setTokenData response");
+      const status = this.readStatus(response);
+      if (status !== 0) {
+        throw new Error(
+          `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
+        );
+      }
     }
 
-    const status = response[0];
-    if (status !== 0x00) {
-      throw new Error(
-        `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
-      );
+    public async startEnergyScan(
+      duration: number,
+      channelMask: number,
+      onProgress: (percent: number, message: string) => void,
+    ): Promise<void> {
+      if (!Number.isInteger(duration) || duration < 0 || duration > 14) {
+        throw new Error("Energy scan duration must be between 0 and 14");
+      }
+      let completed = false;
+      let scanError: Error | null = null;
+      let channelsScanned = 0;
+      const removeListener = this.addEventListener((event) => {
+        if (event.type === "scanComplete") {
+          completed = true;
+          if (event.status !== 0) scanError = new Error(`Energy scan failed with status 0x${event.status.toString(16)}`);
+        } else if (event.type === "energyScanResult") {
+          channelsScanned++;
+          onProgress(Math.min(99, channelsScanned * 6), `Channel ${event.channel}: ${event.rssi} dBm`);
+        }
+      });
+
+      try {
+        const payload = new Uint8Array(6);
+        payload[0] = 0x02; // ENERGY_SCAN
+        new DataView(payload.buffer).setUint32(1, channelMask >>> 0, true);
+        payload[5] = duration;
+        const response = await this.sendEzspCommand(0x001a, payload, 4000);
+        this.assertStatus(response, "startScan");
+        const timeoutAt = Date.now() + Math.min(300000, Math.max(15000, 2 ** duration * 16000));
+        while (!completed && Date.now() < timeoutAt) {
+          await this.pollCallbacks();
+          if (!completed) await sleep(100);
+        }
+        if (!completed) throw new Error("Timed out waiting for energy scan completion");
+        if (scanError) throw scanError;
+        onProgress(100, "Energy scan complete");
+      } finally {
+        removeListener();
+      }
     }
-  }
+
+    public async startPacketMonitor(channel: number): Promise<void> {
+      if (!Number.isInteger(channel) || channel < 11 || channel > 26) {
+        throw new Error("IEEE 802.15.4 channel must be between 11 and 26");
+      }
+      await this.ensureReady();
+      await this.initialize();
+      this.assertStatus(await this.sendEzspCommand(0x0083, new Uint8Array([1]), 4000), "mfglibInternalStart");
+      try {
+        this.assertStatus(await this.sendEzspCommand(0x008a, new Uint8Array([channel]), 4000), "mfglibInternalSetChannel");
+      } catch (error) {
+        await this.sendEzspCommand(0x0084, new Uint8Array(), 4000).catch(() => {});
+        throw error;
+      }
+      this.monitorChannel = channel;
+      this.monitorPolling = true;
+      this.monitorPollPromise = this.runMonitorCallbackPolling();
+    }
+
+    public async stopPacketMonitor(): Promise<void> {
+      this.monitorPolling = false;
+      await this.monitorPollPromise?.catch(() => {});
+      this.monitorPollPromise = null;
+      this.assertStatus(await this.sendEzspCommand(0x0084, new Uint8Array(), 4000), "mfglibInternalEnd");
+    }
+
+    private async runMonitorCallbackPolling(): Promise<void> {
+      while (this.monitorPolling && !this.disposed) {
+        await this.pollCallbacks().catch((error) => this.logger(`EZSP callback poll failed: ${error}`));
+        if (this.monitorPolling) await sleep(100);
+      }
+    }
+
+    private async pollCallbacks(): Promise<void> {
+      await this.sendEzspCommand(0x0006, new Uint8Array(), 2000);
+    }
+
+    private async drainCallbacks(): Promise<void> {
+      let count = 0;
+      while (this.callbackPending && count++ < 256) {
+        this.callbackPending = false;
+        await this.pollCallbacks();
+      }
+      if (count >= 256) this.logger("EZSP callback queue limit reached");
+    }
+
+    private dispatchCallback(frameId: number, body: Uint8Array): void {
+      const emit = (event: EzspEvent) => this.eventListeners.forEach((listener) => listener(event));
+      if (frameId === 0x0048 && body.length >= 2) {
+        emit({ type: "energyScanResult", channel: body[0], rssi: (body[1] << 24) >> 24 });
+      } else if (frameId === 0x001c && body.length >= 1 + this.statusSize()) {
+        const status = this.readStatus(body, 1);
+        emit({ type: "scanComplete", channel: body[0], status });
+      } else if (frameId === 0x008e && body.length >= 3) {
+        const length = body[2];
+        if (body.length < 3 + length) return;
+        const packet = body.slice(3, 3 + length);
+        emit({
+          type: "packet",
+          channel: this.monitorChannel,
+          linkQuality: body[0],
+          rssi: (body[1] << 24) >> 24,
+          data: packet,
+        });
+      }
+    }
+
+    private tokenIndexPayload(tokenId: number, index: number): Uint8Array {
+      if (!Number.isInteger(tokenId) || tokenId < 0 || tokenId > 0xffffffff ||
+          !Number.isInteger(index) || index < 0 || index > 0xffffffff) {
+        throw new Error("Token key and index must be unsigned 32-bit integers");
+      }
+      const payload = new Uint8Array(8);
+      const view = new DataView(payload.buffer);
+      view.setUint32(0, tokenId, true);
+      view.setUint32(4, index, true);
+      return payload;
+    }
+
+    private statusSize(): number {
+      return this.protocolVersion < 0x0e ? 1 : 4;
+    }
+
+    private readStatus(data: Uint8Array, offset = 0): number {
+      if (data.length < offset + this.statusSize()) throw new Error("Truncated EZSP status");
+      return this.statusSize() === 1 ? data[offset] : this.readUInt32(data, offset);
+    }
+
+    private readUInt32(data: Uint8Array, offset: number): number {
+      return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
+    }
+
+    private assertStatus(data: Uint8Array, command: string): void {
+      const status = this.readStatus(data);
+      if (status !== 0) throw new Error(`${command} failed with status 0x${status.toString(16)}`);
+    }
 
   /**
    * Write MFG token using setMfgToken (0x0C)
@@ -1318,11 +1598,11 @@ class EzspAshClient {
 
     const response = await this.sendEzspCommand(0x000c, payload, 4000);
 
-    if (response.length < 1) {
+    if (response.length < this.statusSize()) {
       throw new Error("Invalid setMfgToken response");
     }
 
-    const status = response[0];
+    const status = this.readStatus(response);
     if (status !== 0x00) {
       throw new Error(
         `setMfgToken failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
@@ -1383,6 +1663,8 @@ class EzspAshClient {
 
   private async sendEzspCommand(frameId: number, payload: Uint8Array, timeoutMs = 2000): Promise<Uint8Array> {
     if (this.pendingResponse) throw new Error("EZSP request already in flight");
+    if (frameId !== 0x0006 && this.callbackPending) await this.drainCallbacks();
+    if (this.pendingResponse) throw new Error("EZSP request already in flight");
     const seq = this.ezspSeq;
     this.ezspSeq = (this.ezspSeq + 1) & 0xff;
 
@@ -1412,7 +1694,7 @@ class EzspAshClient {
           this.pendingResponse = null;
         }
       }, timeoutMs);
-      this.pendingResponse = { seq, resolve, reject, timer };
+      this.pendingResponse = { seq, frameId, resolve, reject, timer };
     });
 
     await this.writeDataFrame(frame);
@@ -1661,7 +1943,7 @@ class EzspAshClient {
   }
 
   private handleEzspPayload(payload: Uint8Array) {
-    if (!this.pendingResponse) return;
+    if (payload.length < 3) return;
 
     const seq = payload[0];
     const frameControl = payload[1];
@@ -1691,13 +1973,28 @@ class EzspAshClient {
     //     .join(" ")
     // );
 
-    if ((frameControl & 0x80) === 0 && this.pendingResponse.seq !== seq) {
-      return; // callback frame; ignore for now
+    if ((frameControl & 0x10) !== 0) {
+      this.callbackPending ||= (frameControl & 0x04) !== 0;
+      this.dispatchCallback(frameId, body);
+      return;
     }
-    if (this.pendingResponse.seq !== seq) return;
-    window.clearTimeout(this.pendingResponse.timer);
-    this.pendingResponse.resolve(body);
+    if ((frameControl & 0x80) === 0 || !this.pendingResponse || this.pendingResponse.seq !== seq) return;
+
+    this.callbackPending = (frameControl & 0x04) !== 0;
+    const pending = this.pendingResponse;
+    if (pending.frameId === 0x0006) {
+      if (frameId === 0x0007) {
+        this.callbackPending = false;
+      } else {
+        this.dispatchCallback(frameId, body);
+      }
+    } else if (frameId !== pending.frameId) {
+      return;
+    }
+
+    window.clearTimeout(pending.timer);
     this.pendingResponse = null;
+    pending.resolve(body);
   }
 
   private sendAckFrame() {

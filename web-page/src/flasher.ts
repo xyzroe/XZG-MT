@@ -54,6 +54,11 @@ import {
   bootloaderVersionEl,
   getModelBtn,
   btnNvWrite,
+  btnSilabsEnergyScan,
+  silabsScanDuration,
+  silabsChannel,
+  btnSilabsSniffStart,
+  btnSilabsSniffStop,
   startFlashBtn,
   bslUrlSelect,
   rstUrlSelect,
@@ -62,6 +67,7 @@ import {
   logEl,
   showIoEl,
   btnCopyLog,
+  monitorOnlyToggle,
   connectDebuggerBtn,
   connectLoaderBtn,
   debuggerConnectWrap,
@@ -137,6 +143,7 @@ let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let sl_tools: SilabsTools | null = null;
+let slPacketListenerRemove: (() => void) | null = null;
 let ti_tools: TiTools | null = null;
 let detectedTiChipFamily: TiChipFamily | null = null;
 
@@ -153,7 +160,7 @@ chooseSerialBtn.addEventListener("click", async () => {
     if (!chosen) throw new Error("No port selected");
 
     const family = getSelectedFamily();
-    if (family === "esp") {
+    if (family === "esp" && !monitorOnlyToggle?.checked) {
       log("Port selected, initializing ESP transport...");
       const transport = new Transport(chosen);
       const terminal = {
@@ -233,6 +240,11 @@ chooseSerialBtn.addEventListener("click", async () => {
     //updateConnectionUI();
     updatePortInfo(br);
 
+    if (monitorOnlyToggle?.checked) {
+      startMonitorOnlyConnection("Serial");
+      return;
+    }
+
     await runConnectSequence();
   } catch (e: any) {
     log(`Serial error: ${e?.message || String(e)}`);
@@ -243,11 +255,17 @@ disconnectBtn.addEventListener("click", async () => {
   if (!activeConnection) return;
 
   // Reset protocol tools
+  slPacketListenerRemove?.();
+  slPacketListenerRemove = null;
+  await sl_tools?.stopPacketMonitor().catch(() => {});
+  sl_tools?.dispose();
   sl_tools = null;
   ti_tools = null;
   detectedTiChipFamily = null;
   arduinoTools = null;
   telinkTools = null;
+  if (btnSilabsSniffStart) btnSilabsSniffStart.disabled = false;
+  if (btnSilabsSniffStop) btnSilabsSniffStop.disabled = true;
 
   // Clear image
   hexImage = null;
@@ -319,6 +337,12 @@ connectTcpBtn.addEventListener("click", async () => {
     activeConnection = "tcp";
     // updateConnectionUI();
     updatePortInfo();
+
+    if (monitorOnlyToggle?.checked) {
+      startMonitorOnlyConnection("TCP");
+      return;
+    }
+
     await runConnectSequence();
   } catch (e: any) {
     log(`TCP error: ${e?.message || String(e)}`);
@@ -387,7 +411,7 @@ btnNvRead?.addEventListener("click", async () => {
         jsonContent,
         "application/json",
         "json",
-        "NVRAM",
+        getSelectedFamily() === "sl" ? "NVM3" : "NVRAM",
         chipModelEl?.value,
         ieeeMacEl?.value,
       );
@@ -595,6 +619,10 @@ btnNvWrite?.addEventListener("click", async () => {
       }
 
       const j = JSON.parse(text);
+      if (getSelectedFamily() === "sl" &&
+          !window.confirm("Restore these NVM3 tokens? This replaces saved network credentials and counters. Use only with a compatible firmware/token table.")) {
+        return false;
+      }
       await nvramWriteAll(j);
       log("NVRAM write done. Resetting...");
       try {
@@ -610,9 +638,68 @@ btnNvWrite?.addEventListener("click", async () => {
       throw e;
     }
   });
-});
+  });
 
-// UI wiring for IEEE secondary address
+  btnSilabsEnergyScan?.addEventListener("click", async () => {
+    if (!sl_tools) {
+      log("SilabsTools not initialized");
+      return;
+    }
+    btnSilabsEnergyScan!.disabled = true;
+    nvProgressSetColor("primary");
+    nvProgressReset("Starting energy scan...");
+    try {
+      await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, nvProgress);
+      log("EZSP energy scan completed");
+    } catch (error: unknown) {
+      log("EZSP energy scan failed: " + (error instanceof Error ? error.message : String(error)));
+      nvProgressReset("Error");
+    } finally {
+      btnSilabsEnergyScan!.disabled = false;
+    }
+  });
+
+  btnSilabsSniffStart?.addEventListener("click", async () => {
+    if (!sl_tools) {
+      log("SilabsTools not initialized");
+      return;
+    }
+    btnSilabsSniffStart!.disabled = true;
+    try {
+      const channel = Number(silabsChannel?.value ?? 11);
+      slPacketListenerRemove?.();
+      slPacketListenerRemove = sl_tools.addEzspEventListener((event) => {
+        if (event.type === "packet") {
+          const hex = Array.from(event.data).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+          log(`Sniff ch ${event.channel || channel} RSSI ${event.rssi} dBm LQI ${event.linkQuality}: ${hex}`);
+        }
+      });
+      await sl_tools.startPacketMonitor(channel);
+      btnSilabsSniffStop!.disabled = false;
+      log(`EZSP packet monitor started on channel ${channel}`);
+    } catch (error: unknown) {
+      slPacketListenerRemove?.();
+      slPacketListenerRemove = null;
+      btnSilabsSniffStart!.disabled = false;
+      log("EZSP packet monitor failed: " + (error instanceof Error ? error.message : String(error)));
+    }
+  });
+
+  btnSilabsSniffStop?.addEventListener("click", async () => {
+    btnSilabsSniffStop!.disabled = true;
+    try {
+      await sl_tools?.stopPacketMonitor();
+      log("EZSP packet monitor stopped");
+    } catch (error: unknown) {
+      log("Failed to stop EZSP packet monitor: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      slPacketListenerRemove?.();
+      slPacketListenerRemove = null;
+      btnSilabsSniffStart!.disabled = false;
+    }
+  });
+
+  // UI wiring for IEEE secondary address
 btnIeeeRead?.addEventListener("click", async () => {
   await withButtonStatus(btnIeeeRead!, async () => {
     try {
@@ -1577,6 +1664,16 @@ function getActiveLink(): {
   throw new Error("No transport connected");
 }
 
+function startMonitorOnlyConnection(transport: string): void {
+  if (showIoEl) {
+    showIoEl.checked = true;
+    showIoEl.dispatchEvent(new Event("change"));
+  }
+  log(`${transport} monitor started. No device commands sent.`);
+  updateConnectionUI();
+  deviceDetectBusy(false);
+}
+
 // Unified: enter BSL for current transport (optimized per concept)
 async function enterBsl(): Promise<void> {
   const bslTpl = (bslUrlInput?.value || "").trim();
@@ -2353,6 +2450,10 @@ async function nvramReadAll(): Promise<any> {
   nvProgressSetColor("primary");
   // nvProgressReset("Reading...");
   await sleep(500);
+  if (getSelectedFamily() === "sl") {
+    if (!sl_tools) throw new Error("SilabsTools not initialized");
+    return sl_tools.backupNvm3(nvProgress);
+  }
   if (!ti_tools) throw new Error("TiTools not initialized");
   const payload = await ti_tools.nvramReadAll(nvProgress);
   // nvProgress(100, "Done");
@@ -2363,6 +2464,9 @@ async function nvramEraseAll(): Promise<void> {
   nvProgressSetColor("danger");
   // nvProgressReset("Erasing...");
   await sleep(500);
+  if (getSelectedFamily() === "sl") {
+    throw new Error("NVM3 erase is not available; use a compatible recovery GBL image");
+  }
   if (!ti_tools) throw new Error("TiTools not initialized");
   await ti_tools.nvramEraseAll(nvProgress);
   // nvProgress(100, "Erase done");
@@ -2372,6 +2476,11 @@ async function nvramWriteAll(obj: any): Promise<void> {
   nvProgressSetColor("warning");
   // nvProgressReset("Writing...");
   await sleep(500);
+  if (getSelectedFamily() === "sl") {
+    if (!sl_tools) throw new Error("SilabsTools not initialized");
+    await sl_tools.restoreNvm3(obj, nvProgress);
+    return;
+  }
   if (!ti_tools) throw new Error("TiTools not initialized");
   await ti_tools.nvramWriteAll(obj, (s: string) => log(s), nvProgress);
   // nvProgress(100, "Write done");
