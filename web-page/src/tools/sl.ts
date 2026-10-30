@@ -1969,7 +1969,7 @@ class EzspAshClient {
     // );
 
     if ((frameControl & 0x10) !== 0) {
-      this.callbackPending = (frameControl & 0x04) !== 0;
+      this.callbackPending ||= (frameControl & 0x04) !== 0;
       this.dispatchCallback(frameId, body);
       return;
     }

@@ -638,6 +638,7 @@ btnNvWrite?.addEventListener("click", async () => {
       throw e;
     }
   });
+  });
 
   btnSilabsEnergyScan?.addEventListener("click", async () => {
     if (!sl_tools) {
@@ -697,9 +698,8 @@ btnNvWrite?.addEventListener("click", async () => {
       btnSilabsSniffStart!.disabled = false;
     }
   });
-});
 
-// UI wiring for IEEE secondary address
+  // UI wiring for IEEE secondary address
 btnIeeeRead?.addEventListener("click", async () => {
   await withButtonStatus(btnIeeeRead!, async () => {
     try {
