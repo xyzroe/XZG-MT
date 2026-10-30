@@ -14,6 +14,7 @@ let selectedFamilyValue: FamilyValue = "ti";
 // General section
 export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
 export const generalSection = document.getElementById("generalSection") as HTMLElement | null;
+export const monitorOnlyToggle = document.getElementById("monitorOnlyToggle") as HTMLInputElement | null;
 export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
 export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
@@ -115,6 +116,7 @@ const firmwareSection = document.getElementById("firmwareSection") as HTMLDivEle
 const localFirmwareSection = document.getElementById("localFirmwareSection") as HTMLDivElement | null;
 export const localFile = document.getElementById("localFile") as HTMLInputElement;
 const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
+const slRecoveryHelp = document.getElementById("slRecoveryHelp") as HTMLDivElement | null;
 
 // Cloud firmware section
 const cloudFirmwareSection = document.getElementById("cloudFirmwareSection") as HTMLDivElement | null;
@@ -406,6 +408,7 @@ function resetToDefaultUI() {
     { el: ieeeSection, show: false },
     { el: ieeeForceWrap, show: false },
     { el: nvramSection, show: false },
+    { el: slRecoveryHelp, show: false },
     // Fields - default: basic visible
     { el: serialBaudWrap, show: true },
     { el: arduinoBootWrap, show: false },
@@ -466,6 +469,7 @@ export function updateUIForFamily() {
     setMultipleClasses([
       { el: ieeeSection, show: true },
       { el: ieeeForceWrap, show: true },
+      { el: slRecoveryHelp, show: true },
       { el: flashSizeWrap, show: false },
       { el: ieeeMacWrap, show: false },
       { el: flashOptionsWrap, show: false },
@@ -890,6 +894,7 @@ export function updateConnectionUI() {
   }
 
   const anyActive = !!activeConnection;
+  if (monitorOnlyToggle) monitorOnlyToggle.disabled = anyActive;
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);

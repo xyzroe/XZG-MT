@@ -62,6 +62,7 @@ import {
   logEl,
   showIoEl,
   btnCopyLog,
+  monitorOnlyToggle,
   connectDebuggerBtn,
   connectLoaderBtn,
   debuggerConnectWrap,
@@ -153,7 +154,7 @@ chooseSerialBtn.addEventListener("click", async () => {
     if (!chosen) throw new Error("No port selected");
 
     const family = getSelectedFamily();
-    if (family === "esp") {
+    if (family === "esp" && !monitorOnlyToggle?.checked) {
       log("Port selected, initializing ESP transport...");
       const transport = new Transport(chosen);
       const terminal = {
@@ -232,6 +233,11 @@ chooseSerialBtn.addEventListener("click", async () => {
     activeConnection = "serial";
     //updateConnectionUI();
     updatePortInfo(br);
+
+    if (monitorOnlyToggle?.checked) {
+      startMonitorOnlyConnection("Serial");
+      return;
+    }
 
     await runConnectSequence();
   } catch (e: any) {
@@ -319,6 +325,12 @@ connectTcpBtn.addEventListener("click", async () => {
     activeConnection = "tcp";
     // updateConnectionUI();
     updatePortInfo();
+
+    if (monitorOnlyToggle?.checked) {
+      startMonitorOnlyConnection("TCP");
+      return;
+    }
+
     await runConnectSequence();
   } catch (e: any) {
     log(`TCP error: ${e?.message || String(e)}`);
@@ -1575,6 +1587,16 @@ function getActiveLink(): {
       offData: (cb: (d: Uint8Array) => void) => tcp!.offData(cb),
     } as any;
   throw new Error("No transport connected");
+}
+
+function startMonitorOnlyConnection(transport: string): void {
+  if (showIoEl) {
+    showIoEl.checked = true;
+    showIoEl.dispatchEvent(new Event("change"));
+  }
+  log(`${transport} monitor started. No device commands sent.`);
+  updateConnectionUI();
+  deviceDetectBusy(false);
 }
 
 // Unified: enter BSL for current transport (optimized per concept)
