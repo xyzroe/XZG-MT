@@ -4,8 +4,9 @@ import { saveToFile } from "../utils/http";
 import { SpinelClient, OpenThreadRcpInfo } from "./spinel";
 import { enterBootloader, makeReset } from "../utils/control";
 import { implyGateToggle } from "../ui";
+import { crc32 } from "../utils/crc";
 
-export type TiChipFamily = "cc26xx" | "cc2538";
+export type TiChipFamily = "cc26xx" | "cc26xx-m33" | "cc2538";
 
 // Re-export for backwards compatibility
 export type { OpenThreadRcpInfo } from "./spinel";
@@ -670,6 +671,7 @@ export class TiTools {
     while (Date.now() - start < timeoutMs) {
       if (this.rxBuf.length >= 2) {
         const size = this.rxBuf[0];
+        if (size < 2) throw new Error("CCTOOLS: invalid packet size");
         if (this.rxBuf.length >= size) {
           const chks = this.rxBuf[1];
           const data = this.rxBuf.slice(2, size);
@@ -940,6 +942,10 @@ export class TiTools {
       .join("");
     this.logger(`BSL OK. ChipId packet: ${chipHex}`);
 
+    if (chipHex === "120af000") {
+      throw new Error("CC2674P10 is a Cortex-M33 device; select the TI CC2674P10 (M33) family");
+    }
+
     const info: TiDeviceInfo = { chipIdHex: chipHex };
 
     // cc2538-bsl treats unknown IDs as CC26xx/13xx. Known CC2538 IDs: 0xb964/0xb965
@@ -1108,7 +1114,11 @@ export class TiTools {
     // CC26xx style: addr + widthCode + count
     // widthCode: 1 = 32-bit (4 bytes per read)
     // count: number of 32-bit words to read
-    const words = Math.floor(length / 4);
+    if (!Number.isInteger(addr) || addr < 0 || addr > 0xffffffff || addr % 4 !== 0 ||
+        !Number.isInteger(length) || length % 4 !== 0 || addr + length > 0x100000000) {
+      throw new Error("Memory block address and length must be aligned 32-bit values");
+    }
+    const words = length / 4;
     if (words === 0 || words > 63) {
       throw new Error(`Invalid word count: ${words}, must be 1-63`);
     }
@@ -1121,6 +1131,7 @@ export class TiTools {
 
     const pkt = await this.sendCommandRaw(content, true, 3000);
     if (!pkt) throw new Error("CCTOOLS: no memReadBlock packet");
+    if (pkt.length !== length) throw new Error(`CCTOOLS: memory read returned ${pkt.length} bytes, expected ${length}`);
     const ok = await this.checkLastCmd();
     if (!ok) throw new Error("CCTOOLS: memReadBlock status failed");
     return pkt;
@@ -1257,7 +1268,7 @@ export class TiTools {
    * @returns 8-byte IEEE address
    */
   public async readSecondaryIeeeAddress(family: TiChipFamily): Promise<Uint8Array> {
-    if (!family) {
+    if (family !== "cc2538" && family !== "cc26xx") {
       throw new Error("Chip family must be specified. Call readDeviceInfo() first.");
     }
 
@@ -1337,7 +1348,7 @@ export class TiTools {
    * @param family - Chip family (required - should be obtained from readDeviceInfo)
    */
   public async writeSecondaryIeeeAddress(ieeeAddress: Uint8Array | string, family: TiChipFamily): Promise<void> {
-    if (!family) {
+    if (family !== "cc2538" && family !== "cc26xx") {
       throw new Error("Chip family must be specified. Call readDeviceInfo() first.");
     }
 
@@ -1427,6 +1438,7 @@ export class TiTools {
       const CCFG_LEN = 88;
       const IEEE_OFFSET = 0x20;
       const SECTOR_SIZE = 8192; // CC26xx flash sector size
+      if (flashSize < SECTOR_SIZE) throw new Error("Invalid flash size; IEEE write was refused");
 
       // CCFG is in the last sector
       const ccfgSectorAddr = flashSize - SECTOR_SIZE;
@@ -1450,6 +1462,11 @@ export class TiTools {
         if (offset % 2048 === 0) {
           this.logger(`Read ${offset + chunkSize}/${SECTOR_SIZE} bytes`);
         }
+      }
+
+      const originalCrc = await this.crc32Cc26xx(ccfgSectorAddr, SECTOR_SIZE);
+      if (originalCrc !== crc32(sectorData)) {
+        throw new Error("CCFG read CRC32 mismatch; IEEE write was refused before erasing");
       }
 
       // Modify IEEE address in sector data
@@ -1478,6 +1495,8 @@ export class TiTools {
         }
       }
 
+      const writtenCrc = await this.crc32Cc26xx(ccfgSectorAddr, SECTOR_SIZE);
+      if (writtenCrc !== crc32(sectorData)) throw new Error("CCFG CRC32 mismatch after IEEE write");
       this.logger("Secondary IEEE address written successfully");
     }
   }

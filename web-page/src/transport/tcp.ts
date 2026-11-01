@@ -16,17 +16,28 @@ export class TcpClient {
   }
 
   async connect(host: string, port: number): Promise<void> {
+    if (this.ws) throw new Error("TCP connection is already open or connecting");
     // Bridge URL; can be made configurable via settings
     const url = `${this.wsBase}/connect?host=${encodeURIComponent(host)}&port=${port}`;
     await new Promise<void>((resolve, reject) => {
       const ws = new WebSocket(url);
+      this.ws = ws;
       ws.binaryType = "arraybuffer";
       ws.onopen = () => {
-        this.ws = ws;
+        if (this.ws !== ws) {
+          ws.close();
+          reject(new Error("TCP connection was cancelled"));
+          return;
+        }
         resolve();
       };
-      ws.onerror = () => reject(new Error("WebSocket error"));
+      ws.onerror = () => {
+        if (this.ws === ws) this.ws = null;
+        ws.close();
+        reject(new Error("WebSocket error"));
+      };
       ws.onmessage = (ev) => {
+        if (this.ws !== ws) return;
         const data = ev.data instanceof ArrayBuffer ? new Uint8Array(ev.data) : new Uint8Array();
         if (data.length === 0) return;
         for (const cb of this.onDataCbs) {
@@ -38,10 +49,8 @@ export class TcpClient {
         }
       };
       ws.onclose = (ev) => {
-        if (this.ws === null) {
-          // Closed before open => connection failed
-          reject(new Error(`WebSocket closed (${ev.code})`));
-        }
+        if (this.ws === ws) this.ws = null;
+        reject(new Error(`WebSocket closed (${ev.code})`));
       };
     });
   }
@@ -55,6 +64,15 @@ export class TcpClient {
     }
     if (data.length === 0) return;
     this.ws.send(data);
+  }
+
+  async reconnect(host: string, port: number): Promise<void> {
+    const callbacks = this.onDataCbs;
+    const onTx = this.onTxCb;
+    this.close();
+    this.onDataCbs = callbacks;
+    this.onTxCb = onTx;
+    await this.connect(host, port);
   }
 
   onData(cb: (data: Uint8Array) => void) {

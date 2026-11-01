@@ -24,16 +24,14 @@ func (a wsAddr) String() string  { return a.addr }
 // It pumps incoming WS messages into an io.Pipe for Read(), and implements Write() by
 // using NextWriter(websocket.BinaryMessage) for atomic writes.
 type wsNetConn struct {
-	ws       *websocket.Conn
-	pr       *io.PipeReader
-	pw       *io.PipeWriter
-	writeMu  sync.Mutex
-	closeMu  sync.Mutex
-	closed   bool
-	local    net.Addr
-	remote   net.Addr
-	readDLMu sync.Mutex
-	writeDLM sync.Mutex
+	ws      *websocket.Conn
+	pr      *io.PipeReader
+	pw      *io.PipeWriter
+	writeMu sync.Mutex
+	closeMu sync.Mutex
+	closed  bool
+	local   net.Addr
+	remote  net.Addr
 }
 
 func newWsNetConn(ws *websocket.Conn, localAddr, remoteAddr string) *wsNetConn {
@@ -48,10 +46,6 @@ func newWsNetConn(ws *websocket.Conn, localAddr, remoteAddr string) *wsNetConn {
 	// pump WS -> pipe writer
 	go func() {
 		defer pw.Close()
-		// buffer incoming frame data and emit complete logical packets.
-		// Special-case for protocol starting with 0x00 0xCC: third byte is length (L),
-		// total packet size = 3 + L. Adjust/extend rules for other protocols as needed.
-		buf := make([]byte, 0, 8192)
 		for {
 			mt, r, err := ws.NextReader()
 			if err != nil {
@@ -61,47 +55,10 @@ func newWsNetConn(ws *websocket.Conn, localAddr, remoteAddr string) *wsNetConn {
 			if mt != websocket.BinaryMessage && mt != websocket.TextMessage {
 				continue
 			}
-			// read full frame into tmp slice
-			data, err := io.ReadAll(r)
-			if err != nil {
+			// Forward a byte stream; packet framing belongs to the device protocol.
+			if _, err := io.Copy(pw, r); err != nil {
 				_ = pw.CloseWithError(err)
 				return
-			}
-			if len(data) == 0 {
-				// nothing to append, continue
-				continue
-			}
-			buf = append(buf, data...)
-
-			// try to flush complete logical packets from buffer
-			for {
-				if len(buf) == 0 {
-					break
-				}
-				// protocol: 0x00 0xCC <len> <payload>
-				if len(buf) >= 3 && buf[0] == 0x00 && buf[1] == 0xCC {
-					plen := int(buf[2])
-					total := 3 + plen
-					if len(buf) >= total {
-						if _, err := pw.Write(buf[:total]); err != nil {
-							_ = pw.CloseWithError(err)
-							return
-						}
-						// drop emitted bytes
-						buf = buf[total:]
-						continue
-					}
-					// not enough bytes yet — wait for next frame
-					break
-				}
-				// no known header — flush everything (or could implement other rules)
-				if len(buf) > 0 {
-					if _, err := pw.Write(buf); err != nil {
-						_ = pw.CloseWithError(err)
-						return
-					}
-					buf = buf[:0]
-				}
 			}
 		}
 	}()
@@ -165,14 +122,12 @@ func (c *wsNetConn) SetDeadline(t time.Time) error {
 }
 
 func (c *wsNetConn) SetReadDeadline(t time.Time) error {
-	c.readDLMu.Lock()
-	defer c.readDLMu.Unlock()
-	return c.ws.SetReadDeadline(t)
+	return c.ws.UnderlyingConn().SetReadDeadline(t)
 }
 
 func (c *wsNetConn) SetWriteDeadline(t time.Time) error {
-	c.writeDLM.Lock()
-	defer c.writeDLM.Unlock()
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	return c.ws.SetWriteDeadline(t)
 }
 
@@ -183,7 +138,7 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 	}
 
 	// Create TCP connection to target
-	tcpConn, err := net.Dial("tcp", target)
+	tcpConn, err := net.DialTimeout("tcp", target, 10*time.Second)
 	if err != nil {
 		log.Printf("[websocket] failed to connect to %s: %v\n", target, err)
 		_ = ws.Close()
@@ -202,9 +157,6 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 
 	log.Printf("[websocket] TCP connection established to %s\n", target)
 
-	// wrap websocket as net.Conn
-	wsConn := newWsNetConn(ws, ws.LocalAddr().String(), ws.RemoteAddr().String())
-
 	// Try to set TCP_NODELAY on websocket underlying TCP conn (reduce buffering)
 	if u := ws.UnderlyingConn(); u != nil {
 		if tcpU, ok := u.(*net.TCPConn); ok {
@@ -220,13 +172,25 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 		return nil
 	})
 
+	// Configure the reader before starting its pump.
+	wsConn := newWsNetConn(ws, ws.LocalAddr().String(), ws.RemoteAddr().String())
+
 	// Start ping routine
 	pingTicker := time.NewTicker(20 * time.Second)
 	defer pingTicker.Stop()
+	done := make(chan struct{})
+	defer close(done)
 	go func() {
-		for range pingTicker.C {
-			_ = ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			_ = ws.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second))
+		for {
+			select {
+			case <-done:
+				return
+			case <-pingTicker.C:
+				if err := ws.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second)); err != nil {
+					_ = wsConn.Close()
+					return
+				}
+			}
 		}
 	}()
 
@@ -290,8 +254,7 @@ func handleWebSocketConnection(ws *websocket.Conn, targetHost string, targetPort
 	}
 	// wake up/blocking ops: set immediate deadlines so blocked reads/writes unblock
 	_ = tcpConn.SetDeadline(time.Now())
-	_ = ws.SetWriteDeadline(time.Now())
-	_ = ws.SetReadDeadline(time.Now())
+	_ = ws.UnderlyingConn().SetDeadline(time.Now())
 
 	// ensure close both sides
 	_ = tcpConn.Close()
