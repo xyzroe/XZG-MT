@@ -14,6 +14,7 @@ let selectedFamilyValue: FamilyValue = "ti";
 // General section
 export const connectionSection = document.getElementById("connectionSection") as HTMLElement | null;
 export const generalSection = document.getElementById("generalSection") as HTMLElement | null;
+export const monitorOnlyToggle = document.getElementById("monitorOnlyToggle") as HTMLInputElement | null;
 export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
 export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
@@ -115,6 +116,7 @@ const firmwareSection = document.getElementById("firmwareSection") as HTMLDivEle
 const localFirmwareSection = document.getElementById("localFirmwareSection") as HTMLDivElement | null;
 export const localFile = document.getElementById("localFile") as HTMLInputElement;
 const localFileHelp = document.getElementById("localFileHelp") as HTMLDivElement | null;
+const slRecoveryHelp = document.getElementById("slRecoveryHelp") as HTMLDivElement | null;
 
 // Cloud firmware section
 const cloudFirmwareSection = document.getElementById("cloudFirmwareSection") as HTMLDivElement | null;
@@ -167,6 +169,8 @@ export const forceWrite = document.getElementById("forceWrite") as HTMLInputElem
 
 // NVRAM section
 const nvramSection = document.getElementById("nvramSection") as HTMLDivElement | null;
+const nvramTitle = document.getElementById("nvramTitle") as HTMLHeadingElement | null;
+const nvramDescription = document.getElementById("nvramDescription") as HTMLDivElement | null;
 export const btnNvRead = document.getElementById("btnNvRead") as HTMLButtonElement | null;
 export const btnNvErase = document.getElementById("btnNvErase") as HTMLButtonElement | null;
 export const btnNvWrite = document.getElementById("btnNvWrite") as HTMLButtonElement | null;
@@ -174,6 +178,12 @@ export const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElem
 
 // Actions section
 const actionsSection = document.getElementById("actionsSection") as HTMLDivElement | null;
+const silabsToolsSection = document.getElementById("silabsToolsSection") as HTMLDivElement | null;
+export const btnSilabsEnergyScan = document.getElementById("btnSilabsEnergyScan") as HTMLButtonElement | null;
+export const silabsScanDuration = document.getElementById("silabsScanDuration") as HTMLSelectElement | null;
+export const silabsChannel = document.getElementById("silabsChannel") as HTMLSelectElement | null;
+export const btnSilabsSniffStart = document.getElementById("btnSilabsSniffStart") as HTMLButtonElement | null;
+export const btnSilabsSniffStop = document.getElementById("btnSilabsSniffStop") as HTMLButtonElement | null;
 export const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
 export const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
 export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement | null;
@@ -406,6 +416,8 @@ function resetToDefaultUI() {
     { el: ieeeSection, show: false },
     { el: ieeeForceWrap, show: false },
     { el: nvramSection, show: false },
+    { el: silabsToolsSection, show: false },
+    { el: slRecoveryHelp, show: false },
     // Fields - default: basic visible
     { el: serialBaudWrap, show: true },
     { el: arduinoBootWrap, show: false },
@@ -428,7 +440,10 @@ function resetToDefaultUI() {
     { el: getVersionBtn, show: true },
     { el: pingBtn, show: false },
     { el: swireFlashBtn, show: false },
+    { el: btnNvErase, show: true },
   ]);
+  setText(nvramTitle, "NVRAM");
+  setText(nvramDescription, "Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with caution.");
 
   // Reset column classes to default
   replaceClass(serialSection, "col-md-12", "col-md-6");
@@ -450,6 +465,7 @@ export function updateUIForFamily() {
     setMultipleClasses([
       { el: ieeeSection, show: true },
       { el: nvramSection, show: true },
+      { el: btnNvErase, show: true },
       { el: flashSizeWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
       { el: ieeeMacWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
       { el: firmwareVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
@@ -458,6 +474,8 @@ export function updateUIForFamily() {
     ]);
 
     setText(ieeeDescription, "Read and write secondary IEEE address.");
+    setText(nvramTitle, "NVRAM");
+    setText(nvramDescription, "Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with caution.");
     setText(localFileHelp, "Use a local file (*.hex or *.bin).");
     setAttr(localFile, "accept", ".hex,.bin");
     setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/fw_files", "XZG-MT/fw_files");
@@ -466,6 +484,10 @@ export function updateUIForFamily() {
     setMultipleClasses([
       { el: ieeeSection, show: true },
       { el: ieeeForceWrap, show: true },
+      { el: nvramSection, show: true },
+      { el: btnNvErase, show: false },
+      { el: silabsToolsSection, show: true },
+      { el: slRecoveryHelp, show: true },
       { el: flashSizeWrap, show: false },
       { el: ieeeMacWrap, show: false },
       { el: flashOptionsWrap, show: false },
@@ -475,6 +497,11 @@ export function updateUIForFamily() {
     ]);
 
     setText(ieeeDescription, "Read and write primary IEEE address. Use with caution!");
+    setText(nvramTitle, "NVM3 tokens");
+    setText(
+      nvramDescription,
+      "Back up or restore EZSP tokens. Restore only to a compatible device running the same firmware/token table; this may replace network credentials and counters."
+    );
     setText(localFileHelp, "Use a local file (*.ota or *.gbl).");
     setAttr(localFile, "accept", ".ota,.gbl");
     setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/fw_files", "XZG-MT/fw_files");
@@ -890,6 +917,7 @@ export function updateConnectionUI() {
   }
 
   const anyActive = !!activeConnection;
+  if (monitorOnlyToggle) monitorOnlyToggle.disabled = anyActive;
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
