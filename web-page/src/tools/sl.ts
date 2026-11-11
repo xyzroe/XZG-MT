@@ -24,12 +24,111 @@ export type Nvm3TokenInfo = {
   arraySize: number;
 };
 
+// `tokens` is the ember-zli / zigbee-herdsman token buffer as hex, interchangeable with `ember-zli stack` backups
 export type Nvm3Backup = {
   format: "xzg-mt-silabs-nvm3";
-  version: 1;
+  version: 2;
   ezspVersion: number;
-  tokens: Array<Nvm3TokenInfo & { entries: Array<{ index: number; data: number[] }> }>;
+  eui64: string;
+  psaKeyStorage: boolean;
+  tokens: string;
 };
+
+// NVM3 keys / offsets from zigbee-herdsman src/adapter/ember/adapter/tokensManager.ts
+const NVM3KEY_STACK_KEYS = 0x1eb79;
+const NVM3KEY_STACK_ALTERNATE_KEY = 0x1e475;
+const NVM3KEY_STACK_TRUST_CENTER = 0x1e124;
+const NVM3KEY_STACK_RESTORED_EUI64 = 0x1e12a;
+const NVM3KEY_STACK_BINDING_TABLE = 0x10500;
+const NVM3KEY_STACK_GP_PROXY_TABLE = 0x10380;
+const NVM3KEY_STACK_GP_SINK_TABLE = 0x10400;
+const NVM3KEY_STACK_KEY_TABLE = 0x10600;
+const NVM3KEY_STACK_ZLL_SECURITY = 0x1e502;
+const KEY_ENTRY_KEY_DATA_OFFSET = 8;
+const KEY_SIZE = 16;
+
+enum SecManKeyType {
+  NETWORK = 1,
+  TC_LINK = 2,
+  APP_LINK = 4,
+  ZLL_ENCRYPTION_KEY = 5,
+  ZLL_PRECONFIGURED_KEY = 6,
+  GREEN_POWER_PROXY_TABLE_KEY = 7,
+  GREEN_POWER_SINK_TABLE_KEY = 8,
+}
+const SEC_MAN_FLAG_KEY_INDEX_IS_VALID = 0x01;
+const ZB_PSA_ALG = 0x05440100;
+
+type KeySlot = { keyType: SecManKeyType; offset: number; keyIndex?: number; flags?: number };
+
+// Where each PSA-stored key lives inside its token struct (herdsman saveKeysToData/restoreKeysFromData)
+function keySlotsForToken(nvm3Key: number, index: number): KeySlot[] {
+  switch (nvm3Key) {
+    case NVM3KEY_STACK_KEYS:
+      return [{ keyType: SecManKeyType.NETWORK, offset: 0, keyIndex: 0 }];
+    case NVM3KEY_STACK_ALTERNATE_KEY:
+      return [{ keyType: SecManKeyType.NETWORK, offset: 0, keyIndex: 1 }];
+    case NVM3KEY_STACK_TRUST_CENTER:
+      return [{ keyType: SecManKeyType.TC_LINK, offset: 2 + 8 }];
+    case NVM3KEY_STACK_KEY_TABLE:
+      return [{ keyType: SecManKeyType.APP_LINK, offset: KEY_ENTRY_KEY_DATA_OFFSET, keyIndex: index, flags: SEC_MAN_FLAG_KEY_INDEX_IS_VALID }];
+    case NVM3KEY_STACK_GP_PROXY_TABLE:
+      return [{ keyType: SecManKeyType.GREEN_POWER_PROXY_TABLE_KEY, offset: 1 + 4 + 8 + 1 + 1, keyIndex: index }];
+    case NVM3KEY_STACK_GP_SINK_TABLE:
+      return [{ keyType: SecManKeyType.GREEN_POWER_SINK_TABLE_KEY, offset: 1 + 2 + 8 + 1 + 1, keyIndex: index }];
+    case NVM3KEY_STACK_ZLL_SECURITY:
+      return [
+        { keyType: SecManKeyType.ZLL_ENCRYPTION_KEY, offset: 4 + 1 },
+        { keyType: SecManKeyType.ZLL_PRECONFIGURED_KEY, offset: 4 + 1 + KEY_SIZE },
+      ];
+    default:
+      return [];
+  }
+}
+
+function u32le(value: number): number[] {
+  return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff];
+}
+
+function readU32le(buf: Uint8Array, offset: number): number {
+  return (buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | (buf[offset + 3] << 24)) >>> 0;
+}
+
+function toHexString(data: Uint8Array): string {
+  return Array.from(data, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Validates the ember-zli token buffer layout and clips oversized binding tables like ember-zli does
+export function parseNvm3TokensHex(hex: string, log: (msg: string) => void = () => {}): Uint8Array {
+  const clean = hex.trim();
+  if (!/^([0-9a-fA-F]{2})+$/.test(clean)) throw new Error("NVM3 tokens are not a valid hex string");
+  let buf = Uint8Array.from(clean.match(/../g)!.map((b) => parseInt(b, 16)));
+  const count = buf[0];
+  if (!count) throw new Error("NVM3 backup contains no tokens");
+  let offset = 1;
+  let clip: { arraySizeOffset: number; start: number; end: number } | null = null;
+  for (let i = 0; i < count; i++) {
+    if (offset + 6 > buf.length) throw new Error("Truncated NVM3 backup");
+    const key = readU32le(buf, offset);
+    const size = buf[offset + 4];
+    const arraySize = buf[offset + 5];
+    offset += 6;
+    if (key === NVM3KEY_STACK_BINDING_TABLE && arraySize > 32) {
+      clip = { arraySizeOffset: offset - 1, start: offset + 32 * size, end: offset + arraySize * size };
+    }
+    offset += size * arraySize;
+  }
+  if (offset !== buf.length) throw new Error("NVM3 backup size does not match its token table");
+  if (clip) {
+    log("Binding table is too large, which is known to corrupt NVM3, keeping only first 32 entries.");
+    buf[clip.arraySizeOffset] = 32;
+    const clipped = new Uint8Array(buf.length - (clip.end - clip.start));
+    clipped.set(buf.subarray(0, clip.start));
+    clipped.set(buf.subarray(clip.end), clip.start);
+    buf = clipped;
+  }
+  return buf;
+}
 
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
@@ -536,87 +635,75 @@ export class SilabsTools {
     return client.addEventListener(listener);
   }
 
+  // Port of zigbee-herdsman EmberTokensManager.saveTokens
   public async backupNvm3(onProgress: (percent: number, message: string) => void = () => {}): Promise<Nvm3Backup> {
     this.ensureListener();
     const client = this.getEzspClient();
     const { version } = await client.initialize();
+    const eui64 = await client.getEui64();
     const count = await client.getTokenCount();
-    if (count > 0x100) throw new Error(`Unsupported NVM3 token count: ${count}`);
-    const tokens: Nvm3Backup["tokens"] = [];
+    if (count === 0) throw new Error("Saving tokens not supported by adapter (not NVM3-based)");
+    if (count > 0xff) throw new Error(`Unsupported NVM3 token count: ${count}`);
+    const psaKeyStorage = await client.usesPsaKeyStorage();
+    this.logger(`NVM3: saving ${count} tokens, ${psaKeyStorage ? "with" : "without"} secure key storage`);
 
-    for (let tokenIndex = 0; tokenIndex < count; tokenIndex++) {
-      const info = await client.getTokenInfo(tokenIndex);
-      const entries: Array<{ index: number; data: number[] }> = [];
-      const entryCount = info.isIndexed ? info.arraySize : 1;
-      for (let index = 0; index < entryCount; index++) {
-        const data = await client.getTokenData(info.key, index);
+    const chunks: number[] = [count];
+    for (let i = 0; i < count; i++) {
+      const info = await client.getTokenInfo(i);
+      chunks.push(...u32le(info.key), info.size, info.arraySize);
+      for (let arrayIndex = 0; arrayIndex < info.arraySize; arrayIndex++) {
+        const data = await client.getTokenData(info.key, arrayIndex);
         if (data.length !== info.size) {
-          throw new Error(`Unexpected data size for NVM3 token 0x${info.key.toString(16)}`);
+          throw new Error(`NVM3 token 0x${info.key.toString(16)}[${arrayIndex}]: got ${data.length} bytes, expected ${info.size}`);
         }
-        entries.push({ index, data: Array.from(data) });
+        if (psaKeyStorage) await client.exportKeysIntoTokenData(data, info.key, arrayIndex);
+        if (info.key === NVM3KEY_STACK_RESTORED_EUI64 && data.length === 8 && data.every((b) => b === 0xff)) {
+          data.set(eui64);
+        }
+        chunks.push(...data);
       }
-      tokens.push({ ...info, entries });
-      onProgress(Math.round(((tokenIndex + 1) / count) * 100), `Backed up token ${tokenIndex + 1}/${count}`);
+      onProgress(Math.round(((i + 1) / count) * 100), `Backed up token ${i + 1}/${count}`);
     }
 
-    return { format: "xzg-mt-silabs-nvm3", version: 1, ezspVersion: version, tokens };
+    return {
+      format: "xzg-mt-silabs-nvm3",
+      version: 2,
+      ezspVersion: version,
+      eui64: toHexString(Uint8Array.from(eui64).reverse()),
+      psaKeyStorage,
+      tokens: toHexString(Uint8Array.from(chunks)),
+    };
   }
 
+  // Port of zigbee-herdsman EmberTokensManager.restoreTokens (+ ember-zli binding table clip)
   public async restoreNvm3(backup: Nvm3Backup, onProgress: (percent: number, message: string) => void = () => {}): Promise<void> {
-    if (!backup || backup.format !== "xzg-mt-silabs-nvm3" || backup.version !== 1 || !Array.isArray(backup.tokens)) {
+    if (!backup || backup.format !== "xzg-mt-silabs-nvm3" || backup.version !== 2 || typeof backup.tokens !== "string") {
       throw new Error("Unsupported Silabs NVM3 backup format");
     }
+    const buf = parseNvm3TokensHex(backup.tokens, (msg) => this.logger(msg));
 
     this.ensureListener();
     const client = this.getEzspClient();
     await client.initialize();
-    const count = await client.getTokenCount();
-    if (backup.tokens.length !== count) throw new Error("NVM3 backup token table does not match this device");
-    const currentTokens = new Map<number, Nvm3TokenInfo>();
-    for (let tokenIndex = 0; tokenIndex < count; tokenIndex++) {
-      const info = await client.getTokenInfo(tokenIndex);
-      currentTokens.set(info.key, info);
-    }
-    if (new Set(backup.tokens.map((token) => token?.key)).size !== backup.tokens.length) {
-      throw new Error("NVM3 backup contains duplicate token keys");
-    }
+    const psaKeyStorage = await client.usesPsaKeyStorage();
+    const inTokenCount = buf[0];
+    this.logger(`NVM3: restoring ${inTokenCount} tokens, ${psaKeyStorage ? "with" : "without"} secure key storage`);
 
-    const validatedTokens: Array<{ key: number; entries: Array<{ index: number; data: number[] }> }> = [];
-    for (let tokenNumber = 0; tokenNumber < backup.tokens.length; tokenNumber++) {
-      const saved = backup.tokens[tokenNumber];
-      if (!saved || !Number.isInteger(saved.key) || saved.key < 0 || saved.key > 0xffffffff ||
-          !Number.isInteger(saved.size) || saved.size < 0 || saved.size > 0xff ||
-          !Number.isInteger(saved.arraySize) || saved.arraySize < 0 || saved.arraySize > 0xff) {
-        throw new Error("Invalid token metadata in NVM3 backup");
+    let offset = 1;
+    for (let i = 0; i < inTokenCount; i++) {
+      const info = await client.getTokenInfo(i);
+      const key = readU32le(buf, offset);
+      const size = buf[offset + 4];
+      const arraySize = buf[offset + 5];
+      offset += 6;
+      for (let arrayIndex = 0; arrayIndex < arraySize; arrayIndex++) {
+        const data = buf.slice(offset, offset + size);
+        // herdsman passes the live token key (by index) to the key import, and the saved key to setTokenData
+        if (psaKeyStorage) await client.importKeysFromTokenData(data, info.key, arrayIndex);
+        await client.setTokenData(key, arrayIndex, data);
+        offset += size;
       }
-      const current = currentTokens.get(saved.key);
-      if (!current || current.tokenIndex !== saved.tokenIndex || current.size !== saved.size ||
-          current.isCounter !== saved.isCounter || current.isIndexed !== saved.isIndexed ||
-          current.arraySize !== saved.arraySize || !Array.isArray(saved.entries)) {
-        throw new Error(`Token 0x${saved.key.toString(16)} is missing or incompatible with this firmware`);
-      }
-      for (const entry of saved.entries) {
-        if (!entry || !Number.isInteger(entry.index) || entry.index < 0 ||
-            entry.index >= (current.isIndexed ? current.arraySize : 1) ||
-            !Array.isArray(entry.data) || entry.data.length !== current.size ||
-            entry.data.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 0xff)) {
-          throw new Error(`Invalid data for token 0x${saved.key.toString(16)}`);
-        }
-      }
-      const expectedEntries = current.isIndexed ? current.arraySize : 1;
-      if (saved.entries.length !== expectedEntries ||
-          new Set(saved.entries.map((entry) => entry.index)).size !== expectedEntries) {
-        throw new Error(`Incomplete token data for 0x${saved.key.toString(16)}`);
-      }
-      validatedTokens.push({ key: saved.key, entries: saved.entries });
-    }
-
-    for (let tokenNumber = 0; tokenNumber < validatedTokens.length; tokenNumber++) {
-      const token = validatedTokens[tokenNumber];
-      for (const entry of token.entries) {
-        await client.setTokenData(token.key, entry.index, new Uint8Array(entry.data));
-      }
-      onProgress(Math.round(((tokenNumber + 1) / validatedTokens.length) * 100), `Restored token ${tokenNumber + 1}/${validatedTokens.length}`);
+      onProgress(Math.round(((i + 1) / inTokenCount) * 100), `Restored token ${i + 1}/${inTokenCount}`);
     }
   }
 
@@ -1394,6 +1481,61 @@ class EzspAshClient {
       return () => this.eventListeners.delete(listener);
     }
 
+    public async getEui64(): Promise<Uint8Array> {
+      const response = await this.sendEzspCommand(0x0026, new Uint8Array(), 4000);
+      if (response.length < 8) throw new Error("Invalid getEui64 response");
+      return response.slice(0, 8);
+    }
+
+    // herdsman ncpUsesPSAKeyStorage: getValue(KEY_STORAGE_VERSION)
+    public async usesPsaKeyStorage(): Promise<boolean> {
+      const response = await this.sendEzspCommand(0x00aa, new Uint8Array([0x44]), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset + 2) throw new Error("Invalid getValue(KEY_STORAGE_VERSION) response");
+      const status = this.readStatus(response);
+      if (status !== 0) throw new Error(`Error retrieving key storage version, status=0x${status.toString(16)}`);
+      return response[offset + 1] === 1;
+    }
+
+    private secManContext(slot: KeySlot): Uint8Array {
+      const ctx = new Uint8Array(18);
+      const view = new DataView(ctx.buffer);
+      ctx[0] = slot.keyType;
+      ctx[1] = slot.keyIndex ?? 0;
+      // derivedType (u16) = NONE, eui64 (8) = zero, multiNetworkIndex = 0
+      ctx[13] = slot.flags ?? 0;
+      view.setUint32(14, ZB_PSA_ALG, true);
+      return ctx;
+    }
+
+    public async exportKeysIntoTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+      for (const slot of keySlotsForToken(nvm3Key, index)) {
+        const response = await this.sendEzspCommand(0x0114, this.secManContext(slot), 4000);
+        if (response.length < 4 + KEY_SIZE) throw new Error("Invalid exportKey response");
+        // EZSP < 14 returns key before status
+        const keyOffset = this.protocolVersion < 0x0e ? 0 : 4;
+        const status = this.readUInt32(response, this.protocolVersion < 0x0e ? KEY_SIZE : 0);
+        if (status !== 0) {
+          this.logger(`exportKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
+        }
+        data.set(response.subarray(keyOffset, keyOffset + KEY_SIZE), slot.offset);
+      }
+    }
+
+    public async importKeysFromTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+      for (const slot of keySlotsForToken(nvm3Key, index)) {
+        const payload = new Uint8Array(18 + KEY_SIZE);
+        payload.set(this.secManContext(slot));
+        payload.set(data.subarray(slot.offset, slot.offset + KEY_SIZE), 18);
+        const response = await this.sendEzspCommand(0x0115, payload, 4000);
+        if (response.length < 4) throw new Error("Invalid importKey response");
+        const status = this.readUInt32(response, 0);
+        if (status !== 0) {
+          this.logger(`importKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
+        }
+      }
+    }
+
     public async getTokenCount(): Promise<number> {
       await this.ensureReady();
       await this.initialize();
@@ -1473,7 +1615,7 @@ class EzspAshClient {
 
       try {
         const payload = new Uint8Array(6);
-        payload[0] = 0x02; // ENERGY_SCAN
+        payload[0] = 0x00; // ENERGY_SCAN
         new DataView(payload.buffer).setUint32(1, channelMask >>> 0, true);
         payload[5] = duration;
         const response = await this.sendEzspCommand(0x001a, payload, 4000);
@@ -1728,18 +1870,23 @@ class EzspAshClient {
       this.pendingAckReject(new Error("Overwriting pending ACK wait"));
     }
     this.awaitingAckFrame = frmNum;
-    await new Promise<void>((resolve, reject) => {
-      this.pendingAckResolve = resolve;
-      this.pendingAckReject = reject;
-      window.setTimeout(() => {
-        if (this.awaitingAckFrame === frmNum) {
+    let timer: number | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.pendingAckResolve = resolve;
+        this.pendingAckReject = reject;
+        timer = window.setTimeout(() => {
+          // Frame numbers wrap every 8 frames, so only expire the wait this timer belongs to
+          if (this.pendingAckReject !== reject) return;
           this.awaitingAckFrame = null;
+          this.pendingAckResolve = null;
+          this.pendingAckReject = null;
           reject(new Error("ACK timeout"));
-        }
-      }, timeoutMs);
-    }).catch((err) => {
-      throw err;
-    });
+        }, timeoutMs);
+      });
+    } finally {
+      window.clearTimeout(timer);
+    }
   }
 
   private randomize(data: Uint8Array): Uint8Array {
