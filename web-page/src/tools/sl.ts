@@ -10,6 +10,126 @@ import { makeReset } from "../utils/control";
 // Re-export SpinelClient for backwards compatibility
 export { SpinelClient } from "./spinel";
 
+export type EzspEvent =
+  | { type: "energyScanResult"; channel: number; rssi: number }
+  | { type: "scanComplete"; channel: number; status: number }
+  | { type: "packet"; channel: number; linkQuality: number; rssi: number; data: Uint8Array };
+
+export type Nvm3TokenInfo = {
+  tokenIndex: number;
+  key: number;
+  isCounter: boolean;
+  isIndexed: boolean;
+  size: number;
+  arraySize: number;
+};
+
+// `tokens` is the ember-zli / zigbee-herdsman token buffer as hex, interchangeable with `ember-zli stack` backups
+export type Nvm3Backup = {
+  format: "xzg-mt-silabs-nvm3";
+  version: 2;
+  ezspVersion: number;
+  eui64: string;
+  psaKeyStorage: boolean;
+  tokens: string;
+};
+
+// NVM3 keys / offsets from zigbee-herdsman src/adapter/ember/adapter/tokensManager.ts
+const NVM3KEY_STACK_KEYS = 0x1eb79;
+const NVM3KEY_STACK_ALTERNATE_KEY = 0x1e475;
+const NVM3KEY_STACK_TRUST_CENTER = 0x1e124;
+const NVM3KEY_STACK_RESTORED_EUI64 = 0x1e12a;
+const NVM3KEY_STACK_BINDING_TABLE = 0x10500;
+const NVM3KEY_STACK_GP_PROXY_TABLE = 0x10380;
+const NVM3KEY_STACK_GP_SINK_TABLE = 0x10400;
+const NVM3KEY_STACK_KEY_TABLE = 0x10600;
+const NVM3KEY_STACK_ZLL_SECURITY = 0x1e502;
+const KEY_ENTRY_KEY_DATA_OFFSET = 8;
+const KEY_SIZE = 16;
+
+enum SecManKeyType {
+  NETWORK = 1,
+  TC_LINK = 2,
+  APP_LINK = 4,
+  ZLL_ENCRYPTION_KEY = 5,
+  ZLL_PRECONFIGURED_KEY = 6,
+  GREEN_POWER_PROXY_TABLE_KEY = 7,
+  GREEN_POWER_SINK_TABLE_KEY = 8,
+}
+const SEC_MAN_FLAG_KEY_INDEX_IS_VALID = 0x01;
+const ZB_PSA_ALG = 0x05440100;
+
+type KeySlot = { keyType: SecManKeyType; offset: number; keyIndex?: number; flags?: number };
+
+// Where each PSA-stored key lives inside its token struct (herdsman saveKeysToData/restoreKeysFromData)
+function keySlotsForToken(nvm3Key: number, index: number): KeySlot[] {
+  switch (nvm3Key) {
+    case NVM3KEY_STACK_KEYS:
+      return [{ keyType: SecManKeyType.NETWORK, offset: 0, keyIndex: 0 }];
+    case NVM3KEY_STACK_ALTERNATE_KEY:
+      return [{ keyType: SecManKeyType.NETWORK, offset: 0, keyIndex: 1 }];
+    case NVM3KEY_STACK_TRUST_CENTER:
+      return [{ keyType: SecManKeyType.TC_LINK, offset: 2 + 8 }];
+    case NVM3KEY_STACK_KEY_TABLE:
+      return [{ keyType: SecManKeyType.APP_LINK, offset: KEY_ENTRY_KEY_DATA_OFFSET, keyIndex: index, flags: SEC_MAN_FLAG_KEY_INDEX_IS_VALID }];
+    case NVM3KEY_STACK_GP_PROXY_TABLE:
+      return [{ keyType: SecManKeyType.GREEN_POWER_PROXY_TABLE_KEY, offset: 1 + 4 + 8 + 1 + 1, keyIndex: index }];
+    case NVM3KEY_STACK_GP_SINK_TABLE:
+      return [{ keyType: SecManKeyType.GREEN_POWER_SINK_TABLE_KEY, offset: 1 + 2 + 8 + 1 + 1, keyIndex: index }];
+    case NVM3KEY_STACK_ZLL_SECURITY:
+      return [
+        { keyType: SecManKeyType.ZLL_ENCRYPTION_KEY, offset: 4 + 1 },
+        { keyType: SecManKeyType.ZLL_PRECONFIGURED_KEY, offset: 4 + 1 + KEY_SIZE },
+      ];
+    default:
+      return [];
+  }
+}
+
+function u32le(value: number): number[] {
+  return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff];
+}
+
+function readU32le(buf: Uint8Array, offset: number): number {
+  return (buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | (buf[offset + 3] << 24)) >>> 0;
+}
+
+function toHexString(data: Uint8Array): string {
+  return Array.from(data, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Validates the ember-zli token buffer layout and clips oversized binding tables like ember-zli does
+export function parseNvm3TokensHex(hex: string, log: (msg: string) => void = () => {}): Uint8Array {
+  const clean = hex.trim();
+  if (!/^([0-9a-fA-F]{2})+$/.test(clean)) throw new Error("NVM3 tokens are not a valid hex string");
+  let buf = Uint8Array.from(clean.match(/../g)!.map((b) => parseInt(b, 16)));
+  const count = buf[0];
+  if (!count) throw new Error("NVM3 backup contains no tokens");
+  let offset = 1;
+  let clip: { arraySizeOffset: number; start: number; end: number } | null = null;
+  for (let i = 0; i < count; i++) {
+    if (offset + 6 > buf.length) throw new Error("Truncated NVM3 backup");
+    const key = readU32le(buf, offset);
+    const size = buf[offset + 4];
+    const arraySize = buf[offset + 5];
+    offset += 6;
+    if (key === NVM3KEY_STACK_BINDING_TABLE && arraySize > 32) {
+      clip = { arraySizeOffset: offset - 1, start: offset + 32 * size, end: offset + arraySize * size };
+    }
+    offset += size * arraySize;
+  }
+  if (offset !== buf.length) throw new Error("NVM3 backup size does not match its token table");
+  if (clip) {
+    log("Binding table is too large, which is known to corrupt NVM3, keeping only first 32 entries.");
+    buf[clip.arraySizeOffset] = 32;
+    const clipped = new Uint8Array(buf.length - (clip.end - clip.start));
+    clipped.set(buf.subarray(0, clip.start));
+    clipped.set(buf.subarray(clip.end), clip.start);
+    buf = clipped;
+  }
+  return buf;
+}
+
 enum State {
   WAITING_FOR_MENU = "waiting_for_menu",
   IN_MENU = "in_menu",
@@ -27,6 +147,7 @@ export class SilabsTools {
   private uploadStatus: string | null = null;
   private ezspClient: EzspAshClient | null = null;
   private spinelClient: SpinelClient | null = null;
+  private packetMonitorActive = false;
 
   // XMODEM state
   private xmodemFirmware: Uint8Array | null = null;
@@ -508,6 +629,118 @@ export class SilabsTools {
     }
   }
 
+  public addEzspEventListener(listener: (event: EzspEvent) => void): () => void {
+    this.ensureListener();
+    const client = this.getEzspClient();
+    return client.addEventListener(listener);
+  }
+
+  // Port of zigbee-herdsman EmberTokensManager.saveTokens
+  public async backupNvm3(onProgress: (percent: number, message: string) => void = () => {}): Promise<Nvm3Backup> {
+    this.ensureListener();
+    const client = this.getEzspClient();
+    const { version } = await client.initialize();
+    const eui64 = await client.getEui64();
+    const count = await client.getTokenCount();
+    if (count === 0) throw new Error("Saving tokens not supported by adapter (not NVM3-based)");
+    if (count > 0xff) throw new Error(`Unsupported NVM3 token count: ${count}`);
+    // EZSP < 0x12 returns a 1-byte count, so an error status is only detectable via getTokenInfo
+    const firstInfo = await client.getTokenInfo(0);
+    const psaKeyStorage = await client.usesPsaKeyStorage();
+    this.logger(`NVM3: saving ${count} tokens, ${psaKeyStorage ? "with" : "without"} secure key storage`);
+
+    const chunks: number[] = [count];
+    for (let i = 0; i < count; i++) {
+      const info = i === 0 ? firstInfo : await client.getTokenInfo(i);
+      chunks.push(...u32le(info.key), info.size, info.arraySize);
+      for (let arrayIndex = 0; arrayIndex < info.arraySize; arrayIndex++) {
+        const data = await client.getTokenData(info.key, arrayIndex);
+        if (data.length !== info.size) {
+          throw new Error(`NVM3 token 0x${info.key.toString(16)}[${arrayIndex}]: got ${data.length} bytes, expected ${info.size}`);
+        }
+        if (psaKeyStorage) await client.exportKeysIntoTokenData(data, info.key, arrayIndex);
+        if (info.key === NVM3KEY_STACK_RESTORED_EUI64 && data.length === 8 && data.every((b) => b === 0xff)) {
+          data.set(eui64);
+        }
+        chunks.push(...data);
+      }
+      onProgress(Math.round(((i + 1) / count) * 100), `Backed up token ${i + 1}/${count}`);
+    }
+
+    return {
+      format: "xzg-mt-silabs-nvm3",
+      version: 2,
+      ezspVersion: version,
+      eui64: toHexString(Uint8Array.from(eui64).reverse()),
+      psaKeyStorage,
+      tokens: toHexString(Uint8Array.from(chunks)),
+    };
+  }
+
+  // Port of zigbee-herdsman EmberTokensManager.restoreTokens (+ ember-zli binding table clip)
+  public async restoreNvm3(backup: Nvm3Backup, onProgress: (percent: number, message: string) => void = () => {}): Promise<void> {
+    if (!backup || backup.format !== "xzg-mt-silabs-nvm3" || backup.version !== 2 || typeof backup.tokens !== "string") {
+      throw new Error("Unsupported Silabs NVM3 backup format");
+    }
+    const buf = parseNvm3TokensHex(backup.tokens, (msg) => this.logger(msg));
+
+    this.ensureListener();
+    const client = this.getEzspClient();
+    await client.initialize();
+    const psaKeyStorage = await client.usesPsaKeyStorage();
+    const inTokenCount = buf[0];
+    this.logger(`NVM3: restoring ${inTokenCount} tokens, ${psaKeyStorage ? "with" : "without"} secure key storage`);
+
+    let offset = 1;
+    for (let i = 0; i < inTokenCount; i++) {
+      const info = await client.getTokenInfo(i);
+      const key = readU32le(buf, offset);
+      const size = buf[offset + 4];
+      const arraySize = buf[offset + 5];
+      offset += 6;
+      for (let arrayIndex = 0; arrayIndex < arraySize; arrayIndex++) {
+        const data = buf.slice(offset, offset + size);
+        // herdsman passes the live token key (by index) to the key import, and the saved key to setTokenData
+        if (psaKeyStorage) await client.importKeysFromTokenData(data, info.key, arrayIndex);
+        await client.setTokenData(key, arrayIndex, data);
+        offset += size;
+      }
+      onProgress(Math.round(((i + 1) / inTokenCount) * 100), `Restored token ${i + 1}/${inTokenCount}`);
+    }
+  }
+
+  public async startEnergyScan(
+    duration: number,
+    channelMask: number = 0x07fff800,
+    onProgress: (percent: number, message: string) => void = () => {},
+  ): Promise<void> {
+    this.ensureListener();
+    await this.getEzspClient().startEnergyScan(duration, channelMask, onProgress);
+  }
+
+  public async startPacketMonitor(channel: number): Promise<void> {
+    this.ensureListener();
+    await this.getEzspClient().startPacketMonitor(channel);
+    this.packetMonitorActive = true;
+  }
+
+  public async stopPacketMonitor(): Promise<void> {
+    if (this.ezspClient && this.packetMonitorActive) {
+      await this.ezspClient.stopPacketMonitor();
+      this.packetMonitorActive = false;
+    }
+  }
+
+  public dispose(): void {
+    this.ezspClient?.dispose();
+    this.spinelClient?.dispose();
+  }
+
+  private getEzspClient(): EzspAshClient {
+    if (!this.ezspClient) this.ezspClient = new EzspAshClient(this.link, this.logger);
+    return this.ezspClient;
+  }
+
   public async getSpinelVersion(doReset: boolean = false, implyGate: boolean = false): Promise<string> {
     this.spinelClient = new SpinelClient(this.link);
     const spinelHandler = (data: Uint8Array) => this.spinelClient?.handleData(data);
@@ -881,8 +1114,12 @@ class EzspAshClient {
   private pendingAckResolve: (() => void) | null = null;
   private pendingAckReject: ((err: Error) => void) | null = null;
   private ezspSeq = 0;
+  private protocolVersion = 4;
+  private readonly eventListeners = new Set<(event: EzspEvent) => void>();
+  private monitorChannel = 0;
   private pendingResponse: {
     seq: number;
+    frameId: number;
     resolve: (payload: Uint8Array) => void;
     reject: (err: Error) => void;
     timer: number;
@@ -913,6 +1150,7 @@ class EzspAshClient {
     if (this.readyReject) {
       this.readyReject(new Error("EZSP client disposed"));
     }
+    this.eventListeners.clear();
     this.readyResolve = null;
     this.readyReject = null;
     this.readyPromise = null;
@@ -963,6 +1201,7 @@ class EzspAshClient {
     }
 
     const actualVersion = response1[0];
+    this.protocolVersion = actualVersion;
     const stackType = response1[1];
     const stackVersion = response1[2] | (response1[3] << 8);
 
@@ -971,6 +1210,7 @@ class EzspAshClient {
       if (response2.length < 4 || response2[0] !== actualVersion) {
         throw new Error("EZSP version negotiation failed");
       }
+      this.protocolVersion = response2[0];
     }
 
     this.initialized = true;
@@ -1233,79 +1473,235 @@ class EzspAshClient {
     return (await this.getMfgCustomEui64()) === null;
   }
 
-  /**
-   * Read token data using getTokenData (0x0102)
-   */
-  private async getTokenData(tokenId: number, index: number): Promise<Uint8Array | null> {
-    const payload = new Uint8Array(8);
-    payload[0] = tokenId & 0xff;
-    payload[1] = (tokenId >> 8) & 0xff;
-    payload[2] = (tokenId >> 16) & 0xff;
-    payload[3] = (tokenId >> 24) & 0xff;
-    payload[4] = index & 0xff;
-    payload[5] = (index >> 8) & 0xff;
-    payload[6] = (index >> 16) & 0xff;
-    payload[7] = (index >> 24) & 0xff;
-
-    const response = await this.sendEzspCommand(0x0102, payload, 4000);
-
-    if (response.length < 1) {
-      return null;
+    public addEventListener(listener: (event: EzspEvent) => void): () => void {
+      this.eventListeners.add(listener);
+      return () => this.eventListeners.delete(listener);
     }
 
-    const status = response[0];
-    if (status !== 0x00) {
-      return null;
+    public async getEui64(): Promise<Uint8Array> {
+      const response = await this.sendEzspCommand(0x0026, new Uint8Array(), 4000);
+      if (response.length < 8) throw new Error("Invalid getEui64 response");
+      return response.slice(0, 8);
     }
 
-    // Response format (EZSP v9+): [status, value_length_low, value_length_high, ...value_data]
-    if (response.length < 3) {
-      return null;
+    // herdsman ncpUsesPSAKeyStorage: getValue(KEY_STORAGE_VERSION)
+    public async usesPsaKeyStorage(): Promise<boolean> {
+      const response = await this.sendEzspCommand(0x00aa, new Uint8Array([0x44]), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset + 2) throw new Error("Invalid getValue(KEY_STORAGE_VERSION) response");
+      const status = this.readStatus(response);
+      if (status !== 0) throw new Error(`Error retrieving key storage version, status=0x${status.toString(16)}`);
+      return response[offset + 1] === 1;
     }
 
-    const valueLength = response[1] | (response[2] << 8);
-    if (response.length < 3 + valueLength) {
-      return null;
+    private secManContext(slot: KeySlot): Uint8Array {
+      const ctx = new Uint8Array(18);
+      const view = new DataView(ctx.buffer);
+      ctx[0] = slot.keyType;
+      ctx[1] = slot.keyIndex ?? 0;
+      // derivedType (u16) = NONE, eui64 (8) = zero, multiNetworkIndex = 0
+      ctx[13] = slot.flags ?? 0;
+      view.setUint32(14, ZB_PSA_ALG, true);
+      return ctx;
     }
 
-    return response.slice(3, 3 + valueLength);
-  }
-
-  /**
-   * Write token data using setTokenData (0x0103)
-   */
-  private async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
-    const payload = new Uint8Array(4 + 4 + 1 + data.length);
-
-    // Token ID (little-endian)
-    payload[0] = tokenId & 0xff;
-    payload[1] = (tokenId >> 8) & 0xff;
-    payload[2] = (tokenId >> 16) & 0xff;
-    payload[3] = (tokenId >> 24) & 0xff;
-
-    // Index (little-endian)
-    payload[4] = index & 0xff;
-    payload[5] = (index >> 8) & 0xff;
-    payload[6] = (index >> 16) & 0xff;
-    payload[7] = (index >> 24) & 0xff;
-
-    // Length (1 byte) + Data
-    payload[8] = data.length;
-    payload.set(data, 9);
-
-    const response = await this.sendEzspCommand(0x0103, payload, 4000);
-
-    if (response.length < 1) {
-      throw new Error("Invalid setTokenData response");
+    public async exportKeysIntoTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+      for (const slot of keySlotsForToken(nvm3Key, index)) {
+        const response = await this.sendEzspCommand(0x0114, this.secManContext(slot), 4000);
+        if (response.length < 4 + KEY_SIZE) throw new Error("Invalid exportKey response");
+        // EZSP < 14 returns key before status
+        const keyOffset = this.protocolVersion < 0x0e ? 0 : 4;
+        const status = this.readUInt32(response, this.protocolVersion < 0x0e ? KEY_SIZE : 0);
+        if (status !== 0) {
+          this.logger(`exportKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
+        }
+        data.set(response.subarray(keyOffset, keyOffset + KEY_SIZE), slot.offset);
+      }
     }
 
-    const status = response[0];
-    if (status !== 0x00) {
-      throw new Error(
-        `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
-      );
+    public async importKeysFromTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+      for (const slot of keySlotsForToken(nvm3Key, index)) {
+        const payload = new Uint8Array(18 + KEY_SIZE);
+        payload.set(this.secManContext(slot));
+        payload.set(data.subarray(slot.offset, slot.offset + KEY_SIZE), 18);
+        const response = await this.sendEzspCommand(0x0115, payload, 4000);
+        if (response.length < 4) throw new Error("Invalid importKey response");
+        const status = this.readUInt32(response, 0);
+        if (status !== 0) {
+          this.logger(`importKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
+        }
+      }
     }
-  }
+
+    public async getTokenCount(): Promise<number> {
+      await this.ensureReady();
+      await this.initialize();
+      const response = await this.sendEzspCommand(0x0100, new Uint8Array(), 4000);
+      const countSize = this.protocolVersion >= 0x12 ? 4 : 1;
+      if (response.length < countSize) throw new Error("Invalid getTokenCount response");
+      return countSize === 4 ? this.readUInt32(response, 0) : response[0];
+    }
+
+    public async getTokenInfo(tokenIndex: number): Promise<Nvm3TokenInfo> {
+      if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex > 0xff) {
+        throw new Error("Token table index must be between 0 and 255");
+      }
+      const response = await this.sendEzspCommand(0x0101, new Uint8Array([tokenIndex]), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset) throw new Error("Invalid getTokenInfo response");
+      const status = this.readStatus(response);
+      // EmberStatus LIBRARY_NOT_PRESENT (0xB5), SLStatus NOT_AVAILABLE (0x0E) on EZSP >= 14
+      if (status === 0xb5 || (this.protocolVersion >= 0x0e && status === 0x0e)) {
+        throw new Error("This firmware does not support NVM3 token access (token interface library not present)");
+      }
+      if (status !== 0) throw new Error(`getTokenInfo failed with status 0x${status.toString(16)}`);
+      if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
+      return {
+        tokenIndex,
+        key: this.readUInt32(response, offset),
+        isCounter: response[offset + 4] !== 0,
+        isIndexed: response[offset + 5] !== 0,
+        size: response[offset + 6],
+        arraySize: response[offset + 7],
+      };
+    }
+
+    public async getTokenData(tokenId: number, index: number): Promise<Uint8Array> {
+      const response = await this.sendEzspCommand(0x0102, this.tokenIndexPayload(tokenId, index), 4000);
+      const offset = this.statusSize();
+      if (response.length < offset + 4) throw new Error("Invalid getTokenData response");
+      const status = this.readStatus(response);
+      if (status !== 0) throw new Error(`getTokenData failed with status 0x${status.toString(16)}`);
+      const size = this.readUInt32(response, offset);
+      if (response.length < offset + 4 + size) throw new Error("Truncated getTokenData response");
+      return response.slice(offset + 4, offset + 4 + size);
+    }
+
+    public async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
+      if (data.length > 0xffffffff) throw new Error("Token data is too large");
+      const tokenData = this.tokenIndexPayload(tokenId, index);
+      const payload = new Uint8Array(tokenData.length + 4 + data.length);
+      payload.set(tokenData);
+      new DataView(payload.buffer).setUint32(tokenData.length, data.length, true);
+      payload.set(data, tokenData.length + 4);
+      const response = await this.sendEzspCommand(0x0103, payload, 4000);
+      if (response.length < this.statusSize()) throw new Error("Invalid setTokenData response");
+      const status = this.readStatus(response);
+      if (status !== 0) {
+        throw new Error(
+          `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
+        );
+      }
+    }
+
+    public async startEnergyScan(
+      duration: number,
+      channelMask: number,
+      onProgress: (percent: number, message: string) => void,
+    ): Promise<void> {
+      if (!Number.isInteger(duration) || duration < 0 || duration > 14) {
+        throw new Error("Energy scan duration must be between 0 and 14");
+      }
+      let completed = false;
+      let scanError: Error | null = null;
+      let channelsScanned = 0;
+      const removeListener = this.addEventListener((event) => {
+        if (event.type === "scanComplete") {
+          completed = true;
+          if (event.status !== 0) scanError = new Error(`Energy scan failed with status 0x${event.status.toString(16)}`);
+        } else if (event.type === "energyScanResult") {
+          channelsScanned++;
+          onProgress(Math.min(99, channelsScanned * 6), `Channel ${event.channel}: ${event.rssi} dBm`);
+        }
+      });
+
+      try {
+        const payload = new Uint8Array(6);
+        payload[0] = 0x00; // ENERGY_SCAN
+        new DataView(payload.buffer).setUint32(1, channelMask >>> 0, true);
+        payload[5] = duration;
+        const response = await this.sendEzspCommand(0x001a, payload, 4000);
+        this.assertStatus(response, "startScan");
+        const timeoutAt = Date.now() + Math.min(300000, Math.max(15000, 2 ** duration * 16000));
+        while (!completed && Date.now() < timeoutAt) await sleep(100);
+        if (!completed) throw new Error("Timed out waiting for energy scan completion");
+        if (scanError) throw scanError;
+        onProgress(100, "Energy scan complete");
+      } finally {
+        removeListener();
+      }
+    }
+
+    public async startPacketMonitor(channel: number): Promise<void> {
+      if (!Number.isInteger(channel) || channel < 11 || channel > 26) {
+        throw new Error("IEEE 802.15.4 channel must be between 11 and 26");
+      }
+      await this.ensureReady();
+      await this.initialize();
+      this.assertStatus(await this.sendEzspCommand(0x0083, new Uint8Array([1]), 4000), "mfglibInternalStart");
+      try {
+        this.assertStatus(await this.sendEzspCommand(0x008a, new Uint8Array([channel]), 4000), "mfglibInternalSetChannel");
+      } catch (error) {
+        await this.sendEzspCommand(0x0084, new Uint8Array(), 4000).catch(() => {});
+        throw error;
+      }
+      this.monitorChannel = channel;
+    }
+
+    public async stopPacketMonitor(): Promise<void> {
+      this.assertStatus(await this.sendEzspCommand(0x0084, new Uint8Array(), 4000), "mfglibInternalEnd");
+    }
+
+    private dispatchCallback(frameId: number, body: Uint8Array): void {
+      const emit = (event: EzspEvent) => this.eventListeners.forEach((listener) => listener(event));
+      if (frameId === 0x0048 && body.length >= 2) {
+        emit({ type: "energyScanResult", channel: body[0], rssi: (body[1] << 24) >> 24 });
+      } else if (frameId === 0x001c && body.length >= 1 + this.statusSize()) {
+        const status = this.readStatus(body, 1);
+        emit({ type: "scanComplete", channel: body[0], status });
+      } else if (frameId === 0x008e && body.length >= 3) {
+        const length = body[2];
+        if (body.length < 3 + length) return;
+        const packet = body.slice(3, 3 + length);
+        emit({
+          type: "packet",
+          channel: this.monitorChannel,
+          linkQuality: body[0],
+          rssi: (body[1] << 24) >> 24,
+          data: packet,
+        });
+      }
+    }
+
+    private tokenIndexPayload(tokenId: number, index: number): Uint8Array {
+      if (!Number.isInteger(tokenId) || tokenId < 0 || tokenId > 0xffffffff ||
+          !Number.isInteger(index) || index < 0 || index > 0xffffffff) {
+        throw new Error("Token key and index must be unsigned 32-bit integers");
+      }
+      const payload = new Uint8Array(8);
+      const view = new DataView(payload.buffer);
+      view.setUint32(0, tokenId, true);
+      view.setUint32(4, index, true);
+      return payload;
+    }
+
+    private statusSize(): number {
+      return this.protocolVersion < 0x0e ? 1 : 4;
+    }
+
+    private readStatus(data: Uint8Array, offset = 0): number {
+      if (data.length < offset + this.statusSize()) throw new Error("Truncated EZSP status");
+      return this.statusSize() === 1 ? data[offset] : this.readUInt32(data, offset);
+    }
+
+    private readUInt32(data: Uint8Array, offset: number): number {
+      return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
+    }
+
+    private assertStatus(data: Uint8Array, command: string): void {
+      const status = this.readStatus(data);
+      if (status !== 0) throw new Error(`${command} failed with status 0x${status.toString(16)}`);
+    }
 
   /**
    * Write MFG token using setMfgToken (0x0C)
@@ -1318,11 +1714,11 @@ class EzspAshClient {
 
     const response = await this.sendEzspCommand(0x000c, payload, 4000);
 
-    if (response.length < 1) {
+    if (response.length < this.statusSize()) {
       throw new Error("Invalid setMfgToken response");
     }
 
-    const status = response[0];
+    const status = this.readStatus(response);
     if (status !== 0x00) {
       throw new Error(
         `setMfgToken failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
@@ -1412,7 +1808,7 @@ class EzspAshClient {
           this.pendingResponse = null;
         }
       }, timeoutMs);
-      this.pendingResponse = { seq, resolve, reject, timer };
+      this.pendingResponse = { seq, frameId, resolve, reject, timer };
     });
 
     await this.writeDataFrame(frame);
@@ -1446,18 +1842,23 @@ class EzspAshClient {
       this.pendingAckReject(new Error("Overwriting pending ACK wait"));
     }
     this.awaitingAckFrame = frmNum;
-    await new Promise<void>((resolve, reject) => {
-      this.pendingAckResolve = resolve;
-      this.pendingAckReject = reject;
-      window.setTimeout(() => {
-        if (this.awaitingAckFrame === frmNum) {
+    let timer: number | undefined;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        this.pendingAckResolve = resolve;
+        this.pendingAckReject = reject;
+        timer = window.setTimeout(() => {
+          // Frame numbers wrap every 8 frames, so only expire the wait this timer belongs to
+          if (this.pendingAckReject !== reject) return;
           this.awaitingAckFrame = null;
+          this.pendingAckResolve = null;
+          this.pendingAckReject = null;
           reject(new Error("ACK timeout"));
-        }
-      }, timeoutMs);
-    }).catch((err) => {
-      throw err;
-    });
+        }, timeoutMs);
+      });
+    } finally {
+      window.clearTimeout(timer);
+    }
   }
 
   private randomize(data: Uint8Array): Uint8Array {
@@ -1661,7 +2062,7 @@ class EzspAshClient {
   }
 
   private handleEzspPayload(payload: Uint8Array) {
-    if (!this.pendingResponse) return;
+    if (payload.length < 3) return;
 
     const seq = payload[0];
     const frameControl = payload[1];
@@ -1691,13 +2092,19 @@ class EzspAshClient {
     //     .join(" ")
     // );
 
-    if ((frameControl & 0x80) === 0 && this.pendingResponse.seq !== seq) {
-      return; // callback frame; ignore for now
+    // UART NCPs push callbacks asynchronously (EZSP_FRAME_CONTROL_ASYNCH_CB)
+    if ((frameControl & 0x10) !== 0) {
+      this.dispatchCallback(frameId, body);
+      return;
     }
-    if (this.pendingResponse.seq !== seq) return;
-    window.clearTimeout(this.pendingResponse.timer);
-    this.pendingResponse.resolve(body);
+    if ((frameControl & 0x80) === 0 || !this.pendingResponse || this.pendingResponse.seq !== seq) return;
+
+    const pending = this.pendingResponse;
+    if (frameId !== pending.frameId) return;
+
+    window.clearTimeout(pending.timer);
     this.pendingResponse = null;
+    pending.resolve(body);
   }
 
   private sendAckFrame() {
