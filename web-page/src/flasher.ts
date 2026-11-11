@@ -1215,7 +1215,7 @@ readFlashBtn?.addEventListener("click", async () => {
       // Use CC Debugger
       await ccDebugger?.dumpFlash();
     } else if (ti_tools) {
-      await changeBaud(500000, 460800);
+      await tryHighBaud();
 
       await ti_tools?.dumpFlash();
 
@@ -2347,8 +2347,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   }
 
   if ((family === "ti" || family === "ti_m33") && !isBootloaderOnlyMode()) {
-    // If possible to use high baud, switch to it before flashing
-    await changeBaud(500000, 460800);
+    await tryHighBaud();
   }
   if (family === "sl") {
     // SL bootloader needs 115200 for flashing
@@ -2744,6 +2743,16 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
     return;
   }
 };
+
+// Optional speed-up: a serial port that refuses the higher rate stays open at the current one
+async function tryHighBaud(): Promise<void> {
+  try {
+    await changeBaud(500000, 460800);
+  } catch (e: unknown) {
+    if (activeConnection !== "serial") throw e;
+    log("Continuing at the current baud rate");
+  }
+}
 
 export async function changeBaud(local: number, remote: number = local): Promise<void> {
   try {

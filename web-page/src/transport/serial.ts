@@ -7,9 +7,11 @@ export class SerialPort {
   private onDataCbs: Array<(data: Uint8Array) => void> = [];
   private onTxCb: ((data: Uint8Array) => void) | null = null;
   private readonly bitrate: number;
+  private baudRate: number;
 
   constructor(bitrate: number) {
     this.bitrate = bitrate;
+    this.baudRate = bitrate;
   }
 
   static isSupported(): boolean {
@@ -117,13 +119,38 @@ export class SerialPort {
       } catch {
         // ignore
       }
-      await p.open({ baudRate: baud });
-      this.startIO();
     } catch (err) {
       // leave object in consistent state on error
       this.reader = null;
       this.writer = null;
       throw err;
+    }
+    try {
+      await this.openWithRetry(p, baud);
+    } catch (err) {
+      // Keep the session usable at the previous rate instead of leaving the port closed
+      await this.openWithRetry(p, this.baudRate).catch(() => {});
+      if (this.portIsOpen(p)) this.startIO();
+      throw err;
+    }
+    this.baudRate = baud;
+    this.startIO();
+  }
+
+  private portIsOpen(p: NativeSerialPort): boolean {
+    return !!(p.readable || p.writable);
+  }
+
+  // The OS may not have released the handle right after close() (seen on Windows)
+  private async openWithRetry(p: NativeSerialPort, baud: number, attempts = 3): Promise<void> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await p.open({ baudRate: baud });
+        return;
+      } catch (err) {
+        if (attempt >= attempts) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+      }
     }
   }
 
