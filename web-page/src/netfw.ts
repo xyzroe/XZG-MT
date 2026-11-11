@@ -99,7 +99,8 @@ export function filterFwByChip(man: TiZwManifest, chip: string) {
     CC2652RB: "CC2652RB",
     CC2538: "CC2538",
   };
-  const deviceName = chipMap[chip] || chip;
+  // CC13x4/CC26x4 models carry a revision suffix, e.g. "CC2674P10 PG2.0"
+  const deviceName = chipMap[chip] || chip.split(" ")[0];
   const result: Record<string, ZwFirmwareInfo[]> = {};
   for (const cat of categories) {
     const catObj = man[cat];
@@ -316,14 +317,17 @@ export function parseImageFromBuffer(
   return { startAddress: 0x00000000, data: bytes };
 }
 
+export async function fetchFirmwareBytes(url: string): Promise<Uint8Array> {
+  const resp = await fetch(url, { cache: "no-cache" });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  return new Uint8Array(await resp.arrayBuffer());
+}
+
 export async function downloadFirmwareFromUrl(
   url: string,
   fillByte: number = 0x00
 ): Promise<{ startAddress: number; data: Uint8Array }> {
-  const resp = await fetch(url, { cache: "no-cache" });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  const buf = await resp.arrayBuffer();
-  return parseImageFromBuffer(new Uint8Array(buf), fillByte);
+  return parseImageFromBuffer(await fetchFirmwareBytes(url), fillByte);
 }
 
 export function getSelectedFwNotes() {

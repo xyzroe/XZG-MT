@@ -1,7 +1,7 @@
 // UI Elements
 
 // Family types
-export const FAMILY_VALUES = ["ti", "ti_m33", "sl", "esp", "ti_old", "arduino", "telink"] as const;
+export const FAMILY_VALUES = ["ti", "sl", "esp", "ti_old", "arduino", "telink"] as const;
 export type FamilyValue = (typeof FAMILY_VALUES)[number];
 
 // Family section
@@ -474,32 +474,15 @@ export function updateUIForFamily() {
       { el: firmwareVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
       { el: getModelBtn, show: true },
       { el: pingBtn, show: true },
+      { el: bootloaderOnlyWrap, show: true },
     ]);
 
     setText(ieeeDescription, "Read and write secondary IEEE address.");
     setText(nvramTitle, "NVRAM");
     setText(nvramDescription, "Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with caution.");
-    setText(localFileHelp, "Use a local file (*.hex or *.bin).");
+    setText(localFileHelp, "Use a local file (*.hex or *.bin). CC13x4/CC26x4 (CC2674P10) require *.hex.");
     setAttr(localFile, "accept", ".hex,.bin");
     setLink(netFwSourceEl, "https://github.com/xyzroe/XZG-MT/tree/fw_files", "XZG-MT/fw_files");
-  } else if (selectedFamilyValue === "ti_m33") {
-    setMultipleClasses([
-      { el: cloudFirmwareSection, show: false },
-      { el: localFirmwareSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
-      { el: ieeeSection, show: true },
-      { el: nvramSection, show: false },
-      { el: flashSizeWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
-      { el: ieeeMacWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
-      { el: firmwareVersionWrap, show: true, oldClass: "col-md-6", newClass: "col-md-4" },
-      { el: readFlashBtn, show: false },
-      { el: getModelBtn, show: true },
-      { el: pingBtn, show: true },
-      { el: bootloaderOnlyWrap, show: true },
-    ]);
-
-    setText(ieeeDescription, "Read and write the secondary IEEE address stored in the independent CCFG sector.");
-    setText(localFileHelp, "Use a local, segmented Intel HEX file (*.hex). CCFG must keep the ROM bootloader enabled.");
-    setAttr(localFile, "accept", ".hex");
   } else if (selectedFamilyValue === "sl") {
     // Only differences from default
     setMultipleClasses([

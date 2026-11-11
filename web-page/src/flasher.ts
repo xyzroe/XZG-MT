@@ -5,23 +5,32 @@ import { ESPLoader, Transport } from "esptool-js";
 import { SerialPort as SerialWrap } from "./transport/serial";
 import { TcpClient } from "./transport/tcp";
 
-import { TiTools, TiChipFamily } from "./tools/ti";
 import {
+  TiTools,
+  TiChipFamily,
+  TiDeviceInfo,
+  CC2674P10_PROFILE,
   getM33SecondaryIeeeAddress,
   M33DeviceInfo,
   M33Segment,
   parseM33Hex,
   programM33,
-  readM33DeviceInfo,
   writeM33SecondaryIeeeAddress,
-} from "./tools/ti-m33";
+} from "./tools/ti";
 import { SilabsTools } from "./tools/sl";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
 import { ArduinoTools } from "./tools/arduino";
 import { TelinkTools, TelinkPgmTools } from "./tools/telink";
 
-import { parseImageFromBuffer, downloadFirmwareFromUrl, getSelectedFwNotes, refreshNetworkFirmwareList } from "./netfw";
+import {
+  parseImageFromBuffer,
+  downloadFirmwareFromUrl,
+  fetchFirmwareBytes,
+  isLikelyIntelHexPreview,
+  getSelectedFwNotes,
+  refreshNetworkFirmwareList,
+} from "./netfw";
 import { sleep, toHex, bufToHex } from "./utils";
 import { deriveControlConfig, ControlConfig, enterBootloader, makeReset } from "./utils/control";
 import { httpGetWithFallback, saveToFile } from "./utils/http";
@@ -153,8 +162,9 @@ let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
 let firmwareLoadId = 0;
+// Sparse HEX segments, kept only for CC13x4/CC26x4 images (data in the CCFG sector at 0x50000000)
 let m33Segments: M33Segment[] | null = null;
-let m33DeviceInfo: M33DeviceInfo | null = null;
+let tiDeviceInfo: TiDeviceInfo | M33DeviceInfo | null = null;
 let sl_tools: SilabsTools | null = null;
 let slPacketListenerRemove: (() => void) | null = null;
 let ti_tools: TiTools | null = null;
@@ -284,7 +294,7 @@ disconnectBtn.addEventListener("click", async () => {
   firmwareLoadId++;
   hexImage = null;
   m33Segments = null;
-  m33DeviceInfo = null;
+  tiDeviceInfo = null;
 
   if (activeConnection === "serial") {
     try {
@@ -380,16 +390,10 @@ netFwSelect?.addEventListener("change", async () => {
   const link = opt?.getAttribute("data-link");
   if (!link) return;
   try {
-    if (getSelectedFamily() === "ti_m33") {
-      throw new Error("TI M33 flashing requires a local Intel HEX file so sparse CCFG addresses are preserved");
-    }
-    const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
-    const img = await downloadFirmwareFromUrl(link, fillByte);
+    const bytes = await fetchFirmwareBytes(link);
     if (loadId !== firmwareLoadId || selectedFamily !== getSelectedFamily()) return;
-    hexImage = img;
-    m33Segments = null;
+    loadFirmwareImage(bytes, "network");
     updateOptionsStateForFile(true);
-    log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
   } catch (e: any) {
     if (loadId !== firmwareLoadId) return;
     log("HEX download error: " + (e?.message || String(e)));
@@ -417,20 +421,7 @@ localFile.addEventListener("change", async () => {
     if (buf.byteLength !== f.size) {
       log(`Warning: read length (${buf.byteLength}) != file.size (${f.size})`);
     }
-    if (getSelectedFamily() === "ti_m33") {
-      const parsed = parseM33Hex(new Uint8Array(buf));
-      const first = parsed[0];
-      const totalBytes = parsed.reduce((total, segment) => total + segment.data.length, 0);
-      m33Segments = parsed;
-      hexImage = { startAddress: first.address, data: first.data };
-      log(`M33 HEX loaded: ${f.name}, ${parsed.length} segment(s), ${totalBytes} bytes`);
-    } else {
-      const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
-      const img = parseImageFromBuffer(new Uint8Array(buf), fillByte);
-      hexImage = img;
-      m33Segments = null;
-      log(`Image loaded: ${f.name}, ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
-    }
+    loadFirmwareImage(new Uint8Array(buf), f.name);
     updateOptionsStateForFile(true);
   } catch (e: any) {
     if (loadId !== firmwareLoadId) return;
@@ -440,6 +431,24 @@ localFile.addEventListener("change", async () => {
     log("File load error: " + (e?.message || String(e)));
   }
 });
+
+function loadFirmwareImage(bytes: Uint8Array, source: string): void {
+  const family = getSelectedFamily();
+  if (family === "ti" && isLikelyIntelHexPreview(new TextDecoder().decode(bytes.subarray(0, 4096)))) {
+    const segments = parseM33Hex(bytes);
+    if (segments.some((s) => s.address >= CC2674P10_PROFILE.memory.ccfgBase)) {
+      const totalBytes = segments.reduce((total, segment) => total + segment.data.length, 0);
+      m33Segments = segments;
+      hexImage = { startAddress: segments[0].address, data: segments[0].data };
+      log(`CC13x4/CC26x4 HEX loaded (${source}): ${segments.length} segment(s), ${totalBytes} bytes`);
+      return;
+    }
+  }
+  const img = parseImageFromBuffer(bytes, family === "arduino" ? 0xff : 0x00);
+  hexImage = img;
+  m33Segments = null;
+  log(`Image loaded (${source}): ${img.data.length} bytes, start ${toHex(img.startAddress, 8)}`);
+}
 
 netFwRefreshBtn?.addEventListener("click", () => {
   const model = chipModelEl?.value || "";
@@ -515,7 +524,7 @@ resetBtn?.addEventListener("click", async () => {
 pingBtn?.addEventListener("click", async () => {
   await withButtonStatus(pingBtn!, async () => {
     const family = getSelectedFamily();
-    if (family !== "ti" && family !== "ti_m33") {
+    if (family !== "ti") {
       log("Ping not supported for this family");
       return;
     }
@@ -535,7 +544,7 @@ getVersionBtn?.addEventListener("click", async () => {
     if (family === "esp") {
       log("ESP: Firmware version check not implemented");
     }
-    if (family === "ti" || family === "ti_m33") {
+    if (family === "ti") {
       if (!ti_tools) throw new Error("TiTools not initialized");
       if (isBootloaderOnlyMode()) {
         throw new Error("Application firmware version is unavailable while Already in BSL is enabled");
@@ -762,7 +771,7 @@ btnIeeeRead?.addEventListener("click", async () => {
       if (currentIeee) {
         currentIeee.value = ieee;
       }
-      if (getSelectedFamily() === "ti" || getSelectedFamily() === "ti_m33") {
+      if (getSelectedFamily() === "ti") {
         log(`Secondary IEEE address: ${ieee}`);
       } else {
         log(`Primary IEEE address: ${ieee}`);
@@ -785,7 +794,7 @@ btnIeeeWrite?.addEventListener("click", async () => {
         throw err;
       }
       await ieeeWriteSecondary(addr);
-      if (getSelectedFamily() === "ti" || getSelectedFamily() === "ti_m33") {
+      if (getSelectedFamily() === "ti") {
         log(`Secondary IEEE address written: ${addr}`);
       } else {
         log(`Primary IEEE address written: ${addr}`);
@@ -996,7 +1005,7 @@ startFlashBtn.addEventListener("click", async () => {
           return true;
         }
 
-        if (family === "ti" || family === "ti_m33") {
+        if (family === "ti") {
           //log("Pinging device...");
           await sleep(1000);
           try {
@@ -1025,7 +1034,7 @@ startFlashBtn.addEventListener("click", async () => {
             log("Network FW list fetch failed: " + (e?.message || String(e))),
           );
         }
-        if (family === "ti" || family === "ti_m33") {
+        if (family === "ti") {
           // use local wrapper to log and update UI
           if (!ti_tools) throw new Error("TiTools not initialized");
           const info = await ti_tools.getFwVersion();
@@ -1206,7 +1215,6 @@ connectDebuggerBtn?.addEventListener("click", async () => {
 // Read Flash button handler
 readFlashBtn?.addEventListener("click", async () => {
   await withButtonStatus(readFlashBtn!, async () => {
-    if (getSelectedFamily() === "ti_m33") throw new Error("Full-flash reads are not supported for TI M33 devices");
     flashWarning?.classList.remove("d-none");
     if (ccLoader) {
       // Use Arduino-based CC Loader
@@ -1215,9 +1223,10 @@ readFlashBtn?.addEventListener("click", async () => {
       // Use CC Debugger
       await ccDebugger?.dumpFlash();
     } else if (ti_tools) {
-      await tryHighBaud();
-
-      await ti_tools?.dumpFlash();
+      if (!isBootloaderOnlyMode()) await tryHighBaud();
+      await enterBsl();
+      await sleep(500);
+      await ti_tools.dumpFlash(!isBootloaderOnlyMode() || tiDeviceInfo === null);
 
       const originalBaudRate = parseInt(bitrateInput.value, 10) || 115200;
       await changeBaud(originalBaudRate);
@@ -1727,7 +1736,7 @@ function getActiveLink(): {
 
 function isBootloaderOnlyMode(): boolean {
   const family = getSelectedFamily();
-  return family === "ti_m33" && !!bootloaderOnlyToggle?.checked;
+  return family === "ti" && !!bootloaderOnlyToggle?.checked;
 }
 
 function startMonitorOnlyConnection(transport: string): void {
@@ -1781,10 +1790,10 @@ async function enterBsl(): Promise<void> {
   // if (family === "sl") {
   //   await sl_tools?.enterBootloader(implyGateToggle?.checked ?? false);
   // }
-  // if (family === "ti" || family === "ti_m33") {
+  // if (family === "ti") {
   //   await ti_tools?.enterBootloader(implyGateToggle?.checked ?? false);
   // }
-  if (family === "ti" || family === "ti_m33" || family === "sl") {
+  if (family === "ti" || family === "sl") {
     await enterBootloader(implyGateToggle?.checked ?? false);
   }
 
@@ -1838,11 +1847,11 @@ async function performReset(): Promise<void> {
   const family = getSelectedFamily();
   //log(`Using line sequences for family: ${family}`);
   // Use line sequences via direct serial or remote bridge pins
-  // if (family === "ti" || family === "ti_m33") {
+  // if (family === "ti") {
   //   await ti_tools?.reset(implyGateToggle?.checked ?? false);
   // } else if (family === "sl") {
   //   await sl_tools?.reset(implyGateToggle?.checked ?? false);
-  if (family === "ti" || family === "ti_m33" || family === "sl") {
+  if (family === "ti" || family === "sl") {
     await makeReset(implyGateToggle?.checked ?? false);
   } else if (family === "esp") {
     log("ESP: Resetting...");
@@ -1876,34 +1885,19 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
   try {
     if (showBusy) deviceDetectBusy(true);
     const family = getSelectedFamily();
-    if (family === "ti" || family === "ti_m33") {
+    if (family === "ti") {
       if (!ti_tools) throw new Error("TiTools not initialized");
-      const synchronizeM33 = !isBootloaderOnlyMode() || m33DeviceInfo === null;
-      const info =
-        family === "ti_m33"
-          ? await readM33DeviceInfo(ti_tools, synchronizeM33)
-          : await ti_tools.readDeviceInfo();
-      if (family === "ti_m33") {
-        m33DeviceInfo = info as M33DeviceInfo;
-        const m33Info = info as M33DeviceInfo;
-        log(
-          `M33 profile: wafer=${toHex(m33Info.waferId, 4)}, package=${m33Info.packageName}, CCFG=${toHex(m33Info.ccfgAddress, 8)}`,
-        );
-        log(
-          `ROM bootloader config: ${m33Info.bootloaderEnabled ? "enabled" : "currently disabled"} at ${toHex(m33Info.bootloaderAddress, 8)}`,
-        );
-      }
+      const info = await ti_tools.readDeviceInfo(!isBootloaderOnlyMode() || tiDeviceInfo === null);
+      tiDeviceInfo = info;
       console.log("Device info:", info);
       if (info) {
         if (chipModelEl) chipModelEl.value = info.chipModel || "";
         if (flashSizeEl && info.flashSizeBytes)
           flashSizeEl.value = `${info.flashSizeBytes} bytes (${(info.flashSizeBytes / 1024).toFixed(2)} KB)`;
         if (ieeeMacEl && info.ieeeMac) ieeeMacEl.value = info.ieeeMac;
-        if (family === "ti") {
-          await refreshNetworkFirmwareList(info.chipModel || "").catch((e) =>
-            log("Network FW list fetch failed: " + (e?.message || String(e))),
-          );
-        }
+        await refreshNetworkFirmwareList(info.chipModel || "").catch((e) =>
+          log("Network FW list fetch failed: " + (e?.message || String(e))),
+        );
         if (info.family) detectedFamily = info.family;
       } else {
         log("Failed to read device info via TI BSL");
@@ -2009,7 +2003,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       }
     }
   } catch (e: any) {
-    m33DeviceInfo = null;
+    tiDeviceInfo = null;
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
     throw e;
   } finally {
@@ -2172,7 +2166,7 @@ async function runConnectSequence(): Promise<void> {
       return;
     }
 
-    if (family === "ti" || family === "ti_m33") {
+    if (family === "ti") {
       // Initialize TiTools if needed
       if (!ti_tools) ti_tools = new TiTools(getActiveLink());
       ti_tools.setLogger((msg: string) => log(msg));
@@ -2182,7 +2176,7 @@ async function runConnectSequence(): Promise<void> {
       ti_tools.setSetLinesHandler(setLines);
     } else if (family === "sl") {
       // Silabs path: enter bootloader, read BL version, then reset back to app
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink()); (window as any).__sl = sl_tools;
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       sl_tools.setLogger((msg: string) => log(msg));
       sl_tools.setProgressCallback((percent: number, msg: string) => {
         fwProgress(percent, msg);
@@ -2246,7 +2240,7 @@ async function runConnectSequence(): Promise<void> {
       log("Failed to read chip model after all attempts. Check connection and settings.");
     }
 
-    if ((family === "ti" || family === "ti_m33") && !bootloaderOnly) {
+    if (family === "ti" && !bootloaderOnly) {
       await performReset().catch((e: any) => log("Reset failed: " + (e?.message || String(e))));
       await sleep(1000);
       try {
@@ -2287,7 +2281,7 @@ async function runConnectSequence(): Promise<void> {
       } catch {
         log("FW version check skipped");
       }
-    } else if ((family === "ti" || family === "ti_m33") && bootloaderOnly && chipReadSuccess) {
+    } else if (family === "ti" && bootloaderOnly && chipReadSuccess) {
       log("ROM BSL connection ready; application-mode reset, ping, and firmware-version probing were skipped");
     } else if (family === "sl") {
       try {
@@ -2335,18 +2329,17 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   }
 
   if (!hexImage) throw new Error("Load HEX first");
-  if (family !== "ti_m33" && m33Segments) {
-    throw new Error("The loaded file was parsed for TI M33; select the target family again and reload its firmware");
-  }
   const chipFamily = detectedTiFamily ?? detectedTiChipFamily;
-  if (family === "ti" && chipFamily !== "cc26xx" && chipFamily !== "cc2538") {
-    throw new Error("Reconnect and detect a supported legacy TI device before flashing; use TI CC2674P10 (M33) for CC2674P10");
-  }
-  if (family === "ti_m33" && (!m33Segments || !m33DeviceInfo)) {
-    throw new Error("Reconnect and validate the TI M33 device, then load a local Intel HEX file before flashing");
+  const isM33 = chipFamily === "cc26xx-m33";
+  if (family === "ti") {
+    if (!chipFamily) throw new Error("Reconnect and detect the TI device before flashing");
+    if (isM33 && !m33Segments) {
+      throw new Error("CC13x4/CC26x4 needs an Intel HEX image that contains the CCFG sector (0x50000000)");
+    }
+    if (!isM33 && m33Segments) throw new Error("The loaded HEX is for CC13x4/CC26x4, not for the detected chip");
   }
 
-  if ((family === "ti" || family === "ti_m33") && !isBootloaderOnlyMode()) {
+  if (family === "ti" && !isBootloaderOnlyMode()) {
     await tryHighBaud();
   }
   if (family === "sl") {
@@ -2357,7 +2350,7 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   const userChunk = 248;
   const chunkSize = Math.max(16, Math.min(248, userChunk));
   const startAddr = hexImage.startAddress;
-  const data = hexImage.data;
+  let data = hexImage.data;
 
   // Ensure BSL mode before flashing/verifying depending on transport
   try {
@@ -2396,12 +2389,13 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   // TI path continues below
   if (!ti_tools) throw new Error("TiTools not initialized");
 
-  if (family === "ti_m33") {
-    if (!m33Segments) throw new Error("Load a local Intel HEX file for TI M33 flashing");
-    if (!m33DeviceInfo) throw new Error("Reconnect and validate the TI M33 device before flashing");
+  if (isM33) {
+    if (!m33Segments || tiDeviceInfo?.family !== "cc26xx-m33") {
+      throw new Error("Reconnect and detect the CC13x4/CC26x4 device before flashing");
+    }
     fwProgressReset("Validating M33 image...");
     try {
-      await programM33(ti_tools, m33Segments, m33DeviceInfo, {
+      await programM33(ti_tools, m33Segments, tiDeviceInfo as M33DeviceInfo, {
         erase: optErase.checked,
         write: optWrite.checked,
         verify: optVerify.checked,
@@ -2422,8 +2416,21 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     return;
   }
 
-  const liveInfo = await ti_tools.readDeviceInfo();
+  const liveInfo = await ti_tools.readDeviceInfo(!isBootloaderOnlyMode());
   if (liveInfo.family !== chipFamily) throw new Error("TI device family changed; flashing was refused");
+
+  // CCFG lives in the last main-bank sector on CC26x2, so bank erase would wipe the secondary IEEE
+  if (chipFamily === "cc26xx" && optErase.checked && optWrite.checked && liveInfo.flashSizeBytes) {
+    const ieeeOffset = liveInfo.flashSizeBytes - 88 + 0x20 - startAddr;
+    if (ieeeOffset >= 0 && ieeeOffset + 8 <= data.length && data.subarray(ieeeOffset, ieeeOffset + 8).every((b) => b === 0xff)) {
+      const stored = (await ti_tools.readSecondaryIeeeAddress("cc26xx")).reverse();
+      if (stored.some((b) => b !== 0xff)) {
+        data = new Uint8Array(data);
+        data.set(stored, ieeeOffset);
+        log("Secondary IEEE address will be preserved");
+      }
+    }
+  }
 
   if (optErase.checked) {
     if (chipFamily === "cc26xx") {
@@ -2512,7 +2519,6 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 
 // ----------------- NVRAM helpers (delegated to ti_tools) -----------------
 async function nvramReadAll(): Promise<any> {
-  if (getSelectedFamily() === "ti_m33") throw new Error("NVRAM operations are not supported for TI M33 devices");
   nvProgressSetColor("primary");
   // nvProgressReset("Reading...");
   await sleep(500);
@@ -2527,7 +2533,6 @@ async function nvramReadAll(): Promise<any> {
 }
 
 async function nvramEraseAll(): Promise<void> {
-  if (getSelectedFamily() === "ti_m33") throw new Error("NVRAM operations are not supported for TI M33 devices");
   nvProgressSetColor("danger");
   // nvProgressReset("Erasing...");
   await sleep(500);
@@ -2540,7 +2545,6 @@ async function nvramEraseAll(): Promise<void> {
 }
 
 async function nvramWriteAll(obj: any): Promise<void> {
-  if (getSelectedFamily() === "ti_m33") throw new Error("NVRAM operations are not supported for TI M33 devices");
   nvProgressSetColor("warning");
   // nvProgressReset("Writing...");
   await sleep(500);
@@ -2558,17 +2562,12 @@ async function nvramWriteAll(obj: any): Promise<void> {
 async function ieeeReadSecondary(): Promise<string> {
   const family = getSelectedFamily();
 
-  if (family === "ti_m33") {
-    if (!ti_tools) throw new Error("TiTools not initialized");
-    await enterBsl();
-    m33DeviceInfo = await readM33DeviceInfo(ti_tools, !isBootloaderOnlyMode() || m33DeviceInfo === null);
-    detectedTiChipFamily = m33DeviceInfo.family;
-    return getM33SecondaryIeeeAddress(m33DeviceInfo);
-  } else if (family === "ti") {
+  if (family === "ti") {
     if (!ti_tools) throw new Error("TiTools not initialized");
     await enterBsl();
     await readChipInfo();
     if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+    if (tiDeviceInfo?.family === "cc26xx-m33") return getM33SecondaryIeeeAddress(tiDeviceInfo as M33DeviceInfo);
 
     // Read the secondary IEEE address from TI chip
     const ieeeBytes = await ti_tools.readSecondaryIeeeAddress(detectedTiChipFamily);
@@ -2606,23 +2605,14 @@ async function ieeeReadSecondary(): Promise<string> {
 async function ieeeWriteSecondary(address: string): Promise<void> {
   const family = getSelectedFamily();
 
-  if (family === "ti_m33") {
-    if (!ti_tools) throw new Error("TiTools not initialized");
-    await enterBsl();
-    if (!m33DeviceInfo) throw new Error("Reconnect and validate the TI M33 device before writing IEEE");
-    m33DeviceInfo = await writeM33SecondaryIeeeAddress(
-      ti_tools,
-      address,
-      m33DeviceInfo,
-      log,
-      !isBootloaderOnlyMode(),
-    );
-    detectedTiChipFamily = m33DeviceInfo.family;
-    if (ieeeMacEl) ieeeMacEl.value = m33DeviceInfo.ieeeMac || "";
-  } else if (family === "ti") {
+  if (family === "ti") {
     if (!ti_tools) throw new Error("TiTools not initialized");
     await enterBsl();
     await readChipInfo();
+    if (tiDeviceInfo?.family === "cc26xx-m33") {
+      tiDeviceInfo = await writeM33SecondaryIeeeAddress(ti_tools, address, tiDeviceInfo as M33DeviceInfo, log, false);
+      return;
+    }
     if (detectedTiChipFamily !== "cc26xx" && detectedTiChipFamily !== "cc2538") {
       throw new Error("A supported legacy TI chip must be detected before writing IEEE");
     }
