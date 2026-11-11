@@ -146,6 +146,7 @@ let esploader: ESPLoader | null = null;
 let serial: SerialWrap | null = null;
 let tcp: TcpClient | null = null;
 let hexImage: { startAddress: number; data: Uint8Array } | null = null;
+let firmwareLoadId = 0;
 let m33Segments: M33Segment[] | null = null;
 let m33DeviceInfo: M33DeviceInfo | null = null;
 let sl_tools: SilabsTools | null = null;
@@ -262,6 +263,7 @@ disconnectBtn.addEventListener("click", async () => {
   telinkTools = null;
 
   // Clear image
+  firmwareLoadId++;
   hexImage = null;
   m33Segments = null;
   m33DeviceInfo = null;
@@ -342,6 +344,11 @@ connectTcpBtn.addEventListener("click", async () => {
 // Enable/disable notes button on select change
 netFwSelect?.addEventListener("change", async () => {
   if (!netFwSelect || !netFwNotesBtn) return;
+  const loadId = ++firmwareLoadId;
+  const selectedFamily = getSelectedFamily();
+  hexImage = null;
+  m33Segments = null;
+  updateOptionsStateForFile(false);
   const notes = getSelectedFwNotes();
   netFwNotesBtn.disabled = !notes;
   // Existing logic: load firmware
@@ -354,16 +361,23 @@ netFwSelect?.addEventListener("change", async () => {
     }
     const fillByte = getSelectedFamily() === "arduino" ? 0xff : 0x00;
     const img = await downloadFirmwareFromUrl(link, fillByte);
+    if (loadId !== firmwareLoadId || selectedFamily !== getSelectedFamily()) return;
     hexImage = img;
     m33Segments = null;
     updateOptionsStateForFile(true);
     log(`Image loaded from network: ${img.data.length} bytes @ ${toHex(img.startAddress, 8)}`);
   } catch (e: any) {
+    if (loadId !== firmwareLoadId) return;
     log("HEX download error: " + (e?.message || String(e)));
   }
 });
 
 localFile.addEventListener("change", async () => {
+  const loadId = ++firmwareLoadId;
+  const selectedFamily = getSelectedFamily();
+  hexImage = null;
+  m33Segments = null;
+  updateOptionsStateForFile(false);
   const f = localFile.files?.[0];
   if (!f) {
     updateOptionsStateForFile(false);
@@ -373,6 +387,7 @@ localFile.addEventListener("change", async () => {
     log(`File selected: ${f.name} size=${f.size} bytes type=${f.type || "unknown"}`);
     // Read explicitly using slice to ensure full file read
     const buf = await f.slice(0, f.size).arrayBuffer();
+    if (loadId !== firmwareLoadId || selectedFamily !== getSelectedFamily()) return;
     //log(`ArrayBuffer read: ${buf.byteLength} bytes`);
     // If lengths differ, fail early so we can debug
     if (buf.byteLength !== f.size) {
@@ -394,6 +409,7 @@ localFile.addEventListener("change", async () => {
     }
     updateOptionsStateForFile(true);
   } catch (e: any) {
+    if (loadId !== firmwareLoadId) return;
     hexImage = null;
     m33Segments = null;
     updateOptionsStateForFile(false);
@@ -533,6 +549,7 @@ getVersionBtn?.addEventListener("click", async () => {
       const result = await sl_tools.probe(
         "auto",
         findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+        true,
         implyGateToggle?.checked ?? true,
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -909,6 +926,7 @@ startFlashBtn.addEventListener("click", async () => {
           const result = await sl_tools.probe(
             "auto",
             findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+            true,
             implyGateToggle?.checked ?? true,
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -1891,6 +1909,7 @@ async function readChipInfo(showBusy: boolean = true): Promise<TiChipFamily | nu
       }
     }
   } catch (e: any) {
+    m33DeviceInfo = null;
     log("BSL sync or chip read failed: " + (e?.message || String(e)));
     throw e;
   } finally {
@@ -2176,6 +2195,7 @@ async function runConnectSequence(): Promise<void> {
         const result = await sl_tools.probe(
           "auto",
           findBaudToggle?.checked ? "auto" : bitrateInput ? Number(bitrateInput.value) || 115200 : 115200,
+          true,
           implyGateToggle?.checked ?? true,
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
@@ -2218,9 +2238,12 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   if (family !== "ti_m33" && m33Segments) {
     throw new Error("The loaded file was parsed for TI M33; select the target family again and reload its firmware");
   }
-  const validatedTiFamily = detectedTiFamily ?? detectedTiChipFamily;
-  if (family === "ti" && validatedTiFamily !== "cc26xx" && validatedTiFamily !== "cc2538") {
-    throw new Error("TI device detection did not succeed; reconnect using the correct family before flashing");
+  const chipFamily = detectedTiFamily ?? detectedTiChipFamily;
+  if (family === "ti" && chipFamily !== "cc26xx" && chipFamily !== "cc2538") {
+    throw new Error("Reconnect and detect a supported legacy TI device before flashing; use TI CC2674P10 (M33) for CC2674P10");
+  }
+  if (family === "ti_m33" && (!m33Segments || !m33DeviceInfo)) {
+    throw new Error("Reconnect and validate the TI M33 device, then load a local Intel HEX file before flashing");
   }
 
   if ((family === "ti" || family === "ti_m33") && !isBootloaderOnlyMode()) {
@@ -2237,7 +2260,6 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   const startAddr = hexImage.startAddress;
   const data = hexImage.data;
 
-  const chipFamily = detectedTiFamily ?? detectedTiChipFamily;
   // Ensure BSL mode before flashing/verifying depending on transport
   try {
     await enterBsl();
@@ -2301,7 +2323,8 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     return;
   }
 
-  await ti_tools.sync();
+  const liveInfo = await ti_tools.readDeviceInfo();
+  if (liveInfo.family !== chipFamily) throw new Error("TI device family changed; flashing was refused");
 
   if (optErase.checked) {
     if (chipFamily === "cc26xx") {
@@ -2345,26 +2368,10 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log(`Writing ${data.length} bytes @ ${toHex(startAddr, 8)}...`);
     // reset progress bar
     fwProgressReset("Writing...");
-    //const ff = 0xff;
-    const zero = 0x00;
-
     for (let off = 0; off < data.length; off += chunkSize) {
       const end = Math.min(off + chunkSize, data.length);
       const chunk = data.subarray(off, end);
-      // Skip chunks that are fully 0x00 to avoid unnecessary writes
-      let skip = true;
-      const firstByte = chunk[0];
-      if (firstByte !== zero) {
-        skip = false;
-      } else {
-        // Check if all bytes match the first byte
-        for (let i = 1; i < chunk.length; i++) {
-          if (chunk[i] !== firstByte) {
-            skip = false;
-            break;
-          }
-        }
-      }
+      const skip = optErase.checked && chunk.every((value) => value === 0xff);
       if (!skip) {
         await ti_tools.downloadTo(startAddr + off, chunk);
       }
@@ -2383,72 +2390,18 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Verify...");
     let ok = false;
     try {
-      if (chipFamily === "cc26xx") {
-        const crcDev = await ti_tools.crc32Cc26xx(startAddr, data.length);
-        // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
-        const deviceData = new Uint8Array(data.length);
-        deviceData.fill(0xff); // Start with erased state (all 0xFF)
-        const zero = 0x00;
-        // Apply written chunks
-        for (let off = 0; off < data.length; off += chunkSize) {
-          const end = Math.min(off + chunkSize, data.length);
-          const chunk = data.subarray(off, end);
-          let skip = true;
-          const firstByte = chunk[0];
-          if (firstByte !== zero) {
-            skip = false;
-          } else {
-            for (let i = 1; i < chunk.length; i++) {
-              if (chunk[i] !== firstByte) {
-                skip = false;
-                break;
-              }
-            }
-          }
-          if (!skip) {
-            deviceData.set(chunk, off);
-          }
-        }
-        const crcLocal = computeCrc32(deviceData);
-        log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
-        log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);
-        ok = crcDev === crcLocal;
-      } else if (chipFamily === "cc2538") {
-        // For CC2538 we use crc32 (command 0x27 with addr+size)
-        const crcDev = await ti_tools.crc32(startAddr, data.length);
-        // Create buffer representing actual device state after write (skipped 0x00 chunks remain as 0xFF)
-        const deviceData = new Uint8Array(data.length);
-        deviceData.fill(0xff); // Start with erased state (all 0xFF)
-        const zero = 0x00;
-        // Apply written chunks
-        for (let off = 0; off < data.length; off += chunkSize) {
-          const end = Math.min(off + chunkSize, data.length);
-          const chunk = data.subarray(off, end);
-          let skip = true;
-          const firstByte = chunk[0];
-          if (firstByte !== zero) {
-            skip = false;
-          } else {
-            for (let i = 1; i < chunk.length; i++) {
-              if (chunk[i] !== firstByte) {
-                skip = false;
-                break;
-              }
-            }
-          }
-          if (!skip) {
-            deviceData.set(chunk, off);
-          }
-        }
-        const crcLocal = computeCrc32(deviceData);
-        log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
-        log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);
-        ok = crcDev === crcLocal;
-      }
+      const crcDev = chipFamily === "cc26xx"
+        ? await ti_tools.crc32Cc26xx(startAddr, data.length)
+        : await ti_tools.crc32(startAddr, data.length);
+      const crcLocal = computeCrc32(data);
+      log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
+      log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);
+      ok = crcDev === crcLocal;
     } catch (e: any) {
       log(`Verify error: ${e?.message || String(e)}`);
     }
     log(ok ? "Verify OK" : "Verify FAILED");
+    if (!ok) throw new Error("TI firmware CRC32 verification failed");
   }
 
   // bump baud back to original that was set in ui
@@ -2557,7 +2510,11 @@ async function ieeeWriteSecondary(address: string): Promise<void> {
     if (ieeeMacEl) ieeeMacEl.value = m33DeviceInfo.ieeeMac || "";
   } else if (family === "ti") {
     if (!ti_tools) throw new Error("TiTools not initialized");
-    if (!detectedTiChipFamily) throw new Error("Chip family not detected. Connect to device first.");
+    await enterBsl();
+    await readChipInfo();
+    if (detectedTiChipFamily !== "cc26xx" && detectedTiChipFamily !== "cc2538") {
+      throw new Error("A supported legacy TI chip must be detected before writing IEEE");
+    }
 
     // Write the secondary IEEE address to TI chip
     await ti_tools.writeSecondaryIeeeAddress(address, detectedTiChipFamily);
@@ -2586,6 +2543,9 @@ async function ieeeWriteSecondary(address: string): Promise<void> {
 
     const parsed = new Uint8Array(8);
     for (let i = 0; i < 8; i++) {
+      if (!/^[0-9a-fA-F]{2}$/.test(bytes[i])) {
+        throw new Error(`Invalid byte value in IEEE address: ${bytes[i]}`);
+      }
       const val = parseInt(bytes[i], 16);
       if (isNaN(val) || val < 0 || val > 255) {
         throw new Error(`Invalid byte value in IEEE address: ${bytes[i]}`);
@@ -2649,7 +2609,7 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
       // make link and send using httpGetWithFallback
       await httpGetWithFallback(endUrl).catch((e: any) => {
         log("send request failed: " + (e?.message || String(e)));
-        sleep(1000);
+        throw e;
       });
       return;
     }
@@ -2676,7 +2636,8 @@ export const setLines = async (rstLevel: boolean, bslLevel: boolean) => {
 export async function changeBaud(local: number, remote: number = local): Promise<void> {
   try {
     if (activeConnection === "serial") {
-      await (serial as any)?.reopenWithBaudrate?.(local);
+      if (!serial) throw new Error("No serial connection");
+      await serial.reopenWithBaudrate(local);
       log(`Serial: switched baud to ${local}`);
       if (portInfoEl) portInfoEl.value = `serial @ ${local}bps`;
     } else if (activeConnection === "tcp" && baudUrlInput?.value?.trim() !== "") {
@@ -2684,7 +2645,8 @@ export async function changeBaud(local: number, remote: number = local): Promise
       log(`TCP: switched baud to ${remote}`);
     }
   } catch (e: any) {
-    log("Serial: failed to switch baud " + (e?.message || String(e)));
+    log("Failed to switch baud: " + (e?.message || String(e)));
+    throw e;
   }
 }
 
@@ -2699,7 +2661,7 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   const baudMethod = (baudMethodSelect?.value as "GET" | "POST") || "GET";
   await sendCtrlUrl(tpl, hasSet ? baud : undefined, baudMethod).catch((e: any) => {
     log("Baud change failed: " + (e?.message || String(e)));
-    sleep(1000);
+    throw e;
   });
   await sleep(1000);
 
@@ -2709,16 +2671,7 @@ async function changeBaudOverTcp(baud: number): Promise<void> {
   if (!host || !port) throw new Error("Host/port not set for reconnect");
 
   try {
-    try {
-      tcp.close();
-    } catch {
-      // ignore
-    }
-    const wsBase = getBridgeBase("ws");
-    tcp = new TcpClient(wsBase);
-    await tcp.connect(host, port).catch;
-    tcp.onData((d) => log(`RX: ${bufToHex(d)}`, "rx"));
-    tcp.onTx?.((d: Uint8Array) => log(`TX: ${bufToHex(d)}`, "tx"));
+    await tcp.reconnect(host, port);
     activeConnection = "tcp";
     updateConnectionUI();
     log(`TCP reconnected to ${host}:${port} after baud change`);

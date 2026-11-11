@@ -15,6 +15,10 @@ The CC2530 is a System-on-Chip (SoC) from Texas Instruments, commonly used in Zi
 
 Before using CCLoader, you need to flash the Arduino/ESP with the special CCLoader firmware. This can be done using XZG-MT:
 
+Use the compatible firmware provided by this repository's [CC_Loader branch](https://github.com/xyzroe/XZG-MT/tree/CC_Loader) or its matching cloud builds. Generic upstream CCLoader firmware may lack the chip-identification and flash-read commands required by XZG-MT.
+
+The **Arduino** family programs supported ATmega328P/STK500v1 boards themselves. It does not program the attached CC2530. Arduino Mega2560/STK500v2 is not supported by this workflow; using a Mega as a CCLoader also requires a separately built and hardware-validated loader. The **TI CC25XX → Connect Loader** workflow below targets the attached radio.
+
 1. **Open XZG-MT**:
 
    - Open the [XZG-MT](https://mt.xyzroe.cc) on your computer.
