@@ -1,3 +1,16 @@
+## v0.3.6
+
+- fix(serial): keep port open when switching baud fails (#107) by @xyzroe
+- feat: add TI CC2674P10 Cortex-M33 support (#103) by @LWPkmmt
+- fix(addon): drop deprecated armv7 and the unused config mapping (#106) by @enoch85
+
+## 📘 Documentation
+
+- refactor(ti): merge CC2674P10 support into the TI family (#109) by @xyzroe
+- Add monitor-only mode and Silabs recovery guidance (#105) by @[copilot-swe-agent[bot]](https://github.com/apps/copilot-swe-agent)
+- Consolidate CC2674P10 support and harden TI flashing and network transport (#104) by @[copilot-swe-agent[bot]](https://github.com/apps/copilot-swe-agent)
+- docs: some reorganization (#95) by @xyzroe
+
 ## v0.3.5
 
 ## 🚀 Features
