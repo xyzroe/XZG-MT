@@ -56,6 +56,22 @@
     "link": "https://github.com/egony/cc2652p_E72-2G4M20S1E/raw/master/firmware/router/router_CC2652P_E72_20210812.zip"
   },
   {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2652p_cc1352p_RF-STAR/raw/refs/heads/main/firmware/coordinator/znp_CC1352P_RFS_20260102.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2652p_E72-2G4M20S1E/raw/refs/heads/master/firmware/coordinator/znp_CC1352P_E72_20260105.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2652p7_RF-STAR/raw/refs/heads/main/firmware/coordinator/znp_CC1352P7_20260101.zip"
+  },
+  {
+    "type": "coordinator",
+    "link": "https://github.com/egony/cc2674p10_Ebyte/raw/refs/heads/main/firmware/coordinator/znp_CC2674P10_E72_20260209.zip"
+  },
+  {
     "type": "router",
     "link": "https://github.com/mercenaruss/zigstar_gateways/raw/main/files/Firmware/CC1352P7_Router.zip"
   },
