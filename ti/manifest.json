@@ -284,6 +284,12 @@
                 "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/CC1352P2_CC2652P_launchpad_coordinator_20230507.hex",
                 "notes": "https://raw.githubusercontent.com/Koenkk/Z-Stack-firmware/Z-Stack_3.x.0_coordinator_20230507/coordinator/Z-Stack_3.x.0/CHANGELOG.md",
                 "baud": "115200"
+            },
+            "znp_CC1352P_RFS_20260102.hex": {
+                "ver": "20260102",
+                "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/znp_CC1352P_RFS_20260102.hex",
+                "notes": "",
+                "baud": "115200"
             }
         },
         "CC2652P2_other": {
@@ -346,6 +352,12 @@
                 "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/CC1352P2_CC2652P_other_coordinator_patched_460800_20221226.hex",
                 "notes": "https://raw.githubusercontent.com/Andrik45719/Z-Stack-firmware/main/README.md",
                 "baud": "460800"
+            },
+            "znp_CC1352P_E72_20260105.hex": {
+                "ver": "20260105",
+                "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/znp_CC1352P_E72_20260105.hex",
+                "notes": "",
+                "baud": "115200"
             }
         },
         "CC2652P7": {
@@ -390,6 +402,12 @@
                 "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/CC1352P7_coordinator_patched_460800_20240316.hex",
                 "notes": "https://raw.githubusercontent.com/Andrik45719/Z-Stack-firmware/main/README.md",
                 "baud": "460800"
+            },
+            "znp_CC1352P7_20260101.hex": {
+                "ver": "20260101",
+                "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/znp_CC1352P7_20260101.hex",
+                "notes": "",
+                "baud": "115200"
             }
         },
         "CC2652RB": {
@@ -498,6 +516,14 @@
                 "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/CC2652R_coordinator_460800_20230507.hex",
                 "notes": "https://raw.githubusercontent.com/Andrik45719/Z-Stack-firmware/main/README.md",
                 "baud": "460800"
+            }
+        },
+        "CC2674P10": {
+            "znp_CC2674P10_E72_20260209.hex": {
+                "ver": "20260209",
+                "link": "https://raw.githubusercontent.com/xyzroe/XZG-MT/fw_files/ti/coordinator/znp_CC2674P10_E72_20260209.hex",
+                "notes": "",
+                "baud": "115200"
             }
         }
     }

@@ -6,7 +6,7 @@ Welcome to the **fw_files** branch of the XZG Multi Tool repository! This branch
 ## ♥️ Ti 
 <div align="center">
 
-![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-17_files-brightgreen?style=for-the-badge) ![Zigbee Coodinator](https://img.shields.io/badge/Zigbee_Coordinator-51_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread](https://img.shields.io/badge/OpenThread-8_files-brightgreen?style=for-the-badge&color=0000ff)
+![Zigbee Router](https://img.shields.io/badge/Zigbee_Router-17_files-brightgreen?style=for-the-badge) ![Zigbee Coodinator](https://img.shields.io/badge/Zigbee_Coordinator-55_files-brightgreen?style=for-the-badge&color=ff0000) ![OpenThread](https://img.shields.io/badge/OpenThread-8_files-brightgreen?style=for-the-badge&color=0000ff)
 
 </div>
 
@@ -21,6 +21,8 @@ Downloaded from:
 - [egony/cc2652p_E72-2G4M20S1E](https://github.com/egony/cc2652p_E72-2G4M20S1E)
 - [tube0013/tube_gateways](https://github.com/tube0013/tube_gateways)
 - [agriadsi/MOD-Z-Stack-Firmware](https://github.com/agriadsi/MOD-Z-Stack-Firmware)
+- [egony/cc2652p7_RF-STAR](https://github.com/egony/cc2652p7_RF-STAR)
+- [egony/cc2674p10_Ebyte](https://github.com/egony/cc2674p10_Ebyte)
 - [mercenaruss/zigstar_gateways](https://github.com/mercenaruss/zigstar_gateways)
 
 
