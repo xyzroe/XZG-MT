@@ -2176,7 +2176,7 @@ async function runConnectSequence(): Promise<void> {
       ti_tools.setSetLinesHandler(setLines);
     } else if (family === "sl") {
       // Silabs path: enter bootloader, read BL version, then reset back to app
-      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink()); (window as any).__sl = sl_tools;
+      if (!sl_tools) sl_tools = new SilabsTools(getActiveLink());
       sl_tools.setLogger((msg: string) => log(msg));
       sl_tools.setProgressCallback((percent: number, msg: string) => {
         fwProgress(percent, msg);
