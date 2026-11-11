@@ -6,7 +6,6 @@
   "image": "ghcr.io/xyzroe/xzg-mt",
   "arch": [
     "amd64",
-    "armv7",
     "aarch64"
   ],
   "startup": "services",
@@ -28,9 +27,6 @@
     "debug_mode": "bool?"
   },
   "url": "https://github.com/xyzroe/XZG-MT",
-  "map": [
-    "config:rw"
-  ],
   "host_network": true,
   "uart": true
 }
