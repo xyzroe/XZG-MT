@@ -3,7 +3,7 @@
 | Manufacturer      | Model                  | Notes                          | Interface | Detect | Erase | Write | Verify | Read | Copy IEEE | NVRAM |  Local files   | Cloud FWs |
 | :---------------- | :--------------------- | :----------------------------- | :-------: | :----: | :---: | :---: | :----: | :--: | :-------: | :---: | :------------: | :-------: |
 | Texas Instruments | CC2538, CC1352, CC2652 | with BSL loader                |  🔌 / 🌐  |   ✅   |  ✅   |  ✅   |   ✅   |  ✅  |    ✅     |  ✅   | `.hex`, `.bin` |    ✅     |
-| Texas Instruments | CC2674P10 (Cortex-M33) | dedicated M33 profile; see below |  🔌 / 🌐  |   ✅   |  ⚠️   |  ✅   |   ✅   |  ❌  |    ✅     |  ❌   | `.hex`        |    ❌     |
+| Texas Instruments | CC2674P10 (Cortex-M33) | same TI family, auto-detected; see below |  🔌 / 🌐  |   ✅   |  ⚠️   |  ✅   |   ✅   |  ⚠️  |    ✅     |  ✅   | `.hex`        |    ✅     |
 | Silicon Labs      | EFR32MG21 series       | with Gecko Bootloader          |  🔌 / 🌐  |   ✅   |  ❌   |  ✅   |   ❌   |  ❌  |    ✅     |  ❌   | `.ota`, `.gbl` |    ✅     |
 | Espressif         | ESP8266, ESP32 series  | almost any chip                |    🔌     |   ✅   |  ✅   |  ✅   |   ❌   |  ❌  |    ◻️     |  ◻️   |     `.bin`     |    ⚠️     |
 | Texas Instruments | CC253X, CC254X\*       | using TI CC Debugger           |    🧰     |   ✅   |  ✅   |  ✅   |   ✅   |  ✅  |    ❌     |  ❌   | `.hex`, `.bin` |    ❌     |
@@ -18,13 +18,12 @@
 
 ### CC2674P10
 
-- Select **TI CC2674P10 (M33)**, not the legacy TI family. Device identity and flash capacity must match the registered profile.
-- Use a local Intel HEX image containing main flash and a valid CCFG bootloader configuration. Main flash and the independent CCFG sector are kept separate; binary and cloud images are not supported.
+- Use the regular **TI** family; CC2674P10 is detected by its chip ID and handled automatically.
+- Use an Intel HEX image (local or cloud) containing main flash and a valid CCFG bootloader configuration. Main flash and the independent CCFG sector are kept separate; `.bin` images are not supported.
 - Writing requires **Erase, Write and Verify** together. Erase-only operation is disabled; verify-only is available.
 - The complete CCFG sector is read and CRC-checked before any erase. Firmware CCFG bytes are overlaid on that snapshot, preserving omitted configuration and an existing non-FF secondary IEEE address. Main flash is verified before CCFG is erased; the complete rewritten CCFG is verified afterward.
 - Writes refuse latched CCFG protection, disabled bank/chip erase, changed protection/security configuration, or changes to an already-enabled bootloader backdoor configuration. These conservative restrictions avoid silently disabling recovery; they are not support for arbitrary security configurations.
 - If external hardware has already entered ROM BSL, enable **Already in BSL** before connecting. Reset/control, baud switching and application probing are skipped, and the device remains in BSL afterward. Use the actual bootloader transport baud rate.
-- NVRAM and full-flash reads are not implemented for M33.
 
 Upstream PR #103 reports hardware validation on Dongle-PP10 over WebSerial and Dongle-MP10 over TCP. The additional preservation and protection checks need hardware regression testing, including older TI devices. Flash/CCFG updates are not atomic: loss of power or transport can still require hardware recovery.
 

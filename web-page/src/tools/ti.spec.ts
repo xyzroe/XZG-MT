@@ -9,7 +9,7 @@ import {
   programM33,
   readM33DeviceInfo,
   writeM33SecondaryIeeeAddress,
-} from "./ti-m33";
+} from "./ti";
 
 const base = profile.memory.ccfgBase;
 const bootloader = Uint8Array.of(0xc5, 13, 0xfe, 0xc5);

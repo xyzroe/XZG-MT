@@ -99,8 +99,7 @@ npm test
 - **ui.ts** - UI elements and event handling
 - **netfw.ts** - Network firmware fetching and parsing
 - **tools/** - Device specific protocols
-  - **ti.ts** - TI CC device communication protocol
-  - **ti-m33.ts** - Validated M33 profiles, sparse HEX images and independent CCFG programming
+  - **ti.ts** - TI CC26xx/CC13xx (incl. CC2674P10), CC2538 BSL protocol, NVRAM, IEEE
   - **sl.ts** - Silabs device communication protocol
   - **cc-debugger.ts** - CC Debugger communication protocol
   - **cc-loader.ts** - CC Loader communication protocol
