@@ -169,7 +169,7 @@ export class ArduinoTools {
     cmd: number,
     params: number[] = [],
     timeoutMs = 400,
-    expectedSize = 0
+    expectedSize = 0,
   ): Promise<Uint8Array | null> {
     const packet = new Uint8Array([cmd, ...params, CRC_EOP]);
     await this.link.write(packet);
@@ -334,7 +334,7 @@ export class ArduinoTools {
       this.logger(
         `Board detected: ${chipName} (Signature: ${signature
           .map((b) => "0x" + b.toString(16).padStart(2, "0"))
-          .join(" ")})`
+          .join(" ")})`,
       );
       if (flashSize) {
         this.logger(`Flash size: ${flashSize} bytes (${(flashSize / 1024).toFixed(0)}KB)`);
@@ -505,7 +505,7 @@ export class ArduinoTools {
               throw new Error(
                 `Verify failed at address 0x${(address + i).toString(16)}: expected 0x${paddedExpected[i]
                   .toString(16)
-                  .padStart(2, "0")}, got 0x${readData[i].toString(16).padStart(2, "0")}`
+                  .padStart(2, "0")}, got 0x${readData[i].toString(16).padStart(2, "0")}`,
               );
             }
           }

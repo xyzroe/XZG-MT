@@ -504,7 +504,7 @@ export function updateUIForFamily() {
     setText(nvramTitle, "NVM3 tokens");
     setText(
       nvramDescription,
-      "Back up or restore EZSP tokens. Restore only to a compatible device running the same firmware/token table; this may replace network credentials and counters."
+      "Back up or restore EZSP tokens. Restore only to a compatible device running the same firmware/token table; this may replace network credentials and counters.",
     );
     setText(localFileHelp, "Use a local file (*.ota or *.gbl).");
     setAttr(localFile, "accept", ".ota,.gbl");

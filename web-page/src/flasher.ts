@@ -680,8 +680,12 @@ btnNvWrite?.addEventListener("click", async () => {
       }
 
       const j = JSON.parse(text);
-      if (getSelectedFamily() === "sl" &&
-          !window.confirm("Restore these NVM3 tokens? This replaces saved network credentials and counters. Use only with a compatible firmware/token table.")) {
+      if (
+        getSelectedFamily() === "sl" &&
+        !window.confirm(
+          "Restore these NVM3 tokens? This replaces saved network credentials and counters. Use only with a compatible firmware/token table.",
+        )
+      ) {
         return false;
       }
       await nvramWriteAll(j);
@@ -699,71 +703,73 @@ btnNvWrite?.addEventListener("click", async () => {
       throw e;
     }
   });
-  });
+});
 
-  btnSilabsEnergyScan?.addEventListener("click", async () => {
-    if (!sl_tools) {
-      log("SilabsTools not initialized");
-      return;
-    }
-    btnSilabsEnergyScan!.disabled = true;
-    nvProgressSetColor("primary");
-    nvProgressReset("Starting energy scan...");
-    try {
-      await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, (percent, message) => {
-        nvProgress(percent, message);
-        if (message.startsWith("Channel ")) log(`Energy scan: ${message}`);
-      });
-      log("EZSP energy scan completed");
-    } catch (error: unknown) {
-      log("EZSP energy scan failed: " + (error instanceof Error ? error.message : String(error)));
-      nvProgressReset("Error");
-    } finally {
-      btnSilabsEnergyScan!.disabled = false;
-    }
-  });
+btnSilabsEnergyScan?.addEventListener("click", async () => {
+  if (!sl_tools) {
+    log("SilabsTools not initialized");
+    return;
+  }
+  btnSilabsEnergyScan!.disabled = true;
+  nvProgressSetColor("primary");
+  nvProgressReset("Starting energy scan...");
+  try {
+    await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, (percent, message) => {
+      nvProgress(percent, message);
+      if (message.startsWith("Channel ")) log(`Energy scan: ${message}`);
+    });
+    log("EZSP energy scan completed");
+  } catch (error: unknown) {
+    log("EZSP energy scan failed: " + (error instanceof Error ? error.message : String(error)));
+    nvProgressReset("Error");
+  } finally {
+    btnSilabsEnergyScan!.disabled = false;
+  }
+});
 
-  btnSilabsSniffStart?.addEventListener("click", async () => {
-    if (!sl_tools) {
-      log("SilabsTools not initialized");
-      return;
-    }
-    btnSilabsSniffStart!.disabled = true;
-    try {
-      const channel = Number(silabsChannel?.value ?? 11);
-      slPacketListenerRemove?.();
-      slPacketListenerRemove = sl_tools.addEzspEventListener((event) => {
-        if (event.type === "packet") {
-          const hex = Array.from(event.data).map((byte) => byte.toString(16).padStart(2, "0")).join("");
-          log(`Sniff ch ${event.channel || channel} RSSI ${event.rssi} dBm LQI ${event.linkQuality}: ${hex}`);
-        }
-      });
-      await sl_tools.startPacketMonitor(channel);
-      btnSilabsSniffStop!.disabled = false;
-      log(`EZSP packet monitor started on channel ${channel}`);
-    } catch (error: unknown) {
-      slPacketListenerRemove?.();
-      slPacketListenerRemove = null;
-      btnSilabsSniffStart!.disabled = false;
-      log("EZSP packet monitor failed: " + (error instanceof Error ? error.message : String(error)));
-    }
-  });
+btnSilabsSniffStart?.addEventListener("click", async () => {
+  if (!sl_tools) {
+    log("SilabsTools not initialized");
+    return;
+  }
+  btnSilabsSniffStart!.disabled = true;
+  try {
+    const channel = Number(silabsChannel?.value ?? 11);
+    slPacketListenerRemove?.();
+    slPacketListenerRemove = sl_tools.addEzspEventListener((event) => {
+      if (event.type === "packet") {
+        const hex = Array.from(event.data)
+          .map((byte) => byte.toString(16).padStart(2, "0"))
+          .join("");
+        log(`Sniff ch ${event.channel || channel} RSSI ${event.rssi} dBm LQI ${event.linkQuality}: ${hex}`);
+      }
+    });
+    await sl_tools.startPacketMonitor(channel);
+    btnSilabsSniffStop!.disabled = false;
+    log(`EZSP packet monitor started on channel ${channel}`);
+  } catch (error: unknown) {
+    slPacketListenerRemove?.();
+    slPacketListenerRemove = null;
+    btnSilabsSniffStart!.disabled = false;
+    log("EZSP packet monitor failed: " + (error instanceof Error ? error.message : String(error)));
+  }
+});
 
-  btnSilabsSniffStop?.addEventListener("click", async () => {
-    btnSilabsSniffStop!.disabled = true;
-    try {
-      await sl_tools?.stopPacketMonitor();
-      log("EZSP packet monitor stopped");
-    } catch (error: unknown) {
-      log("Failed to stop EZSP packet monitor: " + (error instanceof Error ? error.message : String(error)));
-    } finally {
-      slPacketListenerRemove?.();
-      slPacketListenerRemove = null;
-      btnSilabsSniffStart!.disabled = false;
-    }
-  });
+btnSilabsSniffStop?.addEventListener("click", async () => {
+  btnSilabsSniffStop!.disabled = true;
+  try {
+    await sl_tools?.stopPacketMonitor();
+    log("EZSP packet monitor stopped");
+  } catch (error: unknown) {
+    log("Failed to stop EZSP packet monitor: " + (error instanceof Error ? error.message : String(error)));
+  } finally {
+    slPacketListenerRemove?.();
+    slPacketListenerRemove = null;
+    btnSilabsSniffStart!.disabled = false;
+  }
+});
 
-  // UI wiring for IEEE secondary address
+// UI wiring for IEEE secondary address
 btnIeeeRead?.addEventListener("click", async () => {
   await withButtonStatus(btnIeeeRead!, async () => {
     try {
@@ -2422,7 +2428,11 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
   // CCFG lives in the last main-bank sector on CC26x2, so bank erase would wipe the secondary IEEE
   if (chipFamily === "cc26xx" && optErase.checked && optWrite.checked && liveInfo.flashSizeBytes) {
     const ieeeOffset = liveInfo.flashSizeBytes - 88 + 0x20 - startAddr;
-    if (ieeeOffset >= 0 && ieeeOffset + 8 <= data.length && data.subarray(ieeeOffset, ieeeOffset + 8).every((b) => b === 0xff)) {
+    if (
+      ieeeOffset >= 0 &&
+      ieeeOffset + 8 <= data.length &&
+      data.subarray(ieeeOffset, ieeeOffset + 8).every((b) => b === 0xff)
+    ) {
       const stored = (await ti_tools.readSecondaryIeeeAddress("cc26xx")).reverse();
       if (stored.some((b) => b !== 0xff)) {
         data = new Uint8Array(data);
@@ -2496,9 +2506,10 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
     log("Verify...");
     let ok = false;
     try {
-      const crcDev = chipFamily === "cc26xx"
-        ? await ti_tools.crc32Cc26xx(startAddr, data.length)
-        : await ti_tools.crc32(startAddr, data.length);
+      const crcDev =
+        chipFamily === "cc26xx"
+          ? await ti_tools.crc32Cc26xx(startAddr, data.length)
+          : await ti_tools.crc32(startAddr, data.length);
       const crcLocal = computeCrc32(data);
       log(`CRC32(dev)=0x${crcDev.toString(16).toUpperCase().padStart(8, "0")}`);
       log(`CRC32(loc)=0x${crcLocal.toString(16).toUpperCase().padStart(8, "0")}`);

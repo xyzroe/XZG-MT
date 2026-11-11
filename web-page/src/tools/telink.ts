@@ -298,7 +298,7 @@ export class TelinkTools {
     param1: number,
     param2: number,
     data?: Uint8Array,
-    timeoutMs = 400
+    timeoutMs = 400,
   ): Promise<Uint8Array | null> {
     // Format: [CMD(1)] [param1(1)] [param2_low(1)] [param2_high(1)] [data...] [CRC(2)]
     const header = new Uint8Array([cmd, param1 & 0xff, param2 & 0xff, (param2 >> 8) & 0xff]);
@@ -683,7 +683,7 @@ export class TelinkTools {
         retries--;
         if (retries > 0) {
           this.logger(
-            `Erase retry at 0x${addr.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`
+            `Erase retry at 0x${addr.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`,
           );
         } else {
           this.logger(`Error erasing sector at 0x${addr.toString(16).padStart(6, "0")} after ${maxRetries} attempts`);
@@ -742,7 +742,7 @@ export class TelinkTools {
       retries--;
       if (retries > 0) {
         this.logger(
-          `Write retry at 0x${offset.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`
+          `Write retry at 0x${offset.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`,
         );
       } else {
         this.logger(`Error writing flash at 0x${offset.toString(16).padStart(6, "0")} after ${maxRetries} attempts`);
@@ -804,7 +804,7 @@ export class TelinkTools {
       retries--;
       if (retries > 0) {
         this.logger(
-          `Read retry at 0x${offset.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`
+          `Read retry at 0x${offset.toString(16).padStart(6, "0")} (${maxRetries - retries}/${maxRetries - 1})`,
         );
       } else {
         this.logger(`Error reading flash at 0x${offset.toString(16).padStart(6, "0")} after ${maxRetries} attempts`);
@@ -825,7 +825,7 @@ export class TelinkTools {
     firmware: Uint8Array,
     startAddress: number = 0,
     erase: boolean = true,
-    verify: boolean = false
+    verify: boolean = false,
   ): Promise<void> {
     if (!this.floaderLoaded) {
       throw new Error("Floader not loaded.");
@@ -988,7 +988,7 @@ export class TelinkTools {
       "dump",
       chipModelEl?.value,
       undefined,
-      String(flashSize / 1024) + "KB"
+      String(flashSize / 1024) + "KB",
     );
 
     this.logger(`Flash saved to ${filename}`);
@@ -1366,7 +1366,7 @@ export class TelinkPgmTools {
     this.logger(
       `PGM: ChipID: 0x${this.pgmChipId.toString(16).padStart(4, "0")} (${this.pgmChipName}), ver: ${
         this.pgmVersion[0]
-      }.${this.pgmVersion[1]}`
+      }.${this.pgmVersion[1]}`,
     );
     this.logger(`swdiv ${this.pgmSwDiv}, addrlen ${this.pgmSwAddrLen}, pwr ${this.pgmPower ? "On" : "Off"}`);
     this.logger(`SWire bit rate: ${this.pgmSwsSpeed.toFixed(4)} Mbits/s`);
@@ -1517,7 +1517,7 @@ export class TelinkPgmTools {
     this.logger(
       `Chip ${this.extChipName} ID: 0x${this.extChipId.toString(16).padStart(4, "0")}, rev: 0x${this.extChipVersion
         .toString(16)
-        .padStart(2, "0")}`
+        .padStart(2, "0")}`,
     );
 
     return true;
@@ -1539,7 +1539,7 @@ export class TelinkPgmTools {
     this.extFlashSize = 1 << response[6];
 
     this.logger(
-      `Flash JEDEC ID: 0x${this.extJedecId.toString(16).padStart(6, "0")}, Size: ${this.extFlashSize >> 10} kbytes`
+      `Flash JEDEC ID: 0x${this.extJedecId.toString(16).padStart(6, "0")}, Size: ${this.extFlashSize >> 10} kbytes`,
     );
 
     return true;
@@ -1663,7 +1663,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Read SWire data at 0x${offset.toString(16).padStart(6, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return null;
   }
@@ -1700,7 +1700,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Write SWire data at 0x${offset.toString(16).padStart(6, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return false;
   }
@@ -1740,7 +1740,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Read Flash data at 0x${offset.toString(16).padStart(6, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return null;
   }
@@ -1768,7 +1768,7 @@ export class TelinkPgmTools {
       if (!response || this.lastError !== PGM_ERR_NONE || this.lastWcnt !== data.length) {
         if (retry < maxRetries - 1) {
           this.logger(
-            `Write Flash retry at 0x${offset.toString(16).padStart(6, "0")} (${retry + 1}/${maxRetries - 1})`
+            `Write Flash retry at 0x${offset.toString(16).padStart(6, "0")} (${retry + 1}/${maxRetries - 1})`,
           );
         }
         continue;
@@ -1815,7 +1815,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Write Flash data at 0x${offset.toString(16).padStart(6, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return false;
   }
@@ -1845,7 +1845,7 @@ export class TelinkPgmTools {
       if (!response || this.lastError !== PGM_ERR_NONE) {
         if (retry < maxRetries - 1) {
           this.logger(
-            `Erase sector retry at 0x${offset.toString(16).padStart(6, "0")} (${retry + 1}/${maxRetries - 1})`
+            `Erase sector retry at 0x${offset.toString(16).padStart(6, "0")} (${retry + 1}/${maxRetries - 1})`,
           );
         }
         continue;
@@ -1979,7 +1979,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Read Analog data at 0x${offset.toString(16).padStart(2, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return null;
   }
@@ -2020,7 +2020,7 @@ export class TelinkPgmTools {
     this.logger(
       `Error Write Analog data at 0x${offset.toString(16).padStart(2, "0")}! (err=${this.lastError}, wcnt=${
         this.lastWcnt
-      })`
+      })`,
     );
     return false;
   }
@@ -2158,7 +2158,7 @@ export class TelinkPgmTools {
     firmware: Uint8Array,
     startAddress: number = 0,
     erase: boolean = true,
-    verify: boolean = false
+    verify: boolean = false,
   ): Promise<void> {
     if (!this.connected) {
       throw new Error("PGM board not connected");
@@ -2323,7 +2323,7 @@ export class TelinkPgmTools {
       "dump",
       chipModelEl?.value,
       undefined,
-      String(flashSize / 1024) + "KB"
+      String(flashSize / 1024) + "KB",
     );
 
     this.logger(`Flash saved to ${filename}`);

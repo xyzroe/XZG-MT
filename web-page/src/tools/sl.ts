@@ -71,7 +71,14 @@ function keySlotsForToken(nvm3Key: number, index: number): KeySlot[] {
     case NVM3KEY_STACK_TRUST_CENTER:
       return [{ keyType: SecManKeyType.TC_LINK, offset: 2 + 8 }];
     case NVM3KEY_STACK_KEY_TABLE:
-      return [{ keyType: SecManKeyType.APP_LINK, offset: KEY_ENTRY_KEY_DATA_OFFSET, keyIndex: index, flags: SEC_MAN_FLAG_KEY_INDEX_IS_VALID }];
+      return [
+        {
+          keyType: SecManKeyType.APP_LINK,
+          offset: KEY_ENTRY_KEY_DATA_OFFSET,
+          keyIndex: index,
+          flags: SEC_MAN_FLAG_KEY_INDEX_IS_VALID,
+        },
+      ];
     case NVM3KEY_STACK_GP_PROXY_TABLE:
       return [{ keyType: SecManKeyType.GREEN_POWER_PROXY_TABLE_KEY, offset: 1 + 4 + 8 + 1 + 1, keyIndex: index }];
     case NVM3KEY_STACK_GP_SINK_TABLE:
@@ -542,7 +549,7 @@ export class SilabsTools {
 
   public async getApplicationVersion(
     doReset: boolean = false,
-    implyGate: boolean = false
+    implyGate: boolean = false,
   ): Promise<{ version: string; deviceModel?: string }> {
     // Re-register handler to ensure we are listening
     this.ensureListener();
@@ -656,7 +663,9 @@ export class SilabsTools {
       for (let arrayIndex = 0; arrayIndex < info.arraySize; arrayIndex++) {
         const data = await client.getTokenData(info.key, arrayIndex);
         if (data.length !== info.size) {
-          throw new Error(`NVM3 token 0x${info.key.toString(16)}[${arrayIndex}]: got ${data.length} bytes, expected ${info.size}`);
+          throw new Error(
+            `NVM3 token 0x${info.key.toString(16)}[${arrayIndex}]: got ${data.length} bytes, expected ${info.size}`,
+          );
         }
         if (psaKeyStorage) await client.exportKeysIntoTokenData(data, info.key, arrayIndex);
         if (info.key === NVM3KEY_STACK_RESTORED_EUI64 && data.length === 8 && data.every((b) => b === 0xff)) {
@@ -678,8 +687,16 @@ export class SilabsTools {
   }
 
   // Port of zigbee-herdsman EmberTokensManager.restoreTokens (+ ember-zli binding table clip)
-  public async restoreNvm3(backup: Nvm3Backup, onProgress: (percent: number, message: string) => void = () => {}): Promise<void> {
-    if (!backup || backup.format !== "xzg-mt-silabs-nvm3" || backup.version !== 2 || typeof backup.tokens !== "string") {
+  public async restoreNvm3(
+    backup: Nvm3Backup,
+    onProgress: (percent: number, message: string) => void = () => {},
+  ): Promise<void> {
+    if (
+      !backup ||
+      backup.format !== "xzg-mt-silabs-nvm3" ||
+      backup.version !== 2 ||
+      typeof backup.tokens !== "string"
+    ) {
       throw new Error("Unsupported Silabs NVM3 backup format");
     }
     const buf = parseNvm3TokensHex(backup.tokens, (msg) => this.logger(msg));
@@ -901,7 +918,7 @@ export class SilabsTools {
     baudrate: number | "auto" = "auto",
     doReset: boolean = true,
     implyGate: boolean = true,
-    baudrateCandidates: number[] = [115200, 460800, 230400]
+    baudrateCandidates: number[] = [115200, 460800, 230400],
   ): Promise<{ firmwareType: string; version: string; baudrate: number; deviceModel?: string }> {
     const tryBaudrates = baudrate === "auto" ? baudrateCandidates : [baudrate];
 
@@ -1185,7 +1202,7 @@ class EzspAshClient {
   }
 
   public async initialize(
-    implyGate: boolean = false
+    implyGate: boolean = false,
   ): Promise<{ version: number; stackType: number; stackVersion: number }> {
     // Only reset if not already initialized
     if (!this.initialized) {
@@ -1256,7 +1273,7 @@ class EzspAshClient {
   }
 
   public async readVersion(
-    implyGate: boolean = false
+    implyGate: boolean = false,
   ): Promise<{ version: string; mfgString?: string; boardName?: string }> {
     await this.ensureReady();
 
@@ -1381,7 +1398,7 @@ class EzspAshClient {
       throw new Error(
         `Firmware does not support NV3 tokens. ` +
           `Custom IEEE will not be written unless you pass select "Force" option. ` +
-          `WARNING: MFG_CUSTOM_EUI_64 is ONE-TIME write and cannot be changed afterward!`
+          `WARNING: MFG_CUSTOM_EUI_64 is ONE-TIME write and cannot be changed afterward!`,
       );
     }
 
@@ -1392,7 +1409,7 @@ class EzspAshClient {
           .reverse()
           .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
           .join(":")}) ` +
-        `and cannot be changed!`
+        `and cannot be changed!`,
     );
   }
 
@@ -1413,7 +1430,7 @@ class EzspAshClient {
           console.log(
             `Found NV3 token 0x${tokenId.toString(16).padStart(8, "0")}: ${Array.from(data)
               .map((b) => b.toString(16).padStart(2, "0"))
-              .join(":")}`
+              .join(":")}`,
           );
           return tokenId;
         }
@@ -1473,235 +1490,244 @@ class EzspAshClient {
     return (await this.getMfgCustomEui64()) === null;
   }
 
-    public addEventListener(listener: (event: EzspEvent) => void): () => void {
-      this.eventListeners.add(listener);
-      return () => this.eventListeners.delete(listener);
-    }
+  public addEventListener(listener: (event: EzspEvent) => void): () => void {
+    this.eventListeners.add(listener);
+    return () => this.eventListeners.delete(listener);
+  }
 
-    public async getEui64(): Promise<Uint8Array> {
-      const response = await this.sendEzspCommand(0x0026, new Uint8Array(), 4000);
-      if (response.length < 8) throw new Error("Invalid getEui64 response");
-      return response.slice(0, 8);
-    }
+  public async getEui64(): Promise<Uint8Array> {
+    const response = await this.sendEzspCommand(0x0026, new Uint8Array(), 4000);
+    if (response.length < 8) throw new Error("Invalid getEui64 response");
+    return response.slice(0, 8);
+  }
 
-    // herdsman ncpUsesPSAKeyStorage: getValue(KEY_STORAGE_VERSION)
-    public async usesPsaKeyStorage(): Promise<boolean> {
-      const response = await this.sendEzspCommand(0x00aa, new Uint8Array([0x44]), 4000);
-      const offset = this.statusSize();
-      if (response.length < offset + 2) throw new Error("Invalid getValue(KEY_STORAGE_VERSION) response");
-      const status = this.readStatus(response);
-      if (status !== 0) throw new Error(`Error retrieving key storage version, status=0x${status.toString(16)}`);
-      return response[offset + 1] === 1;
-    }
+  // herdsman ncpUsesPSAKeyStorage: getValue(KEY_STORAGE_VERSION)
+  public async usesPsaKeyStorage(): Promise<boolean> {
+    const response = await this.sendEzspCommand(0x00aa, new Uint8Array([0x44]), 4000);
+    const offset = this.statusSize();
+    if (response.length < offset + 2) throw new Error("Invalid getValue(KEY_STORAGE_VERSION) response");
+    const status = this.readStatus(response);
+    if (status !== 0) throw new Error(`Error retrieving key storage version, status=0x${status.toString(16)}`);
+    return response[offset + 1] === 1;
+  }
 
-    private secManContext(slot: KeySlot): Uint8Array {
-      const ctx = new Uint8Array(18);
-      const view = new DataView(ctx.buffer);
-      ctx[0] = slot.keyType;
-      ctx[1] = slot.keyIndex ?? 0;
-      // derivedType (u16) = NONE, eui64 (8) = zero, multiNetworkIndex = 0
-      ctx[13] = slot.flags ?? 0;
-      view.setUint32(14, ZB_PSA_ALG, true);
-      return ctx;
-    }
+  private secManContext(slot: KeySlot): Uint8Array {
+    const ctx = new Uint8Array(18);
+    const view = new DataView(ctx.buffer);
+    ctx[0] = slot.keyType;
+    ctx[1] = slot.keyIndex ?? 0;
+    // derivedType (u16) = NONE, eui64 (8) = zero, multiNetworkIndex = 0
+    ctx[13] = slot.flags ?? 0;
+    view.setUint32(14, ZB_PSA_ALG, true);
+    return ctx;
+  }
 
-    public async exportKeysIntoTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
-      for (const slot of keySlotsForToken(nvm3Key, index)) {
-        const response = await this.sendEzspCommand(0x0114, this.secManContext(slot), 4000);
-        if (response.length < 4 + KEY_SIZE) throw new Error("Invalid exportKey response");
-        // EZSP < 14 returns key before status
-        const keyOffset = this.protocolVersion < 0x0e ? 0 : 4;
-        const status = this.readUInt32(response, this.protocolVersion < 0x0e ? KEY_SIZE : 0);
-        if (status !== 0) {
-          this.logger(`exportKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
-        }
-        data.set(response.subarray(keyOffset, keyOffset + KEY_SIZE), slot.offset);
-      }
-    }
-
-    public async importKeysFromTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
-      for (const slot of keySlotsForToken(nvm3Key, index)) {
-        const payload = new Uint8Array(18 + KEY_SIZE);
-        payload.set(this.secManContext(slot));
-        payload.set(data.subarray(slot.offset, slot.offset + KEY_SIZE), 18);
-        const response = await this.sendEzspCommand(0x0115, payload, 4000);
-        if (response.length < 4) throw new Error("Invalid importKey response");
-        const status = this.readUInt32(response, 0);
-        if (status !== 0) {
-          this.logger(`importKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
-        }
-      }
-    }
-
-    public async getTokenCount(): Promise<number> {
-      await this.ensureReady();
-      await this.initialize();
-      const response = await this.sendEzspCommand(0x0100, new Uint8Array(), 4000);
-      const countSize = this.protocolVersion >= 0x12 ? 4 : 1;
-      if (response.length < countSize) throw new Error("Invalid getTokenCount response");
-      return countSize === 4 ? this.readUInt32(response, 0) : response[0];
-    }
-
-    public async getTokenInfo(tokenIndex: number): Promise<Nvm3TokenInfo> {
-      if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex > 0xff) {
-        throw new Error("Token table index must be between 0 and 255");
-      }
-      const response = await this.sendEzspCommand(0x0101, new Uint8Array([tokenIndex]), 4000);
-      const offset = this.statusSize();
-      if (response.length < offset) throw new Error("Invalid getTokenInfo response");
-      const status = this.readStatus(response);
-      // EmberStatus LIBRARY_NOT_PRESENT (0xB5), SLStatus NOT_AVAILABLE (0x0E) on EZSP >= 14
-      if (status === 0xb5 || (this.protocolVersion >= 0x0e && status === 0x0e)) {
-        throw new Error("This firmware does not support NVM3 token access (token interface library not present)");
-      }
-      if (status !== 0) throw new Error(`getTokenInfo failed with status 0x${status.toString(16)}`);
-      if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
-      return {
-        tokenIndex,
-        key: this.readUInt32(response, offset),
-        isCounter: response[offset + 4] !== 0,
-        isIndexed: response[offset + 5] !== 0,
-        size: response[offset + 6],
-        arraySize: response[offset + 7],
-      };
-    }
-
-    public async getTokenData(tokenId: number, index: number): Promise<Uint8Array> {
-      const response = await this.sendEzspCommand(0x0102, this.tokenIndexPayload(tokenId, index), 4000);
-      const offset = this.statusSize();
-      if (response.length < offset + 4) throw new Error("Invalid getTokenData response");
-      const status = this.readStatus(response);
-      if (status !== 0) throw new Error(`getTokenData failed with status 0x${status.toString(16)}`);
-      const size = this.readUInt32(response, offset);
-      if (response.length < offset + 4 + size) throw new Error("Truncated getTokenData response");
-      return response.slice(offset + 4, offset + 4 + size);
-    }
-
-    public async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
-      if (data.length > 0xffffffff) throw new Error("Token data is too large");
-      const tokenData = this.tokenIndexPayload(tokenId, index);
-      const payload = new Uint8Array(tokenData.length + 4 + data.length);
-      payload.set(tokenData);
-      new DataView(payload.buffer).setUint32(tokenData.length, data.length, true);
-      payload.set(data, tokenData.length + 4);
-      const response = await this.sendEzspCommand(0x0103, payload, 4000);
-      if (response.length < this.statusSize()) throw new Error("Invalid setTokenData response");
-      const status = this.readStatus(response);
+  public async exportKeysIntoTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+    for (const slot of keySlotsForToken(nvm3Key, index)) {
+      const response = await this.sendEzspCommand(0x0114, this.secManContext(slot), 4000);
+      if (response.length < 4 + KEY_SIZE) throw new Error("Invalid exportKey response");
+      // EZSP < 14 returns key before status
+      const keyOffset = this.protocolVersion < 0x0e ? 0 : 4;
+      const status = this.readUInt32(response, this.protocolVersion < 0x0e ? KEY_SIZE : 0);
       if (status !== 0) {
-        throw new Error(
-          `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
-        );
+        this.logger(`exportKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
+      }
+      data.set(response.subarray(keyOffset, keyOffset + KEY_SIZE), slot.offset);
+    }
+  }
+
+  public async importKeysFromTokenData(data: Uint8Array, nvm3Key: number, index: number): Promise<void> {
+    for (const slot of keySlotsForToken(nvm3Key, index)) {
+      const payload = new Uint8Array(18 + KEY_SIZE);
+      payload.set(this.secManContext(slot));
+      payload.set(data.subarray(slot.offset, slot.offset + KEY_SIZE), 18);
+      const response = await this.sendEzspCommand(0x0115, payload, 4000);
+      if (response.length < 4) throw new Error("Invalid importKey response");
+      const status = this.readUInt32(response, 0);
+      if (status !== 0) {
+        this.logger(`importKey type=${slot.keyType} index=${slot.keyIndex ?? 0} status=0x${status.toString(16)}`);
       }
     }
+  }
 
-    public async startEnergyScan(
-      duration: number,
-      channelMask: number,
-      onProgress: (percent: number, message: string) => void,
-    ): Promise<void> {
-      if (!Number.isInteger(duration) || duration < 0 || duration > 14) {
-        throw new Error("Energy scan duration must be between 0 and 14");
+  public async getTokenCount(): Promise<number> {
+    await this.ensureReady();
+    await this.initialize();
+    const response = await this.sendEzspCommand(0x0100, new Uint8Array(), 4000);
+    const countSize = this.protocolVersion >= 0x12 ? 4 : 1;
+    if (response.length < countSize) throw new Error("Invalid getTokenCount response");
+    return countSize === 4 ? this.readUInt32(response, 0) : response[0];
+  }
+
+  public async getTokenInfo(tokenIndex: number): Promise<Nvm3TokenInfo> {
+    if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex > 0xff) {
+      throw new Error("Token table index must be between 0 and 255");
+    }
+    const response = await this.sendEzspCommand(0x0101, new Uint8Array([tokenIndex]), 4000);
+    const offset = this.statusSize();
+    if (response.length < offset) throw new Error("Invalid getTokenInfo response");
+    const status = this.readStatus(response);
+    // EmberStatus LIBRARY_NOT_PRESENT (0xB5), SLStatus NOT_AVAILABLE (0x0E) on EZSP >= 14
+    if (status === 0xb5 || (this.protocolVersion >= 0x0e && status === 0x0e)) {
+      throw new Error("This firmware does not support NVM3 token access (token interface library not present)");
+    }
+    if (status !== 0) throw new Error(`getTokenInfo failed with status 0x${status.toString(16)}`);
+    if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
+    return {
+      tokenIndex,
+      key: this.readUInt32(response, offset),
+      isCounter: response[offset + 4] !== 0,
+      isIndexed: response[offset + 5] !== 0,
+      size: response[offset + 6],
+      arraySize: response[offset + 7],
+    };
+  }
+
+  public async getTokenData(tokenId: number, index: number): Promise<Uint8Array> {
+    const response = await this.sendEzspCommand(0x0102, this.tokenIndexPayload(tokenId, index), 4000);
+    const offset = this.statusSize();
+    if (response.length < offset + 4) throw new Error("Invalid getTokenData response");
+    const status = this.readStatus(response);
+    if (status !== 0) throw new Error(`getTokenData failed with status 0x${status.toString(16)}`);
+    const size = this.readUInt32(response, offset);
+    if (response.length < offset + 4 + size) throw new Error("Truncated getTokenData response");
+    return response.slice(offset + 4, offset + 4 + size);
+  }
+
+  public async setTokenData(tokenId: number, index: number, data: Uint8Array): Promise<void> {
+    if (data.length > 0xffffffff) throw new Error("Token data is too large");
+    const tokenData = this.tokenIndexPayload(tokenId, index);
+    const payload = new Uint8Array(tokenData.length + 4 + data.length);
+    payload.set(tokenData);
+    new DataView(payload.buffer).setUint32(tokenData.length, data.length, true);
+    payload.set(data, tokenData.length + 4);
+    const response = await this.sendEzspCommand(0x0103, payload, 4000);
+    if (response.length < this.statusSize()) throw new Error("Invalid setTokenData response");
+    const status = this.readStatus(response);
+    if (status !== 0) {
+      throw new Error(
+        `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`,
+      );
+    }
+  }
+
+  public async startEnergyScan(
+    duration: number,
+    channelMask: number,
+    onProgress: (percent: number, message: string) => void,
+  ): Promise<void> {
+    if (!Number.isInteger(duration) || duration < 0 || duration > 14) {
+      throw new Error("Energy scan duration must be between 0 and 14");
+    }
+    let completed = false;
+    let scanError: Error | null = null;
+    let channelsScanned = 0;
+    const removeListener = this.addEventListener((event) => {
+      if (event.type === "scanComplete") {
+        completed = true;
+        if (event.status !== 0) scanError = new Error(`Energy scan failed with status 0x${event.status.toString(16)}`);
+      } else if (event.type === "energyScanResult") {
+        channelsScanned++;
+        onProgress(Math.min(99, channelsScanned * 6), `Channel ${event.channel}: ${event.rssi} dBm`);
       }
-      let completed = false;
-      let scanError: Error | null = null;
-      let channelsScanned = 0;
-      const removeListener = this.addEventListener((event) => {
-        if (event.type === "scanComplete") {
-          completed = true;
-          if (event.status !== 0) scanError = new Error(`Energy scan failed with status 0x${event.status.toString(16)}`);
-        } else if (event.type === "energyScanResult") {
-          channelsScanned++;
-          onProgress(Math.min(99, channelsScanned * 6), `Channel ${event.channel}: ${event.rssi} dBm`);
-        }
+    });
+
+    try {
+      const payload = new Uint8Array(6);
+      payload[0] = 0x00; // ENERGY_SCAN
+      new DataView(payload.buffer).setUint32(1, channelMask >>> 0, true);
+      payload[5] = duration;
+      const response = await this.sendEzspCommand(0x001a, payload, 4000);
+      this.assertStatus(response, "startScan");
+      const timeoutAt = Date.now() + Math.min(300000, Math.max(15000, 2 ** duration * 16000));
+      while (!completed && Date.now() < timeoutAt) await sleep(100);
+      if (!completed) throw new Error("Timed out waiting for energy scan completion");
+      if (scanError) throw scanError;
+      onProgress(100, "Energy scan complete");
+    } finally {
+      removeListener();
+    }
+  }
+
+  public async startPacketMonitor(channel: number): Promise<void> {
+    if (!Number.isInteger(channel) || channel < 11 || channel > 26) {
+      throw new Error("IEEE 802.15.4 channel must be between 11 and 26");
+    }
+    await this.ensureReady();
+    await this.initialize();
+    this.assertStatus(await this.sendEzspCommand(0x0083, new Uint8Array([1]), 4000), "mfglibInternalStart");
+    try {
+      this.assertStatus(
+        await this.sendEzspCommand(0x008a, new Uint8Array([channel]), 4000),
+        "mfglibInternalSetChannel",
+      );
+    } catch (error) {
+      await this.sendEzspCommand(0x0084, new Uint8Array(), 4000).catch(() => {});
+      throw error;
+    }
+    this.monitorChannel = channel;
+  }
+
+  public async stopPacketMonitor(): Promise<void> {
+    this.assertStatus(await this.sendEzspCommand(0x0084, new Uint8Array(), 4000), "mfglibInternalEnd");
+  }
+
+  private dispatchCallback(frameId: number, body: Uint8Array): void {
+    const emit = (event: EzspEvent) => this.eventListeners.forEach((listener) => listener(event));
+    if (frameId === 0x0048 && body.length >= 2) {
+      emit({ type: "energyScanResult", channel: body[0], rssi: (body[1] << 24) >> 24 });
+    } else if (frameId === 0x001c && body.length >= 1 + this.statusSize()) {
+      const status = this.readStatus(body, 1);
+      emit({ type: "scanComplete", channel: body[0], status });
+    } else if (frameId === 0x008e && body.length >= 3) {
+      const length = body[2];
+      if (body.length < 3 + length) return;
+      const packet = body.slice(3, 3 + length);
+      emit({
+        type: "packet",
+        channel: this.monitorChannel,
+        linkQuality: body[0],
+        rssi: (body[1] << 24) >> 24,
+        data: packet,
       });
-
-      try {
-        const payload = new Uint8Array(6);
-        payload[0] = 0x00; // ENERGY_SCAN
-        new DataView(payload.buffer).setUint32(1, channelMask >>> 0, true);
-        payload[5] = duration;
-        const response = await this.sendEzspCommand(0x001a, payload, 4000);
-        this.assertStatus(response, "startScan");
-        const timeoutAt = Date.now() + Math.min(300000, Math.max(15000, 2 ** duration * 16000));
-        while (!completed && Date.now() < timeoutAt) await sleep(100);
-        if (!completed) throw new Error("Timed out waiting for energy scan completion");
-        if (scanError) throw scanError;
-        onProgress(100, "Energy scan complete");
-      } finally {
-        removeListener();
-      }
     }
+  }
 
-    public async startPacketMonitor(channel: number): Promise<void> {
-      if (!Number.isInteger(channel) || channel < 11 || channel > 26) {
-        throw new Error("IEEE 802.15.4 channel must be between 11 and 26");
-      }
-      await this.ensureReady();
-      await this.initialize();
-      this.assertStatus(await this.sendEzspCommand(0x0083, new Uint8Array([1]), 4000), "mfglibInternalStart");
-      try {
-        this.assertStatus(await this.sendEzspCommand(0x008a, new Uint8Array([channel]), 4000), "mfglibInternalSetChannel");
-      } catch (error) {
-        await this.sendEzspCommand(0x0084, new Uint8Array(), 4000).catch(() => {});
-        throw error;
-      }
-      this.monitorChannel = channel;
+  private tokenIndexPayload(tokenId: number, index: number): Uint8Array {
+    if (
+      !Number.isInteger(tokenId) ||
+      tokenId < 0 ||
+      tokenId > 0xffffffff ||
+      !Number.isInteger(index) ||
+      index < 0 ||
+      index > 0xffffffff
+    ) {
+      throw new Error("Token key and index must be unsigned 32-bit integers");
     }
+    const payload = new Uint8Array(8);
+    const view = new DataView(payload.buffer);
+    view.setUint32(0, tokenId, true);
+    view.setUint32(4, index, true);
+    return payload;
+  }
 
-    public async stopPacketMonitor(): Promise<void> {
-      this.assertStatus(await this.sendEzspCommand(0x0084, new Uint8Array(), 4000), "mfglibInternalEnd");
-    }
+  private statusSize(): number {
+    return this.protocolVersion < 0x0e ? 1 : 4;
+  }
 
-    private dispatchCallback(frameId: number, body: Uint8Array): void {
-      const emit = (event: EzspEvent) => this.eventListeners.forEach((listener) => listener(event));
-      if (frameId === 0x0048 && body.length >= 2) {
-        emit({ type: "energyScanResult", channel: body[0], rssi: (body[1] << 24) >> 24 });
-      } else if (frameId === 0x001c && body.length >= 1 + this.statusSize()) {
-        const status = this.readStatus(body, 1);
-        emit({ type: "scanComplete", channel: body[0], status });
-      } else if (frameId === 0x008e && body.length >= 3) {
-        const length = body[2];
-        if (body.length < 3 + length) return;
-        const packet = body.slice(3, 3 + length);
-        emit({
-          type: "packet",
-          channel: this.monitorChannel,
-          linkQuality: body[0],
-          rssi: (body[1] << 24) >> 24,
-          data: packet,
-        });
-      }
-    }
+  private readStatus(data: Uint8Array, offset = 0): number {
+    if (data.length < offset + this.statusSize()) throw new Error("Truncated EZSP status");
+    return this.statusSize() === 1 ? data[offset] : this.readUInt32(data, offset);
+  }
 
-    private tokenIndexPayload(tokenId: number, index: number): Uint8Array {
-      if (!Number.isInteger(tokenId) || tokenId < 0 || tokenId > 0xffffffff ||
-          !Number.isInteger(index) || index < 0 || index > 0xffffffff) {
-        throw new Error("Token key and index must be unsigned 32-bit integers");
-      }
-      const payload = new Uint8Array(8);
-      const view = new DataView(payload.buffer);
-      view.setUint32(0, tokenId, true);
-      view.setUint32(4, index, true);
-      return payload;
-    }
+  private readUInt32(data: Uint8Array, offset: number): number {
+    return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
+  }
 
-    private statusSize(): number {
-      return this.protocolVersion < 0x0e ? 1 : 4;
-    }
-
-    private readStatus(data: Uint8Array, offset = 0): number {
-      if (data.length < offset + this.statusSize()) throw new Error("Truncated EZSP status");
-      return this.statusSize() === 1 ? data[offset] : this.readUInt32(data, offset);
-    }
-
-    private readUInt32(data: Uint8Array, offset: number): number {
-      return new DataView(data.buffer, data.byteOffset, data.byteLength).getUint32(offset, true);
-    }
-
-    private assertStatus(data: Uint8Array, command: string): void {
-      const status = this.readStatus(data);
-      if (status !== 0) throw new Error(`${command} failed with status 0x${status.toString(16)}`);
-    }
+  private assertStatus(data: Uint8Array, command: string): void {
+    const status = this.readStatus(data);
+    if (status !== 0) throw new Error(`${command} failed with status 0x${status.toString(16)}`);
+  }
 
   /**
    * Write MFG token using setMfgToken (0x0C)
@@ -1721,7 +1747,7 @@ class EzspAshClient {
     const status = this.readStatus(response);
     if (status !== 0x00) {
       throw new Error(
-        `setMfgToken failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`
+        `setMfgToken failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`,
       );
     }
   }
@@ -2276,7 +2302,7 @@ class CpcClient {
   private buildUnnumberedPayload(
     commandId: number,
     propertyId: number,
-    value: Uint8Array = new Uint8Array(0)
+    value: Uint8Array = new Uint8Array(0),
   ): Uint8Array {
     // Property payload: property_id (4 bytes LE) + value
     const propertyPayload = new Uint8Array(4 + value.length);
@@ -2306,7 +2332,7 @@ class CpcClient {
   public async sendUnnumberedCommand(
     propertyId: number,
     value: Uint8Array = new Uint8Array(0),
-    timeout = 1000
+    timeout = 1000,
   ): Promise<Uint8Array> {
     const unnumberedPayload = this.buildUnnumberedPayload(CPC_CMD_SYSTEM_PROP_VALUE_GET, propertyId, value);
 

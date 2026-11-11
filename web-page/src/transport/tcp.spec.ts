@@ -13,10 +13,20 @@ class MockWebSocket {
   onclose: (event: { code: number }) => void = () => {};
   onmessage: (event: { data: ArrayBuffer }) => void = () => {};
   sent: Uint8Array[] = [];
-  constructor(public url: string) { MockWebSocket.instances.push(this); }
-  open() { this.readyState = 1; this.onopen(); }
-  close() { this.readyState = 3; this.onclose({ code: 1000 }); }
-  send(data: Uint8Array) { this.sent.push(data); }
+  constructor(public url: string) {
+    MockWebSocket.instances.push(this);
+  }
+  open() {
+    this.readyState = 1;
+    this.onopen();
+  }
+  close() {
+    this.readyState = 3;
+    this.onclose({ code: 1000 });
+  }
+  send(data: Uint8Array) {
+    this.sent.push(data);
+  }
 }
 
 function installMock(t: TestContext) {

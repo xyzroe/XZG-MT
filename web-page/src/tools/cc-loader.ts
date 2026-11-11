@@ -292,8 +292,8 @@ export class CCLoader {
     if (checksumCalculated !== checksumReceived) {
       console.warn(
         `Block ${this.blockNum + 1}: checksum mismatch (calc: ${checksumCalculated.toString(
-          16
-        )}, recv: ${checksumReceived.toString(16)})`
+          16,
+        )}, recv: ${checksumReceived.toString(16)})`,
       );
     }
 
@@ -304,7 +304,7 @@ export class CCLoader {
       //this.progressCallback(this.blockNum, this.blockTotal);
       this.progressCallback(
         Math.round((this.blockNum / this.blockTotal) * 100),
-        `Reading ${this.blockNum} / ${this.blockTotal}`
+        `Reading ${this.blockNum} / ${this.blockTotal}`,
       );
     }
 
@@ -340,8 +340,8 @@ export class CCLoader {
     const errorMsg = error
       ? error.message
       : this.state === State.FLASHING
-      ? "Verify failed or flash error"
-      : "No chip detected or communication error";
+        ? "Verify failed or flash error"
+        : "No chip detected or communication error";
 
     if (this.flashReject) {
       this.flashReject(new Error(errorMsg));
@@ -403,7 +403,7 @@ export class CCLoader {
       //this.progressCallback(this.blockNum, this.blockTotal);
       this.progressCallback(
         Math.round((this.blockNum / this.blockTotal) * 100),
-        `Writing ${this.blockNum} / ${this.blockTotal}`
+        `Writing ${this.blockNum} / ${this.blockTotal}`,
       );
     }
   }
@@ -449,7 +449,7 @@ export class CCLoader {
    */
   public async flash(
     firmware: Uint8Array,
-    verify: boolean = false
+    verify: boolean = false,
     //onProgress?: (current: number, total: number) => void
   ): Promise<void> {
     this.ensureListener();
@@ -486,7 +486,7 @@ export class CCLoader {
    */
   public async readFlash(
     startBlock: number = 0,
-    numBlocks: number = 512
+    numBlocks: number = 512,
     // onProgress?: (current: number, total: number) => void
   ): Promise<Uint8Array> {
     this.ensureListener();
@@ -552,7 +552,7 @@ export class CCLoader {
         firmware.set(data, startAddress);
 
         this.logger(
-          `Parsed HEX: ${data.length} bytes at 0x${startAddress.toString(16)}, total image size: ${firmware.length}`
+          `Parsed HEX: ${data.length} bytes at 0x${startAddress.toString(16)}, total image size: ${firmware.length}`,
         );
       } else {
         const arrayBuffer = await file.arrayBuffer();
@@ -591,7 +591,7 @@ export class CCLoader {
         "bin",
         "dump",
         targetIdEl?.value,
-        targetIeeeEl?.value
+        targetIeeeEl?.value,
       );
 
       this.logger(`Flash dump saved to ${filename}`);
@@ -651,8 +651,8 @@ export class CCLoader {
 
     this.logger(
       `CC Loader connected: ${chipInfo.chipName} (ID: 0x${chipInfo.chipId.toString(
-        16
-      )}, Rev: 0x${chipInfo.revision.toString(16)})`
+        16,
+      )}, Rev: 0x${chipInfo.revision.toString(16)})`,
     );
     if (chipInfo.ieee) {
       this.logger(`IEEE Address: ${chipInfo.ieee}`);

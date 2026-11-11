@@ -13,7 +13,7 @@ export enum XModemPacketType {
 export class XmodemCRCPacket {
   constructor(
     public number: number, // Packet number (1-255, wraps around)
-    public payload: Uint8Array // Must be exactly XMODEM_BLOCK_SIZE bytes
+    public payload: Uint8Array, // Must be exactly XMODEM_BLOCK_SIZE bytes
   ) {
     if (payload.length !== XMODEM_BLOCK_SIZE) {
       throw new Error(`Payload must be ${XMODEM_BLOCK_SIZE} bytes`);

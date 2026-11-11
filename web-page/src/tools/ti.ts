@@ -42,7 +42,7 @@ class NVRAM {
     cmd0: number,
     cmd1: number,
     payload: number[] = [],
-    timeoutMs = 1500
+    timeoutMs = 1500,
   ): Promise<{ cmd0: number; cmd1: number; payload: Uint8Array } | null> {
     const len = payload.length & 0xff;
     const fcs = this.xorFcs([len, cmd0 & 0xff, cmd1 & 0xff, ...payload]);
@@ -294,7 +294,7 @@ class NVRAM {
   }
 
   private async readExtendedAll(
-    progress?: (pct: number, label?: string) => void
+    progress?: (pct: number, label?: string) => void,
   ): Promise<Record<string, Record<string, string>> | null> {
     const exNames: Record<number, string> = {
       0x0001: "ADDRMGR",
@@ -323,7 +323,7 @@ class NVRAM {
             .join("");
           progress?.(
             35 + Math.min(55, (tIndex / Math.max(1, tableIds.length)) * 55),
-            `${exNames[itemId]}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`
+            `${exNames[itemId]}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`,
           );
         } catch {
           break;
@@ -385,7 +385,7 @@ class NVRAM {
           if (!ok) break;
           progress?.(
             50 + Math.min(45, ((idx - 1) / Math.max(1, names.length)) * 45),
-            `${name}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`
+            `${name}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`,
           );
         }
       }
@@ -396,7 +396,7 @@ class NVRAM {
   public async writeAll(
     obj: NvramBundle,
     log?: (s: string) => void,
-    progress?: (pct: number, label?: string) => void
+    progress?: (pct: number, label?: string) => void,
   ): Promise<void> {
     const logCb = log || this.logger;
     // const progressCb = progress || ((pct: number, label?: string) => this.progressCallback(pct, label || ""));
@@ -452,17 +452,17 @@ class NVRAM {
             logCb(
               `NVRAM EX ${name}[${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}] len=${bytes.length} => ${
                 ok ? "OK" : "ERR"
-              }`
+              }`,
             );
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             logCb(
-              `NVRAM EX write fail ${name}[${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}] : ${message}`
+              `NVRAM EX write fail ${name}[${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}] : ${message}`,
             );
           }
           progress?.(
             40 + Math.min(55, ((idx - 1) / Math.max(1, names.length)) * 55),
-            `${name}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`
+            `${name}:${"0x" + subId.toString(16).toUpperCase().padStart(4, "0")}`,
           );
         }
       }
@@ -555,7 +555,7 @@ export class TiTools {
     cmd0: number,
     cmd1: number,
     payload: number[] = [],
-    timeoutMs = 1500
+    timeoutMs = 1500,
   ): Promise<{ cmd0: number; cmd1: number; payload: Uint8Array } | null> {
     const len = payload.length & 0xff;
     const fcs = this.xorFcs([len, cmd0 & 0xff, cmd1 & 0xff, ...payload]);
@@ -699,7 +699,7 @@ export class TiTools {
   private async sendCommandRaw(
     content: Uint8Array,
     expectPacket = false,
-    ackTimeout = 2000
+    ackTimeout = 2000,
   ): Promise<Uint8Array | null> {
     // content starts with CMD byte
     const len = content.length + 2; // include size+checksum bytes per protocol
@@ -950,7 +950,7 @@ export class TiTools {
       this.logger(
         `Package ${m33.packageName}, CCFG at ${hex(m33.ccfgAddress)}, ROM BSL ${
           m33.bootloaderEnabled ? "enabled" : "disabled"
-        } (BL_CONFIG at ${hex(m33.bootloaderAddress)})`
+        } (BL_CONFIG at ${hex(m33.bootloaderAddress)})`,
       );
       return m33;
     }
@@ -1071,7 +1071,7 @@ export class TiTools {
   public async nvramWriteAll(
     obj: NvramBundle,
     log?: (s: string) => void,
-    progress?: (pct: number, label?: string) => void
+    progress?: (pct: number, label?: string) => void,
   ): Promise<void> {
     return this.nvram.writeAll(obj, log, progress);
   }
@@ -1123,8 +1123,15 @@ export class TiTools {
     // CC26xx style: addr + widthCode + count
     // widthCode: 1 = 32-bit (4 bytes per read)
     // count: number of 32-bit words to read
-    if (!Number.isInteger(addr) || addr < 0 || addr > 0xffffffff || addr % 4 !== 0 ||
-        !Number.isInteger(length) || length % 4 !== 0 || addr + length > 0x100000000) {
+    if (
+      !Number.isInteger(addr) ||
+      addr < 0 ||
+      addr > 0xffffffff ||
+      addr % 4 !== 0 ||
+      !Number.isInteger(length) ||
+      length % 4 !== 0 ||
+      addr + length > 0x100000000
+    ) {
       throw new Error("Memory block address and length must be aligned 32-bit values");
     }
     const words = length / 4;
@@ -1257,7 +1264,7 @@ export class TiTools {
       "bin",
       "dump",
       deviceInfo.chipModel,
-      deviceInfo.ieeeMac?.replace(/:/g, "")
+      deviceInfo.ieeeMac?.replace(/:/g, ""),
     );
 
     this.logger(`Flash dump saved to ${filename}`);
@@ -1769,7 +1776,7 @@ async function readMemoryRange(tools: TiTools, address: number, length: number):
     const chunk = await tools.memReadBlock(address + offset, chunkLength);
     if (chunk.length !== chunkLength) {
       throw new Error(
-        `M33 memory read at ${hex(address + offset)} returned ${chunk.length} bytes; expected ${chunkLength}`
+        `M33 memory read at ${hex(address + offset)} returned ${chunk.length} bytes; expected ${chunkLength}`,
       );
     }
     result.set(chunk, offset);
@@ -1785,7 +1792,7 @@ async function validateCcfgRewrite(
   tools: TiTools,
   profile: M33DeviceProfile,
   original: Uint8Array,
-  planned: Uint8Array
+  planned: Uint8Array,
 ): Promise<void> {
   const { memory, offsets } = profile;
   for (const ccfg of [original, planned]) {
@@ -1988,7 +1995,9 @@ export async function readM33DeviceInfo(tools: TiTools, synchronize = true): Pro
   if (synchronize) await tools.sync();
   const chipIdHex = bytesToHex(await tools.chipId());
   if (!(profile.romChipIds as readonly string[]).includes(chipIdHex)) {
-    throw new Error(`Unsupported TI M33 chip ID ${chipIdHex || "<empty>"}; supported IDs: ${profile.romChipIds.join(", ")}`);
+    throw new Error(
+      `Unsupported TI M33 chip ID ${chipIdHex || "<empty>"}; supported IDs: ${profile.romChipIds.join(", ")}`,
+    );
   }
 
   const deviceId = await readWord(tools, memory.fcfgBase + offsets.icepickId);
@@ -2004,7 +2013,7 @@ export async function readM33DeviceInfo(tools: TiTools, synchronize = true): Pro
   };
   if (!profile.matches(identity)) {
     throw new Error(
-      `Unsupported TI M33 identity: chip=${chipIdHex}, wafer=${hex(identity.waferId, 4)}, flash=${identity.flashSizeBytes} bytes, USER_ID=${bytesToHex(userId)}`
+      `Unsupported TI M33 identity: chip=${chipIdHex}, wafer=${hex(identity.waferId, 4)}, flash=${identity.flashSizeBytes} bytes, USER_ID=${bytesToHex(userId)}`,
     );
   }
 
@@ -2065,7 +2074,7 @@ export async function writeM33SecondaryIeeeAddress(
   address: string,
   expectedDevice: M33DeviceInfo,
   log: (message: string) => void,
-  synchronize = true
+  synchronize = true,
 ): Promise<M33DeviceInfo> {
   const liveDevice = await readM33DeviceInfo(tools, synchronize);
   const { memory, offsets } = liveDevice.profile;
@@ -2085,7 +2094,7 @@ export async function writeM33SecondaryIeeeAddress(
   const bootloaderConfig = ccfg.slice(offsets.bootloaderConfig, offsets.bootloaderConfig + 4);
   if (!isBootloaderEnabled(bootloaderConfig)) {
     throw new Error(
-      `Preserved CCFG would disable ROM BSL (BL_CONFIG=${bytesToHex(bootloaderConfig)}); IEEE write was refused`
+      `Preserved CCFG would disable ROM BSL (BL_CONFIG=${bytesToHex(bootloaderConfig)}); IEEE write was refused`,
     );
   }
 
@@ -2124,7 +2133,7 @@ export async function writeM33SecondaryIeeeAddress(
 export function prepareM33Image(
   segments: M33Segment[],
   device: M33DeviceInfo,
-  preservedCcfg?: Uint8Array
+  preservedCcfg?: Uint8Array,
 ): M33ImagePlan {
   const { profile } = device;
   const { memory, offsets } = profile;
@@ -2142,7 +2151,12 @@ export function prepareM33Image(
   let previousEnd = -1;
   for (const segment of [...segments].sort((left, right) => left.address - right.address)) {
     const end = segment.address + segment.data.length;
-    if (!Number.isSafeInteger(segment.address) || !Number.isSafeInteger(end) || segment.address < 0 || end <= segment.address) {
+    if (
+      !Number.isSafeInteger(segment.address) ||
+      !Number.isSafeInteger(end) ||
+      segment.address < 0 ||
+      end <= segment.address
+    ) {
       throw new Error(`Invalid M33 segment at ${hex(segment.address)}`);
     }
     if (segment.address < previousEnd) throw new Error(`M33 firmware segments overlap at ${hex(segment.address)}`);
@@ -2167,7 +2181,7 @@ export function prepareM33Image(
   }
   if (!isBootloaderEnabled(imageBootloaderConfig)) {
     throw new Error(
-      `M33 firmware disables the ROM bootloader (CCFG.BL_CONFIG=${bytesToHex(imageBootloaderConfig)}); flashing was refused`
+      `M33 firmware disables the ROM bootloader (CCFG.BL_CONFIG=${bytesToHex(imageBootloaderConfig)}); flashing was refused`,
     );
   }
   if (imageBootloaderConfig[1] === 0xff || imageBootloaderConfig[1] > 63) {
@@ -2205,7 +2219,14 @@ export function prepareM33Image(
     return left.address - right.address;
   });
   const totalBytes = [...main, ...ccfg].reduce((total, segment) => total + segment.data.length, 0);
-  return { main, ccfg, totalBytes, bootloaderConfig: imageBootloaderConfig, secondaryIeeePresent, restoredSecondaryIeee };
+  return {
+    main,
+    ccfg,
+    totalBytes,
+    bootloaderConfig: imageBootloaderConfig,
+    secondaryIeeePresent,
+    restoredSecondaryIeee,
+  };
 }
 
 function isErased(data: Uint8Array): boolean {
@@ -2218,7 +2239,7 @@ async function writeSegments(
   phase: string,
   totalBytes: number,
   completed: { bytes: number },
-  progress: M33ProgramOptions["progress"]
+  progress: M33ProgramOptions["progress"],
 ): Promise<void> {
   for (const segment of segments) {
     for (let offset = 0; offset < segment.data.length; offset += M33_WRITE_CHUNK_SIZE) {
@@ -2234,14 +2255,14 @@ async function verifySegments(
   tools: TiTools,
   segments: M33Segment[],
   phase: string,
-  log: M33ProgramOptions["log"]
+  log: M33ProgramOptions["log"],
 ): Promise<void> {
   for (const segment of segments) {
     const targetCrc = await tools.crc32Cc26xx(segment.address, segment.data.length);
     const imageCrc = crc32(segment.data);
     if (targetCrc !== imageCrc) {
       throw new Error(
-        `${phase} CRC32 mismatch at ${hex(segment.address)}: device=${hex(targetCrc)}, image=${hex(imageCrc)}`
+        `${phase} CRC32 mismatch at ${hex(segment.address)}: device=${hex(targetCrc)}, image=${hex(imageCrc)}`,
       );
     }
     log(`${phase} CRC32 OK at ${hex(segment.address)} (${segment.data.length} bytes)`);
@@ -2253,7 +2274,7 @@ export async function programM33(
   tools: TiTools,
   segments: M33Segment[],
   expectedDevice: M33DeviceInfo,
-  options: M33ProgramOptions
+  options: M33ProgramOptions,
 ): Promise<void> {
   if (options.erase && !options.write) throw new Error("M33 erase-only operation is disabled for safety");
   if (options.write && !options.erase) throw new Error("M33 writes require main-bank and CCFG erase");
@@ -2271,7 +2292,7 @@ export async function programM33(
   }
   const plan = prepareM33Image(segments, liveDevice, preservedCcfg);
   options.log(
-    `M33 image validated: ${plan.main.length} main segment(s), ${plan.ccfg.length} CCFG segment(s), ${plan.totalBytes} bytes`
+    `M33 image validated: ${plan.main.length} main segment(s), ${plan.ccfg.length} CCFG segment(s), ${plan.totalBytes} bytes`,
   );
   options.log(
     `CCFG.BL_CONFIG=${bytesToHex(plan.bootloaderConfig)}; secondary IEEE ${
@@ -2280,7 +2301,7 @@ export async function programM33(
         : plan.restoredSecondaryIeee
           ? "will be restored from the device"
           : "already matches the device"
-    }`
+    }`,
   );
 
   if (!options.write) {

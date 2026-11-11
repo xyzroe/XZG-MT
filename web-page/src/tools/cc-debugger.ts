@@ -46,7 +46,7 @@ function parseHex(content: string): HexSection[] {
     // Total = 1 + 2 + 4 + 2 + 2*count + 2 = 11 + 2*count
     if (line.length !== 11 + byteCount * 2) {
       throw new Error(
-        `Invalid HEX record at line ${i + 1}: Length mismatch (expected ${11 + byteCount * 2}, got ${line.length})`
+        `Invalid HEX record at line ${i + 1}: Length mismatch (expected ${11 + byteCount * 2}, got ${line.length})`,
       );
     }
 
@@ -349,7 +349,7 @@ export class CCDebugger {
           this.device.manufacturerName +
           " (SN: " +
           this.device.serialNumber +
-          ")"
+          ")",
       );
 
       // deviceNameSpan.textContent = this.device.productName || "-";
@@ -398,7 +398,7 @@ export class CCDebugger {
         value: value,
         index: index,
       },
-      data as any
+      data as any,
     );
 
     // Log the result status
@@ -419,7 +419,7 @@ export class CCDebugger {
         value: value,
         index: index,
       },
-      length
+      length,
     );
 
     if (result.status !== "ok" || !result.data) {
@@ -499,13 +499,13 @@ export class CCDebugger {
 
     try {
       await this.sendDebugInstructions(
-        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_READ, CCDebugger.DEBUG_CMD_READ_STATUS])
+        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_READ, CCDebugger.DEBUG_CMD_READ_STATUS]),
       );
       const statusData = await this.readBulkData(1);
 
       // Configure (DEBUG_CONFIG_TIMER_SUSPEND | DEBUG_CONFIG_SOFT_POWER_MODE = 0x02 | 0x20 = 0x22)
       await this.sendDebugInstructions(
-        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_ARG, CCDebugger.DEBUG_CMD_WR_CONFIG, 0x22])
+        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_ARG, CCDebugger.DEBUG_CMD_WR_CONFIG, 0x22]),
       );
 
       this.initialized = true;
@@ -554,7 +554,7 @@ export class CCDebugger {
 
     // Add timeout to prevent hanging - increased to 10 seconds for first read after reset
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Bulk read timed out")), 10000)
+      setTimeout(() => reject(new Error("Bulk read timed out")), 10000),
     );
 
     const transferPromise = this.device.transferIn(this.endpointIn.endpointNumber, length);
@@ -600,7 +600,7 @@ export class CCDebugger {
         CCDebugger.DEBUG_CMD_DEBUG_INSTR_3,
         CCDebugger.ASM_MOV_DPTR_IMM16,
         (currentAddress >> 8) & 0xff,
-        currentAddress & 0xff
+        currentAddress & 0xff,
       );
 
       for (let j = 0; j < currentChunkSize; j++) {
@@ -651,7 +651,7 @@ export class CCDebugger {
         CCDebugger.DEBUG_CMD_DEBUG_INSTR_3,
         CCDebugger.ASM_MOV_DPTR_IMM16,
         (currentAddress >> 8) & 0xff,
-        currentAddress & 0xff
+        currentAddress & 0xff,
       );
 
       for (let j = 0; j < currentChunkSize; j++) {
@@ -706,7 +706,7 @@ export class CCDebugger {
       // Check status
       // 0x1F, 0x34 (READ_STATUS)
       await this.sendDebugInstructions(
-        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_READ, CCDebugger.DEBUG_CMD_READ_STATUS])
+        new Uint8Array([CCDebugger.WRAPPER_DEBUG_EXEC_READ, CCDebugger.DEBUG_CMD_READ_STATUS]),
       );
       const statusData = await this.readBulkData(1);
       const status = statusData.getUint8(0);
@@ -758,7 +758,7 @@ export class CCDebugger {
       CCDebugger.DEBUG_CMD_DEBUG_INSTR_3,
       CCDebugger.ASM_MOV_DIRECT_IMM,
       address,
-      value
+      value,
     );
 
     // Short footer (from cc-tool write_sfr)
@@ -926,7 +926,7 @@ export class CCDebugger {
 
       this.progressCallback(
         Math.min(100, Math.round((((i + 1) * PROG_BLOCK_SIZE) / paddedData.length) * 100)),
-        `Writing ${Math.min((i + 1) * PROG_BLOCK_SIZE, paddedData.length)} / ${paddedData.length}`
+        `Writing ${Math.min((i + 1) * PROG_BLOCK_SIZE, paddedData.length)} / ${paddedData.length}`,
       );
     }
 
@@ -946,7 +946,7 @@ export class CCDebugger {
     data: Uint8Array,
     startAddress: number,
     progressStart: number = 0,
-    progressEnd: number = 100
+    progressEnd: number = 100,
   ): Promise<void> {
     // Use DMA for writing (single channel)
     // Max DMA length is 8KB (13 bits).
@@ -1277,7 +1277,7 @@ export class CCDebugger {
           this.logger(
             `CRC mismatch at address 0x${sectionOffset.toString(16)}: expected 0x${expectedCRC
               .toString(16)
-              .padStart(4, "0")}, got 0x${actualCRC.toString(16).padStart(4, "0")}`
+              .padStart(4, "0")}, got 0x${actualCRC.toString(16).padStart(4, "0")}`,
           );
           this.progressCallback(100, "Verify FAILED");
           return false;
@@ -1322,7 +1322,7 @@ export class CCDebugger {
 
     if (expectedData.length > maxFlashSize) {
       this.logger(
-        `WARNING: Data size (${expectedData.length} bytes) exceeds flash size (${maxFlashSize} bytes). Will verify only first ${maxFlashSize} bytes.`
+        `WARNING: Data size (${expectedData.length} bytes) exceeds flash size (${maxFlashSize} bytes). Will verify only first ${maxFlashSize} bytes.`,
       );
     }
 
@@ -1353,7 +1353,7 @@ export class CCDebugger {
                 globalIndex
               ]
                 .toString(16)
-                .padStart(2, "0")}, got 0x${flashData[i].toString(16).padStart(2, "0")}`
+                .padStart(2, "0")}, got 0x${flashData[i].toString(16).padStart(2, "0")}`,
             );
             await this.flashReadEnd();
             this.progressCallback(100, "Verify FAILED");
@@ -1478,7 +1478,7 @@ export class CCDebugger {
             this.logger(
               `Verify FAILED at address 0x${(section.address + i).toString(16)}: expected 0x${section.data[i]
                 .toString(16)
-                .padStart(2, "0")}, got 0x${flashData[i].toString(16).padStart(2, "0")}`
+                .padStart(2, "0")}, got 0x${flashData[i].toString(16).padStart(2, "0")}`,
             );
             await this.flashReadEnd();
             this.progressCallback(100, "Verify FAILED");

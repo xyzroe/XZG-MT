@@ -306,7 +306,7 @@ export function isLikelyIntelHexPreview(txt: string): boolean {
 
 export function parseImageFromBuffer(
   bytes: Uint8Array,
-  fillByte: number = 0x00
+  fillByte: number = 0x00,
 ): { startAddress: number; data: Uint8Array } {
   const previewLen = Math.min(4096, bytes.length);
   const preview = new TextDecoder().decode(bytes.subarray(0, previewLen));
@@ -325,7 +325,7 @@ export async function fetchFirmwareBytes(url: string): Promise<Uint8Array> {
 
 export async function downloadFirmwareFromUrl(
   url: string,
-  fillByte: number = 0x00
+  fillByte: number = 0x00,
 ): Promise<{ startAddress: number; data: Uint8Array }> {
   return parseImageFromBuffer(await fetchFirmwareBytes(url), fillByte);
 }

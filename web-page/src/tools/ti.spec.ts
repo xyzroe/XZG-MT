@@ -18,13 +18,16 @@ const firmware = () => [
   { address: base + profile.offsets.bootloaderConfig, data: bootloader.slice() },
 ];
 const options = () => ({
-  erase: true, write: true, verify: true,
-  log: () => {}, progress: () => {},
+  erase: true,
+  write: true,
+  verify: true,
+  log: () => {},
+  progress: () => {},
 });
 
 function record(type: number, address: number, data: number[] = []): string {
   const bytes = [data.length, address >>> 8, address & 0xff, type, ...data];
-  bytes.push((-bytes.reduce((sum, value) => sum + value, 0)) & 0xff);
+  bytes.push(-bytes.reduce((sum, value) => sum + value, 0) & 0xff);
   return ":" + bytes.map((value) => value.toString(16).padStart(2, "0")).join("");
 }
 
@@ -47,8 +50,12 @@ function deviceMock() {
     [0x5803002c, Uint8Array.of(0, 2, 0, 0)],
   ]);
   const mock = {
-    async sync() { events.push("sync"); },
-    async chipId() { return Uint8Array.from(state.chipId.match(/../g)!, (byte) => parseInt(byte, 16)); },
+    async sync() {
+      events.push("sync");
+    },
+    async chipId() {
+      return Uint8Array.from(state.chipId.match(/../g)!, (byte) => parseInt(byte, 16));
+    },
     async memRead32(address: number) {
       if (address >= base && address < base + ccfg.length) return ccfg.slice(address - base, address - base + 4);
       if (address === 0x58030004) return Uint8Array.of(state.protected ? 1 : 0, 0, 0, 0);
@@ -58,13 +65,24 @@ function deviceMock() {
       return ccfg.slice(address - base, address - base + length - (state.shortRead ? 4 : 0));
     },
     async crc32Cc26xx(address: number, length: number) {
-      const value = crc32(address >= base ? ccfg.subarray(address - base, address - base + length) : main.subarray(address, address + length));
+      const value = crc32(
+        address >= base
+          ? ccfg.subarray(address - base, address - base + length)
+          : main.subarray(address, address + length),
+      );
       if ((address >= base && state.badSnapshot) || (address < base && state.badMainCrc)) return (value ^ 1) >>> 0;
       events.push(address >= base ? "verify ccfg" : "verify main");
       return value;
     },
-    async bankErase() { events.push("erase main"); main.fill(0xff); },
-    async sectorErase(address: number) { assert.equal(address, base); events.push("erase ccfg"); ccfg.fill(0xff); },
+    async bankErase() {
+      events.push("erase main");
+      main.fill(0xff);
+    },
+    async sectorErase(address: number) {
+      assert.equal(address, base);
+      events.push("erase ccfg");
+      ccfg.fill(0xff);
+    },
     async downloadTo(address: number, data: Uint8Array) {
       events.push(address >= base ? "write ccfg" : "write main");
       if (address >= base) ccfg.set(data, address - base);
@@ -75,11 +93,16 @@ function deviceMock() {
 }
 
 test("sparse HEX keeps main and independent CCFG separate without allocating the gap", () => {
-  const segments = parseM33Hex(hexInput(
-    record(0, 0, [0, 1, 2, 3]), record(4, 0, [0x50, 0]),
-    record(0, 0x28, [...bootloader]), record(1, 0),
-  ));
-  assert.deepEqual(segments.map((segment) => [segment.address, segment.data.length]), [[0, 4], [base + 0x28, 4]]);
+  const segments = parseM33Hex(
+    hexInput(record(0, 0, [0, 1, 2, 3]), record(4, 0, [0x50, 0]), record(0, 0x28, [...bootloader]), record(1, 0)),
+  );
+  assert.deepEqual(
+    segments.map((segment) => [segment.address, segment.data.length]),
+    [
+      [0, 4],
+      [base + 0x28, 4],
+    ],
+  );
 });
 
 test("HEX rejects corrupt checksums, missing EOF, overlaps and data after EOF", () => {
@@ -102,16 +125,25 @@ test("profile rejects legacy and mismatched M33 devices", async () => {
   const mock = deviceMock();
   mock.state.chipId = "1202f000";
   await assert.rejects(readM33DeviceInfo(mock.tools), /Unsupported TI M33 chip ID/);
-  assert.equal(profile.matches({
-    chipIdHex: "120af000", waferId: 0xbb78, pgRevision: 1,
-    flashSizeBytes: 0x100000, userIdRaw: new Uint8Array(4),
-  }), false);
+  assert.equal(
+    profile.matches({
+      chipIdHex: "120af000",
+      waferId: 0xbb78,
+      pgRevision: 1,
+      flashSizeBytes: 0x100000,
+      userIdRaw: new Uint8Array(4),
+    }),
+    false,
+  );
 });
 
 test("image validation refuses foreign ranges, overlaps and disabled bootloaders", async () => {
   const mock = deviceMock();
   const device = await readM33DeviceInfo(mock.tools);
-  assert.throws(() => prepareM33Image([...firmware(), { address: 0x50000800, data: new Uint8Array(4) }], device), /outside/);
+  assert.throws(
+    () => prepareM33Image([...firmware(), { address: 0x50000800, data: new Uint8Array(4) }], device),
+    /outside/,
+  );
   assert.throws(() => prepareM33Image([...firmware(), { address: 0, data: new Uint8Array(4) }], device), /overlap/);
   const image = firmware();
   image[1].data.fill(0);
@@ -134,10 +166,15 @@ test("partial-word CCFG records preserve omitted bytes instead of padding them w
   mock.ccfg.fill(0, 0x40, 0x44);
   const original = mock.ccfg.slice();
   const device = await readM33DeviceInfo(mock.tools);
-  const image = parseM33Hex(hexInput(
-    record(0, 0, [0, 0, 0, 0]), record(4, 0, [0x50, 0]),
-    record(0, 0x28, [...bootloader]), record(0, 0x40, [0]), record(1, 0),
-  ));
+  const image = parseM33Hex(
+    hexInput(
+      record(0, 0, [0, 0, 0, 0]),
+      record(4, 0, [0x50, 0]),
+      record(0, 0x28, [...bootloader]),
+      record(0, 0x40, [0]),
+      record(1, 0),
+    ),
+  );
   await programM33(mock.tools, image, device, options());
   assert.deepEqual(mock.ccfg, original);
 });
