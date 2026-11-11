@@ -701,7 +701,10 @@ btnNvWrite?.addEventListener("click", async () => {
     nvProgressSetColor("primary");
     nvProgressReset("Starting energy scan...");
     try {
-      await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, nvProgress);
+      await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, (percent, message) => {
+        nvProgress(percent, message);
+        if (message.startsWith("Channel ")) log(`Energy scan: ${message}`);
+      });
       log("EZSP energy scan completed");
     } catch (error: unknown) {
       log("EZSP energy scan failed: " + (error instanceof Error ? error.message : String(error)));

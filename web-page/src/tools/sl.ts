@@ -644,12 +644,14 @@ export class SilabsTools {
     const count = await client.getTokenCount();
     if (count === 0) throw new Error("Saving tokens not supported by adapter (not NVM3-based)");
     if (count > 0xff) throw new Error(`Unsupported NVM3 token count: ${count}`);
+    // EZSP < 0x12 returns a 1-byte count, so an error status is only detectable via getTokenInfo
+    const firstInfo = await client.getTokenInfo(0);
     const psaKeyStorage = await client.usesPsaKeyStorage();
     this.logger(`NVM3: saving ${count} tokens, ${psaKeyStorage ? "with" : "without"} secure key storage`);
 
     const chunks: number[] = [count];
     for (let i = 0; i < count; i++) {
-      const info = await client.getTokenInfo(i);
+      const info = i === 0 ? firstInfo : await client.getTokenInfo(i);
       chunks.push(...u32le(info.key), info.size, info.arraySize);
       for (let arrayIndex = 0; arrayIndex < info.arraySize; arrayIndex++) {
         const data = await client.getTokenData(info.key, arrayIndex);
@@ -1113,10 +1115,7 @@ class EzspAshClient {
   private pendingAckReject: ((err: Error) => void) | null = null;
   private ezspSeq = 0;
   private protocolVersion = 4;
-  private callbackPending = false;
   private readonly eventListeners = new Set<(event: EzspEvent) => void>();
-  private monitorPolling = false;
-  private monitorPollPromise: Promise<void> | null = null;
   private monitorChannel = 0;
   private pendingResponse: {
     seq: number;
@@ -1151,8 +1150,6 @@ class EzspAshClient {
     if (this.readyReject) {
       this.readyReject(new Error("EZSP client disposed"));
     }
-    this.callbackPending = false;
-    this.monitorPolling = false;
     this.eventListeners.clear();
     this.readyResolve = null;
     this.readyReject = null;
@@ -1551,9 +1548,14 @@ class EzspAshClient {
       }
       const response = await this.sendEzspCommand(0x0101, new Uint8Array([tokenIndex]), 4000);
       const offset = this.statusSize();
-      if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
+      if (response.length < offset) throw new Error("Invalid getTokenInfo response");
       const status = this.readStatus(response);
+      // EmberStatus LIBRARY_NOT_PRESENT (0xB5), SLStatus NOT_AVAILABLE (0x0E) on EZSP >= 14
+      if (status === 0xb5 || (this.protocolVersion >= 0x0e && status === 0x0e)) {
+        throw new Error("This firmware does not support NVM3 token access (token interface library not present)");
+      }
       if (status !== 0) throw new Error(`getTokenInfo failed with status 0x${status.toString(16)}`);
+      if (response.length < offset + 8) throw new Error("Invalid getTokenInfo response");
       return {
         tokenIndex,
         key: this.readUInt32(response, offset),
@@ -1621,10 +1623,7 @@ class EzspAshClient {
         const response = await this.sendEzspCommand(0x001a, payload, 4000);
         this.assertStatus(response, "startScan");
         const timeoutAt = Date.now() + Math.min(300000, Math.max(15000, 2 ** duration * 16000));
-        while (!completed && Date.now() < timeoutAt) {
-          await this.pollCallbacks();
-          if (!completed) await sleep(100);
-        }
+        while (!completed && Date.now() < timeoutAt) await sleep(100);
         if (!completed) throw new Error("Timed out waiting for energy scan completion");
         if (scanError) throw scanError;
         onProgress(100, "Energy scan complete");
@@ -1647,35 +1646,10 @@ class EzspAshClient {
         throw error;
       }
       this.monitorChannel = channel;
-      this.monitorPolling = true;
-      this.monitorPollPromise = this.runMonitorCallbackPolling();
     }
 
     public async stopPacketMonitor(): Promise<void> {
-      this.monitorPolling = false;
-      await this.monitorPollPromise?.catch(() => {});
-      this.monitorPollPromise = null;
       this.assertStatus(await this.sendEzspCommand(0x0084, new Uint8Array(), 4000), "mfglibInternalEnd");
-    }
-
-    private async runMonitorCallbackPolling(): Promise<void> {
-      while (this.monitorPolling && !this.disposed) {
-        await this.pollCallbacks().catch((error) => this.logger(`EZSP callback poll failed: ${error}`));
-        if (this.monitorPolling) await sleep(100);
-      }
-    }
-
-    private async pollCallbacks(): Promise<void> {
-      await this.sendEzspCommand(0x0006, new Uint8Array(), 2000);
-    }
-
-    private async drainCallbacks(): Promise<void> {
-      let count = 0;
-      while (this.callbackPending && count++ < 256) {
-        this.callbackPending = false;
-        await this.pollCallbacks();
-      }
-      if (count >= 256) this.logger("EZSP callback queue limit reached");
     }
 
     private dispatchCallback(frameId: number, body: Uint8Array): void {
@@ -1804,8 +1778,6 @@ class EzspAshClient {
   }
 
   private async sendEzspCommand(frameId: number, payload: Uint8Array, timeoutMs = 2000): Promise<Uint8Array> {
-    if (this.pendingResponse) throw new Error("EZSP request already in flight");
-    if (frameId !== 0x0006 && this.callbackPending) await this.drainCallbacks();
     if (this.pendingResponse) throw new Error("EZSP request already in flight");
     const seq = this.ezspSeq;
     this.ezspSeq = (this.ezspSeq + 1) & 0xff;
@@ -2120,24 +2092,15 @@ class EzspAshClient {
     //     .join(" ")
     // );
 
+    // UART NCPs push callbacks asynchronously (EZSP_FRAME_CONTROL_ASYNCH_CB)
     if ((frameControl & 0x10) !== 0) {
-      this.callbackPending ||= (frameControl & 0x04) !== 0;
       this.dispatchCallback(frameId, body);
       return;
     }
     if ((frameControl & 0x80) === 0 || !this.pendingResponse || this.pendingResponse.seq !== seq) return;
 
-    this.callbackPending = (frameControl & 0x04) !== 0;
     const pending = this.pendingResponse;
-    if (pending.frameId === 0x0006) {
-      if (frameId === 0x0007) {
-        this.callbackPending = false;
-      } else {
-        this.dispatchCallback(frameId, body);
-      }
-    } else if (frameId !== pending.frameId) {
-      return;
-    }
+    if (frameId !== pending.frameId) return;
 
     window.clearTimeout(pending.timer);
     this.pendingResponse = null;
