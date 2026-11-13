@@ -17,6 +17,8 @@ export const generalSection = document.getElementById("generalSection") as HTMLE
 export const monitorOnlyToggle = document.getElementById("monitorOnlyToggle") as HTMLInputElement | null;
 export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
+const implyGateWrap = document.getElementById("implyGateWrap") as HTMLElement | null;
+const invertLevelWrap = document.getElementById("invertLevelWrap") as HTMLElement | null;
 export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
 export const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
 export const bootloaderOnlyToggle = document.getElementById("bootloaderOnlyToggle") as HTMLInputElement | null;
@@ -435,6 +437,8 @@ function resetToDefaultUI() {
     // Toggles - default: visible
     { el: autoBslWrap, show: true },
     { el: findBaudWrap, show: true },
+    { el: implyGateWrap, show: true },
+    { el: invertLevelWrap, show: true },
     { el: bootloaderOnlyWrap, show: false },
     // Buttons - default: basic visible
     { el: readFlashBtn, show: true },
@@ -513,7 +517,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "esp") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: localFirmwareSection, show: false },
@@ -550,7 +555,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "arduino") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: serialBaudWrap, show: false },
@@ -571,7 +577,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "telink") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: autoBslWrap, show: false },
@@ -599,7 +606,18 @@ export function updateUIForFamily() {
   }
 }
 
-monitorOnlyToggle?.addEventListener("change", updateUIForFamily);
+monitorOnlyToggle?.addEventListener("change", () => {
+  updateUIForFamily();
+  applyMonitorLock();
+});
+
+// Monitor mode sends no commands, so the control-line options and Auto BSL do not apply
+function applyMonitorLock() {
+  const locked = !!monitorOnlyToggle?.checked || !!activeConnection;
+  for (const toggle of [findBaudToggle, implyGateToggle, invertLevel, bootloaderOnlyToggle, autoBslToggle]) {
+    if (toggle) toggle.disabled = locked;
+  }
+}
 
 declare global {
   interface Window {
@@ -893,6 +911,7 @@ export function updatePortInfo(baudrate?: number) {
   setSectionDisabled(tcpSection, anyActive);
   setSectionDisabled(generalSection, anyActive);
   setSectionDisabled(familySection, anyActive);
+  applyMonitorLock();
 
   // Unified Disconnect button visible only when connected, red style when shown
   const showDisc = anyActive;
