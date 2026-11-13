@@ -112,20 +112,27 @@
 
         <!-- General section -->
         <div class="section" id="connectionSection">
-            <div class="d-flex justify-content-center mb-3">
-                <div class="form-check">
-                    <input id="monitorOnlyToggle" class="form-check-input" type="checkbox" />
-                    <label class="form-check-label" for="monitorOnlyToggle">Monitor only (skip detection and
-                        reset)</label>
-                    <div class="small text-muted">Connect to a serial or TCP port and display raw traffic without
-                        sending commands.</div>
-                </div>
-            </div>
             <div class="row g-3 align-items-stretch">
                 <!-- General column -->
                 <div id="generalSection" class="col-md-12 d-flex flex-column">
                     <div class="d-flex align-items-center justify-content-between mb-2" style="height:1em">
                         <h3 class="h6 m-0"><i class="bi bi-gear-fill me-1"></i>General</h3>
+                    </div>
+                    <div class="col-12 mb-2">
+                        <div id="monitorOnlyWrap" class="d-flex align-items-center justify-content-center gap-2">
+                            <div class="form-check form-switch d-flex align-items-center justify-content-center">
+                                <input id="monitorOnlyToggle" class="form-check-input" type="checkbox" role="switch"
+                                    aria-label="Monitor only" />
+                            </div>
+                            <span class="text-muted">Monitor only</span>
+                            <!-- Help tooltip for Monitor only -->
+                            <button id="monitorOnlyHelp" type="button" class="btn btn-sm btn-link p-0 ms-2"
+                                data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                title="<strong>Monitor only:</strong> Connect to a serial or TCP port and display raw traffic without sending any commands (skips detection and reset). The options below are not used in this mode.">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span class="visually-hidden">Help</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="col-12 mb-2">
                         <div id="findBaudWrap" class="d-flex align-items-center justify-content-center gap-2">

@@ -17,6 +17,8 @@ export const generalSection = document.getElementById("generalSection") as HTMLE
 export const monitorOnlyToggle = document.getElementById("monitorOnlyToggle") as HTMLInputElement | null;
 export const findBaudToggle = document.getElementById("findBaudToggle") as HTMLInputElement | null;
 export const findBaudWrap = document.getElementById("findBaudWrap") as HTMLElement | null;
+const implyGateWrap = document.getElementById("implyGateWrap") as HTMLElement | null;
+const invertLevelWrap = document.getElementById("invertLevelWrap") as HTMLElement | null;
 export const implyGateToggle = document.getElementById("implyGateToggle") as HTMLInputElement | null;
 export const invertLevel = document.getElementById("invertLevel") as HTMLInputElement | null;
 export const bootloaderOnlyToggle = document.getElementById("bootloaderOnlyToggle") as HTMLInputElement | null;
@@ -435,6 +437,8 @@ function resetToDefaultUI() {
     // Toggles - default: visible
     { el: autoBslWrap, show: true },
     { el: findBaudWrap, show: true },
+    { el: implyGateWrap, show: true },
+    { el: invertLevelWrap, show: true },
     { el: bootloaderOnlyWrap, show: false },
     // Buttons - default: basic visible
     { el: readFlashBtn, show: true },
@@ -513,7 +517,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "esp") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: localFirmwareSection, show: false },
@@ -550,7 +555,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "arduino") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: serialBaudWrap, show: false },
@@ -571,7 +577,8 @@ export function updateUIForFamily() {
   } else if (selectedFamilyValue === "telink") {
     // Only differences from default
     setMultipleClasses([
-      { el: generalSection, show: false },
+      { el: implyGateWrap, show: false },
+      { el: invertLevelWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: autoBslWrap, show: false },
@@ -587,6 +594,28 @@ export function updateUIForFamily() {
       { el: getVersionBtn, show: false },
       { el: enterBslBtn, show: false },
     ]);
+  }
+
+  // Monitor mode only needs a plain baud rate, not bootloader or programmer options
+  if (monitorOnlyToggle?.checked) {
+    setMultipleClasses([
+      { el: serialBaudWrap, show: true },
+      { el: arduinoBootWrap, show: false },
+      { el: telinkOptionsWrap, show: false },
+    ]);
+  }
+}
+
+monitorOnlyToggle?.addEventListener("change", () => {
+  updateUIForFamily();
+  applyMonitorLock();
+});
+
+// Monitor mode sends no commands, so the control-line options and Auto BSL do not apply
+function applyMonitorLock() {
+  const locked = !!monitorOnlyToggle?.checked || !!activeConnection;
+  for (const toggle of [findBaudToggle, implyGateToggle, invertLevel, bootloaderOnlyToggle, autoBslToggle]) {
+    if (toggle) toggle.disabled = locked;
   }
 }
 
@@ -882,6 +911,7 @@ export function updatePortInfo(baudrate?: number) {
   setSectionDisabled(tcpSection, anyActive);
   setSectionDisabled(generalSection, anyActive);
   setSectionDisabled(familySection, anyActive);
+  applyMonitorLock();
 
   // Unified Disconnect button visible only when connected, red style when shown
   const showDisc = anyActive;
@@ -923,6 +953,8 @@ export function updateConnectionUI() {
 
   const anyActive = !!activeConnection;
   if (monitorOnlyToggle) monitorOnlyToggle.disabled = anyActive;
+  // A monitor session has no device behind it, so device sections stay locked
+  const deviceActive = anyActive && !monitorOnlyToggle?.checked;
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
@@ -946,27 +978,27 @@ export function updateConnectionUI() {
 
   // Gate entire Actions section like Firmware/NVRAM
   if (actionsSection) {
-    actionsSection.classList.toggle("opacity-50", !anyActive);
-    actionsSection.classList.toggle("pe-none", !anyActive);
-    actionsSection.setAttribute("aria-disabled", String(!anyActive));
+    actionsSection.classList.toggle("opacity-50", !deviceActive);
+    actionsSection.classList.toggle("pe-none", !deviceActive);
+    actionsSection.setAttribute("aria-disabled", String(!deviceActive));
   }
 
   // Firmware and NVRAM sections enabled only when a connection is active
   if (firmwareSection) {
-    firmwareSection.classList.toggle("opacity-50", !anyActive);
-    firmwareSection.classList.toggle("pe-none", !anyActive);
+    firmwareSection.classList.toggle("opacity-50", !deviceActive);
+    firmwareSection.classList.toggle("pe-none", !deviceActive);
   }
   if (nvramSection) {
-    nvramSection.classList.toggle("opacity-50", !anyActive);
-    nvramSection.classList.toggle("pe-none", !anyActive);
+    nvramSection.classList.toggle("opacity-50", !deviceActive);
+    nvramSection.classList.toggle("pe-none", !deviceActive);
   }
   if (ieeeSection) {
-    ieeeSection.classList.toggle("opacity-50", !anyActive);
-    ieeeSection.classList.toggle("pe-none", !anyActive);
+    ieeeSection.classList.toggle("opacity-50", !deviceActive);
+    ieeeSection.classList.toggle("pe-none", !deviceActive);
   }
   // Cloud controls reflect connection state
-  if (netFwSelect) netFwSelect.disabled = !anyActive;
-  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
+  if (netFwSelect) netFwSelect.disabled = !deviceActive;
+  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !deviceActive;
 
   // Cause we have usb and tcp at the same time, we won't disable the rest of the controls
   // Disable certain controls when in Pin Mode
