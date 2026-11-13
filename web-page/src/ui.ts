@@ -969,6 +969,10 @@ export function updateConnectionUI() {
     ieeeSection.classList.toggle("opacity-50", !anyActive);
     ieeeSection.classList.toggle("pe-none", !anyActive);
   }
+  if (silabsToolsSection) {
+    silabsToolsSection.classList.toggle("opacity-50", !anyActive);
+    silabsToolsSection.classList.toggle("pe-none", !anyActive);
+  }
   // Cloud controls reflect connection state
   if (netFwSelect) netFwSelect.disabled = !anyActive;
   if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;

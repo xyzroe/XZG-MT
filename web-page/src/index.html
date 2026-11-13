@@ -827,9 +827,12 @@
                     <i class="bi bi-upload me-1"></i>Flash uart2swire
                 </button>
             </div>
-            <div id="silabsToolsSection" class="d-none mt-3">
-                <h3 class="h6">EZSP radio tools</h3>
-                <h4 class="small fw-semibold mb-1">Sniff</h4>
+        </div>
+
+        <div id="silabsToolsSection" class="section d-none opacity-50 pe-none" aria-disabled="true">
+            <h2 class="h6">EZSP radio tools</h2>
+            <div class="small text-muted mb-2">Radio tools for the connected EZSP adapter.</div>
+                <h3 class="h6">Sniff</h3>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <label class="small" for="silabsChannel">Sniff channel</label>
                     <select id="silabsChannel" class="form-select form-select-sm w-auto">
@@ -859,7 +862,7 @@
                 </div>
                 <div class="small text-muted mt-2">Packet monitor uses MFGLib and temporarily takes control of the
                     radio; stop it before using the network stack.</div>
-                <h4 class="small fw-semibold mt-3 mb-1">Energy scan</h4>
+                <h3 class="h6 mt-3">Energy scan</h3>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <label class="small" for="energyScanDuration">Scan duration</label>
                     <select id="energyScanDuration" class="form-select form-select-sm w-auto">
@@ -889,7 +892,7 @@
                         <div id="energyProgress" class="progress-bar bg-primary" style="width: 0%"></div>
                     </div>
                 </div>
-                <h3 class="h6 mt-3">EZSP repairs</h3>
+                <h3 class="h6 mt-3">Repairs</h3>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <button id="btnSilabsEui64Check" class="btn btn-sm btn-outline-warning">
                         <i class="bi bi-wrench-adjustable me-1"></i>Check EUI64 mismatch
@@ -897,7 +900,6 @@
                 </div>
                 <div class="small text-muted mt-2">Compares the node EUI64 with the one stored in the NVM3 Trust Center
                     token and offers to fix it. Back up the NVM3 tokens first.</div>
-            </div>
         </div>
 
         <div class="section" id="logSection">
