@@ -253,6 +253,7 @@ Built on the shoulders of giants:
 - **Texas Instruments CCXX52 and CC2538** — inspired by
   - [cc2538-bsl](https://github.com/JelmerT/cc2538-bsl) by Jelmer Tiete
   - [zigpy-znp](https://github.com/zigpy/zigpy-znp) by Open Home Foundation
+  - [ti-python-sbl](https://github.com/egony/cc2674p10_Ebyte/blob/main/firmware/flash_tools/ti-python-sbl.py) by Egony
 - **Silicon Labs** — inspired by
   - [universal-silabs-flasher](https://github.com/NabuCasa/universal-silabs-flasher) by Nabu Casa
 - **Espressif Systems** — powered by
