@@ -211,12 +211,11 @@ If you find this project useful, please consider giving it a ⭐ on GitHub!
 
 Thanks to all the contributors who make this project possible!
 
-<a href="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors?repo_id=1046815115&limit=30" target="_blank" style="display: block" align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors/thumbnail.png?repo_id=1046815115&limit=30&image_size=auto&color_scheme=dark" width="655" height="auto">
-    <img alt="Active Contributors of xyzroe/XZG-MT - Last 28 days" src="https://next.ossinsight.io/widgets/official/compose-recent-active-contributors/thumbnail.png?repo_id=1046815115&limit=30&image_size=auto&color_scheme=light" width="655" height="auto">
-  </picture>
-</a>
+<p align="center">
+  <a href="https://github.com/xyzroe/XZG-MT/graphs/contributors" target="_blank">
+    <img alt="Contributors of xyzroe/XZG-MT" src="https://contrib.rocks/image?repo=xyzroe/XZG-MT&max=30" />
+  </a>
+</p>
 
 ## 🛠️ Tech badges
 
