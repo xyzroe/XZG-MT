@@ -78,6 +78,7 @@ import {
   silabsChannel,
   btnSilabsSniffStart,
   btnSilabsSniffStop,
+  btnSilabsEui64Check,
   startFlashBtn,
   bslUrlSelect,
   rstUrlSelect,
@@ -766,6 +767,36 @@ btnSilabsSniffStop?.addEventListener("click", async () => {
     slPacketListenerRemove?.();
     slPacketListenerRemove = null;
     btnSilabsSniffStart!.disabled = false;
+  }
+});
+
+btnSilabsEui64Check?.addEventListener("click", async () => {
+  if (!sl_tools) {
+    log("SilabsTools not initialized");
+    return;
+  }
+  if (btnSilabsSniffStop && !btnSilabsSniffStop.disabled) {
+    log("Stop the packet monitor before running repairs");
+    return;
+  }
+  btnSilabsEui64Check!.disabled = true;
+  try {
+    // Network init leaves the NCP running a network until its next reset
+    await performReset();
+    await sleep(1000);
+    const result = await sl_tools.checkEui64Mismatch((nodeEui64, trustCenterEui64) =>
+      window.confirm(
+        `EUI64 mismatch: node ${nodeEui64}, Trust Center ${trustCenterEui64}.\n\nRewrite the Trust Center token with the node EUI64? Back up the NVM3 tokens first.`,
+      ),
+    );
+    if (result === "fixed") {
+      await performReset();
+      log("Device reset after the EUI64 repair");
+    }
+  } catch (error: unknown) {
+    log("EUI64 check failed: " + (error instanceof Error ? error.message : String(error)));
+  } finally {
+    btnSilabsEui64Check!.disabled = false;
   }
 });
 

@@ -115,8 +115,10 @@
             <div class="d-flex justify-content-center mb-3">
                 <div class="form-check">
                     <input id="monitorOnlyToggle" class="form-check-input" type="checkbox" />
-                    <label class="form-check-label" for="monitorOnlyToggle">Monitor only (skip detection and reset)</label>
-                    <div class="small text-muted">Connect to a serial or TCP port and display raw traffic without sending commands.</div>
+                    <label class="form-check-label" for="monitorOnlyToggle">Monitor only (skip detection and
+                        reset)</label>
+                    <div class="small text-muted">Connect to a serial or TCP port and display raw traffic without
+                        sending commands.</div>
                 </div>
             </div>
             <div class="row g-3 align-items-stretch">
@@ -177,8 +179,8 @@
                     <div class="col-12 mb-2 d-none" id="bootloaderOnlyWrap">
                         <div class="d-flex align-items-center justify-content-center gap-2">
                             <div class="form-check form-switch d-flex align-items-center justify-content-center">
-                                <input id="bootloaderOnlyToggle" class="form-check-input" type="checkbox"
-                                    role="switch" aria-label="Already in bootloader" />
+                                <input id="bootloaderOnlyToggle" class="form-check-input" type="checkbox" role="switch"
+                                    aria-label="Already in bootloader" />
                             </div>
                             <span class="text-muted">Already in BSL</span>
                             <button type="button" class="btn btn-sm btn-link p-0 ms-2" aria-label="Already in BSL help"
@@ -627,7 +629,8 @@
                         To clear NVM3 or the application, select the matching recovery GBL from
                         <a href="https://github.com/Nerivec/silabs-firmware-recovery/tree/main/gbl-builds"
                             target="_blank" rel="noopener noreferrer">Silabs firmware recovery</a>
-                        and flash it here. This is destructive: verify the exact chip, flash layout, and NVM3 size first.
+                        and flash it here. This is destructive: verify the exact chip, flash layout, and NVM3 size
+                        first.
                     </div>
                     <div class="small text-muted mt-1">⚠️ Check your chip model.</div>
                 </div>
@@ -763,7 +766,8 @@
 
         <div id="nvramSection" class="section opacity-50 pe-none" aria-disabled="true">
             <h2 id="nvramTitle" class="h6">NVRAM</h2>
-            <div id="nvramDescription" class="small text-muted mb-2">Backup and restore device NVRAM (Legacy OSAL + Extended NV). Use with caution.</div>
+            <div id="nvramDescription" class="small text-muted mb-2">Backup and restore device NVRAM (Legacy OSAL +
+                Extended NV). Use with caution.</div>
             <!-- File picker is opened programmatically on Write button click -->
             <div class="row g-2 align-items-end mb-2">
                 <div class="col-12">
@@ -838,14 +842,22 @@
                     </button>
                     <label class="small" for="silabsChannel">Sniff channel</label>
                     <select id="silabsChannel" class="form-select form-select-sm w-auto">
-                        <option value="11">11</option><option value="12">12</option>
-                        <option value="13">13</option><option value="14">14</option>
-                        <option value="15">15</option><option value="16">16</option>
-                        <option value="17">17</option><option value="18">18</option>
-                        <option value="19">19</option><option value="20">20</option>
-                        <option value="21">21</option><option value="22">22</option>
-                        <option value="23">23</option><option value="24">24</option>
-                        <option value="25">25</option><option value="26">26</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15">15</option>
+                        <option value="16">16</option>
+                        <option value="17">17</option>
+                        <option value="18">18</option>
+                        <option value="19">19</option>
+                        <option value="20">20</option>
+                        <option value="21">21</option>
+                        <option value="22">22</option>
+                        <option value="23">23</option>
+                        <option value="24">24</option>
+                        <option value="25">25</option>
+                        <option value="26">26</option>
                     </select>
                     <button id="btnSilabsSniffStart" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-headphones me-1"></i>Start packet monitor
@@ -854,7 +866,16 @@
                         <i class="bi bi-stop-circle me-1"></i>Stop
                     </button>
                 </div>
-                <div class="small text-muted mt-2">Packet monitor uses MFGLib and temporarily takes control of the radio; stop it before using the network stack.</div>
+                <div class="small text-muted mt-2">Packet monitor uses MFGLib and temporarily takes control of the
+                    radio; stop it before using the network stack.</div>
+                <h3 class="h6 mt-3">EZSP repairs</h3>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <button id="btnSilabsEui64Check" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-wrench-adjustable me-1"></i>Check EUI64 mismatch
+                    </button>
+                </div>
+                <div class="small text-muted mt-2">Compares the node EUI64 with the one stored in the NVM3 Trust Center
+                    token and offers to fix it. Back up the NVM3 tokens first.</div>
             </div>
         </div>
 
