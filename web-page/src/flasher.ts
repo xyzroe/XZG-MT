@@ -18,6 +18,7 @@ import {
   writeM33SecondaryIeeeAddress,
 } from "./tools/ti";
 import { SilabsTools } from "./tools/sl";
+import { EnergyChart } from "./energy-chart";
 import { CCDebugger } from "./tools/cc-debugger";
 import { CCLoader } from "./tools/cc-loader";
 import { ArduinoTools } from "./tools/arduino";
@@ -73,8 +74,13 @@ import {
   bootloaderVersionEl,
   getModelBtn,
   btnNvWrite,
-  btnSilabsEnergyScan,
-  silabsScanDuration,
+  btnEnergyScan,
+  btnEnergyScanStop,
+  energyScanDuration,
+  energyScanRepeat,
+  energyProgressEl,
+  energyChartEl,
+  energyResultEl,
   silabsChannel,
   btnSilabsSniffStart,
   btnSilabsSniffStop,
@@ -279,6 +285,8 @@ disconnectBtn.addEventListener("click", async () => {
   if (!activeConnection) return;
 
   // Reset protocol tools
+  energyScanStop = true;
+  energyCollapse();
   slPacketListenerRemove?.();
   slPacketListenerRemove = null;
   await sl_tools?.stopPacketMonitor().catch(() => {});
@@ -706,26 +714,77 @@ btnNvWrite?.addEventListener("click", async () => {
   });
 });
 
-btnSilabsEnergyScan?.addEventListener("click", async () => {
+const ENERGY_HOLD_SECONDS = 60;
+const energyChart = energyChartEl ? new EnergyChart(energyChartEl) : null;
+let energyScanStop = false;
+let energyHoldTimer: number | null = null;
+
+function energyProgress(percent: number, text = "") {
+  if (!energyProgressEl) return;
+  energyProgressEl.style.width = `${percent}%`;
+  energyProgressEl.textContent = text;
+}
+
+function energyClearHold() {
+  if (energyHoldTimer === null) return;
+  window.clearInterval(energyHoldTimer);
+  energyHoldTimer = null;
+}
+
+// Hides the result and forgets the collected values
+function energyCollapse() {
+  energyClearHold();
+  energyChart?.reset();
+  energyProgress(0);
+  energyResultEl?.classList.add("d-none");
+}
+
+// The finished result stays visible while the progress bar counts down
+function energyStartHold() {
+  energyClearHold();
+  let left = ENERGY_HOLD_SECONDS;
+  const render = () => energyProgress((left / ENERGY_HOLD_SECONDS) * 100, `Hiding in ${left}s`);
+  render();
+  energyHoldTimer = window.setInterval(() => {
+    left--;
+    if (left <= 0) energyCollapse();
+    else render();
+  }, 1000);
+}
+
+btnEnergyScan?.addEventListener("click", async () => {
   if (!sl_tools) {
     log("SilabsTools not initialized");
     return;
   }
-  btnSilabsEnergyScan!.disabled = true;
-  nvProgressSetColor("primary");
-  nvProgressReset("Starting energy scan...");
+  btnEnergyScan!.disabled = true;
+  btnEnergyScanStop!.disabled = false;
+  energyScanStop = false;
+  energyClearHold();
+  energyResultEl?.classList.remove("d-none");
   try {
-    await sl_tools.startEnergyScan(Number(silabsScanDuration?.value ?? 1), 0x07fff800, (percent, message) => {
-      nvProgress(percent, message);
-      if (message.startsWith("Channel ")) log(`Energy scan: ${message}`);
-    });
+    do {
+      energyProgress(0, "Scanning...");
+      await sl_tools.startEnergyScan(
+        Number(energyScanDuration?.value ?? 1),
+        0x07fff800,
+        (percent, message) => energyProgress(percent, message),
+        (channel, rssi) => energyChart?.setValue(channel, rssi),
+      );
+    } while (energyScanRepeat?.checked && !energyScanStop && sl_tools);
     log("EZSP energy scan completed");
   } catch (error: unknown) {
     log("EZSP energy scan failed: " + (error instanceof Error ? error.message : String(error)));
-    nvProgressReset("Error");
   } finally {
-    btnSilabsEnergyScan!.disabled = false;
+    btnEnergyScan!.disabled = false;
+    btnEnergyScanStop!.disabled = true;
+    if (activeConnection) energyStartHold();
+    else energyCollapse();
   }
+});
+
+btnEnergyScanStop?.addEventListener("click", () => {
+  energyScanStop = true;
 });
 
 btnSilabsSniffStart?.addEventListener("click", async () => {

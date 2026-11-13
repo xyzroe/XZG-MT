@@ -829,17 +829,8 @@
             </div>
             <div id="silabsToolsSection" class="d-none mt-3">
                 <h3 class="h6">EZSP radio tools</h3>
+                <h4 class="small fw-semibold mb-1">Sniff</h4>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <label class="small" for="silabsScanDuration">Scan duration</label>
-                    <select id="silabsScanDuration" class="form-select form-select-sm w-auto">
-                        <option value="0">0 (fast)</option>
-                        <option value="1" selected>1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                    </select>
-                    <button id="btnSilabsEnergyScan" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-broadcast me-1"></i>Energy scan
-                    </button>
                     <label class="small" for="silabsChannel">Sniff channel</label>
                     <select id="silabsChannel" class="form-select form-select-sm w-auto">
                         <option value="11">11</option>
@@ -868,6 +859,36 @@
                 </div>
                 <div class="small text-muted mt-2">Packet monitor uses MFGLib and temporarily takes control of the
                     radio; stop it before using the network stack.</div>
+                <h4 class="small fw-semibold mt-3 mb-1">Energy scan</h4>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <label class="small" for="energyScanDuration">Scan duration</label>
+                    <select id="energyScanDuration" class="form-select form-select-sm w-auto">
+                        <option value="0">0 (fast)</option>
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                    </select>
+                    <button id="btnEnergyScan" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-broadcast me-1"></i>Scan
+                    </button>
+                    <button id="btnEnergyScanStop" class="btn btn-sm btn-outline-danger" disabled>
+                        <i class="bi bi-stop-circle me-1"></i>Stop
+                    </button>
+                    <div class="form-check form-switch m-0">
+                        <input id="energyScanRepeat" class="form-check-input" type="checkbox" role="switch" />
+                        <label class="form-check-label small" for="energyScanRepeat">Repeat</label>
+                    </div>
+                </div>
+                <div id="energyResult" class="d-none mt-2">
+                    <div id="energyChart" class="energy-chart" role="img" aria-label="Energy per Zigbee channel"></div>
+                    <div class="small text-muted mt-2">Taller, redder bars mean a busier channel. Bars show the latest
+                        value,
+                        the line marks the peak since the first scan (range -100 to -20 dBm).</div>
+                    <div class="progress mt-2" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                        aria-valuenow="0" style="height: 1.25rem;">
+                        <div id="energyProgress" class="progress-bar bg-primary" style="width: 0%"></div>
+                    </div>
+                </div>
                 <h3 class="h6 mt-3">EZSP repairs</h3>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <button id="btnSilabsEui64Check" class="btn btn-sm btn-outline-warning">
