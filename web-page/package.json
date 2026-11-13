@@ -24,7 +24,7 @@
     "preview": "browser-sync start --config bs-config.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "esbuild src/tools/*.spec.ts src/transport/*.spec.ts --bundle --platform=node --format=cjs --outdir=dist/tests && node --test dist/tests/tools/*.js dist/tests/transport/*.js"
+    "test": "esbuild src/tools/*.spec.ts src/transport/*.spec.ts src/utils/*.spec.ts --bundle --platform=node --format=cjs --outdir=dist/tests && node --test dist/tests/tools/*.js dist/tests/transport/*.js dist/tests/utils/*.js"
   },
   "author": "xyzroe",
   "license": "MIT",

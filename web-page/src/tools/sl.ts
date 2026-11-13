@@ -740,9 +740,10 @@ export class SilabsTools {
     duration: number,
     channelMask: number = 0x07fff800,
     onProgress: (percent: number, message: string) => void = () => {},
+    onResult: (channel: number, rssi: number) => void = () => {},
   ): Promise<void> {
     this.ensureListener();
-    await this.getEzspClient().startEnergyScan(duration, channelMask, onProgress);
+    await this.getEzspClient().startEnergyScan(duration, channelMask, onProgress, onResult);
   }
 
   // Port of ember-zli stack > repairs > "Check for EUI64 mismatch": the Trust Center token must carry the node EUI64
@@ -1690,6 +1691,7 @@ class EzspAshClient {
     duration: number,
     channelMask: number,
     onProgress: (percent: number, message: string) => void,
+    onResult: (channel: number, rssi: number) => void = () => {},
   ): Promise<void> {
     if (!Number.isInteger(duration) || duration < 0 || duration > 14) {
       throw new Error("Energy scan duration must be between 0 and 14");
@@ -1703,6 +1705,7 @@ class EzspAshClient {
         if (event.status !== 0) scanError = new Error(`Energy scan failed with status 0x${event.status.toString(16)}`);
       } else if (event.type === "energyScanResult") {
         channelsScanned++;
+        onResult(event.channel, event.rssi);
         onProgress(Math.min(99, channelsScanned * 6), `Channel ${event.channel}: ${event.rssi} dBm`);
       }
     });

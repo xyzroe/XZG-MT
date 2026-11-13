@@ -183,8 +183,13 @@ export const nvProgressEl = document.getElementById("nvProgress") as HTMLDivElem
 // Actions section
 const actionsSection = document.getElementById("actionsSection") as HTMLDivElement | null;
 const silabsToolsSection = document.getElementById("silabsToolsSection") as HTMLDivElement | null;
-export const btnSilabsEnergyScan = document.getElementById("btnSilabsEnergyScan") as HTMLButtonElement | null;
-export const silabsScanDuration = document.getElementById("silabsScanDuration") as HTMLSelectElement | null;
+export const energyResultEl = document.getElementById("energyResult") as HTMLDivElement | null;
+export const btnEnergyScan = document.getElementById("btnEnergyScan") as HTMLButtonElement | null;
+export const btnEnergyScanStop = document.getElementById("btnEnergyScanStop") as HTMLButtonElement | null;
+export const energyScanDuration = document.getElementById("energyScanDuration") as HTMLSelectElement | null;
+export const energyScanRepeat = document.getElementById("energyScanRepeat") as HTMLInputElement | null;
+export const energyProgressEl = document.getElementById("energyProgress") as HTMLDivElement | null;
+export const energyChartEl = document.getElementById("energyChart") as HTMLDivElement | null;
 export const silabsChannel = document.getElementById("silabsChannel") as HTMLSelectElement | null;
 export const btnSilabsSniffStart = document.getElementById("btnSilabsSniffStart") as HTMLButtonElement | null;
 export const btnSilabsSniffStop = document.getElementById("btnSilabsSniffStop") as HTMLButtonElement | null;
@@ -995,6 +1000,10 @@ export function updateConnectionUI() {
   if (ieeeSection) {
     ieeeSection.classList.toggle("opacity-50", !deviceActive);
     ieeeSection.classList.toggle("pe-none", !deviceActive);
+  }
+  if (silabsToolsSection) {
+    silabsToolsSection.classList.toggle("opacity-50", !anyActive);
+    silabsToolsSection.classList.toggle("pe-none", !anyActive);
   }
   // Cloud controls reflect connection state
   if (netFwSelect) netFwSelect.disabled = !deviceActive;
