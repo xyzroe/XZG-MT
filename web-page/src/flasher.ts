@@ -184,7 +184,8 @@ chooseSerialBtn.addEventListener("click", async () => {
     if (!chosen) throw new Error("No port selected");
 
     const family = getSelectedFamily();
-    if (family === "esp" && !monitorOnlyToggle?.checked) {
+    const monitorOnly = !!monitorOnlyToggle?.checked;
+    if (family === "esp" && !monitorOnly) {
       log("Port selected, initializing ESP transport...");
       const transport = new Transport(chosen);
       const terminal = {
@@ -239,10 +240,11 @@ chooseSerialBtn.addEventListener("click", async () => {
       return;
     }
 
-    if (family === "arduino") {
+    // Monitor mode listens at the Baud selector value; bootloader baud rates only apply to flashing
+    if (family === "arduino" && !monitorOnly) {
       log("Initializing Arduino connection...");
       br = parseInt(arduinoBootSelect.value, 10) || 115200;
-    } else if (family === "telink") {
+    } else if (family === "telink" && !monitorOnly) {
       log("Initializing Telink connection...");
       br = 230400;
     }
@@ -264,7 +266,7 @@ chooseSerialBtn.addEventListener("click", async () => {
     //updateConnectionUI();
     updatePortInfo(br);
 
-    if (monitorOnlyToggle?.checked) {
+    if (monitorOnly) {
       startMonitorOnlyConnection("Serial");
       return;
     }

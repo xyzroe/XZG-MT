@@ -588,7 +588,18 @@ export function updateUIForFamily() {
       { el: enterBslBtn, show: false },
     ]);
   }
+
+  // Monitor mode only needs a plain baud rate, not bootloader or programmer options
+  if (monitorOnlyToggle?.checked) {
+    setMultipleClasses([
+      { el: serialBaudWrap, show: true },
+      { el: arduinoBootWrap, show: false },
+      { el: telinkOptionsWrap, show: false },
+    ]);
+  }
 }
+
+monitorOnlyToggle?.addEventListener("change", updateUIForFamily);
 
 declare global {
   interface Window {
@@ -923,6 +934,8 @@ export function updateConnectionUI() {
 
   const anyActive = !!activeConnection;
   if (monitorOnlyToggle) monitorOnlyToggle.disabled = anyActive;
+  // A monitor session has no device behind it, so device sections stay locked
+  const deviceActive = anyActive && !monitorOnlyToggle?.checked;
 
   // Keep TCP settings panel hidden when a connection is active
   //if (tcpSettingsPanel) tcpSettingsPanel.classList.toggle("d-none", !tcpSettingsPanelVisible || anyActive);
@@ -946,27 +959,27 @@ export function updateConnectionUI() {
 
   // Gate entire Actions section like Firmware/NVRAM
   if (actionsSection) {
-    actionsSection.classList.toggle("opacity-50", !anyActive);
-    actionsSection.classList.toggle("pe-none", !anyActive);
-    actionsSection.setAttribute("aria-disabled", String(!anyActive));
+    actionsSection.classList.toggle("opacity-50", !deviceActive);
+    actionsSection.classList.toggle("pe-none", !deviceActive);
+    actionsSection.setAttribute("aria-disabled", String(!deviceActive));
   }
 
   // Firmware and NVRAM sections enabled only when a connection is active
   if (firmwareSection) {
-    firmwareSection.classList.toggle("opacity-50", !anyActive);
-    firmwareSection.classList.toggle("pe-none", !anyActive);
+    firmwareSection.classList.toggle("opacity-50", !deviceActive);
+    firmwareSection.classList.toggle("pe-none", !deviceActive);
   }
   if (nvramSection) {
-    nvramSection.classList.toggle("opacity-50", !anyActive);
-    nvramSection.classList.toggle("pe-none", !anyActive);
+    nvramSection.classList.toggle("opacity-50", !deviceActive);
+    nvramSection.classList.toggle("pe-none", !deviceActive);
   }
   if (ieeeSection) {
-    ieeeSection.classList.toggle("opacity-50", !anyActive);
-    ieeeSection.classList.toggle("pe-none", !anyActive);
+    ieeeSection.classList.toggle("opacity-50", !deviceActive);
+    ieeeSection.classList.toggle("pe-none", !deviceActive);
   }
   // Cloud controls reflect connection state
-  if (netFwSelect) netFwSelect.disabled = !anyActive;
-  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !anyActive;
+  if (netFwSelect) netFwSelect.disabled = !deviceActive;
+  if (netFwRefreshBtn) netFwRefreshBtn.disabled = !deviceActive;
 
   // Cause we have usb and tcp at the same time, we won't disable the rest of the controls
   // Disable certain controls when in Pin Mode
