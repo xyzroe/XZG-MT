@@ -6,6 +6,7 @@ import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/x
 import { changeBaud } from "../flasher";
 import { SpinelClient } from "./spinel";
 import { makeReset } from "../utils/control";
+import { planEui64Repair } from "./sl-eui64";
 
 // Re-export SpinelClient for backwards compatibility
 export { SpinelClient } from "./spinel";
@@ -104,6 +105,15 @@ function readU32le(buf: Uint8Array, offset: number): number {
 function toHexString(data: Uint8Array): string {
   return Array.from(data, (b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+function formatEui64(wire: Uint8Array): string {
+  return Array.from(wire, (b) => b.toString(16).padStart(2, "0"))
+    .reverse()
+    .join(":")
+    .toUpperCase();
+}
+
+export type Eui64CheckResult = "no-network" | "match" | "fixed" | "declined";
 
 // Validates the ember-zli token buffer layout and clips oversized binding tables like ember-zli does
 export function parseNvm3TokensHex(hex: string, log: (msg: string) => void = () => {}): Uint8Array {
@@ -733,6 +743,43 @@ export class SilabsTools {
   ): Promise<void> {
     this.ensureListener();
     await this.getEzspClient().startEnergyScan(duration, channelMask, onProgress);
+  }
+
+  // Port of ember-zli stack > repairs > "Check for EUI64 mismatch": the Trust Center token must carry the node EUI64
+  public async checkEui64Mismatch(
+    confirmFix: (nodeEui64: string, trustCenterEui64: string) => boolean | Promise<boolean>,
+  ): Promise<Eui64CheckResult> {
+    this.ensureListener();
+    const client = this.getEzspClient();
+    await client.initialize();
+
+    const initStatus = await client.networkInit();
+    if (client.isNotJoinedStatus(initStatus)) {
+      this.logger("No network present.");
+      return "no-network";
+    }
+    if (initStatus !== 0) throw new Error(`Failed network init request with status=0x${initStatus.toString(16)}`);
+
+    const trustCenterAddress = await client.getTrustCenterAddress();
+    const nodeEui64 = await client.getEui64();
+    this.logger(`Node EUI64 ${formatEui64(nodeEui64)} / Trust Center EUI64 ${formatEui64(trustCenterAddress)}.`);
+
+    const tokenData = await client.getTokenData(NVM3KEY_STACK_TRUST_CENTER, 0);
+    const plan = planEui64Repair(nodeEui64, trustCenterAddress, tokenData);
+    if (!plan.mismatch) {
+      this.logger("EUI64 match. No fix required.");
+      return "match";
+    }
+
+    if (!(await confirmFix(formatEui64(nodeEui64), formatEui64(trustCenterAddress)))) {
+      this.logger("EUI64 mismatch found, fix declined.");
+      return "declined";
+    }
+
+    this.logger("Fixing EUI64 mismatch...");
+    await client.setTokenData(NVM3KEY_STACK_TRUST_CENTER, 0, plan.tokenData);
+    this.logger("EUI64 mismatch fixed. Reset the device to apply.");
+    return "fixed";
   }
 
   public async startPacketMonitor(channel: number): Promise<void> {
@@ -1609,6 +1656,34 @@ class EzspAshClient {
         `setTokenData failed with status 0x${status.toString(16).padStart(2, "0")} (${this.getEmberStatusName(status)})`,
       );
     }
+  }
+
+  // EmberStatus NOT_JOINED (0x93) before EZSP v14, SLStatus NOT_JOINED (0x17) after
+  public isNotJoinedStatus(status: number): boolean {
+    return status === (this.protocolVersion < 0x0e ? 0x93 : 0x17);
+  }
+
+  // Same bring-up as ember-zli: Zigbee PRO stack profile, then network init resuming any stored network
+  public async networkInit(): Promise<number> {
+    const STACK_PROFILE = 0x0c;
+    const STACK_PROFILE_ZIGBEE_PRO = 2;
+    const profile = await this.sendEzspCommand(
+      0x0053,
+      new Uint8Array([STACK_PROFILE, STACK_PROFILE_ZIGBEE_PRO, 0]),
+      4000,
+    );
+    this.assertStatus(profile, "setConfigurationValue(STACK_PROFILE)");
+    // PARENT_INFO_IN_TOKEN | END_DEVICE_REJOIN_ON_REBOOT
+    return this.readStatus(await this.sendEzspCommand(0x0017, new Uint8Array([0x03, 0x00]), 8000));
+  }
+
+  public async getTrustCenterAddress(): Promise<Uint8Array> {
+    const response = await this.sendEzspCommand(0x0069, new Uint8Array(), 4000);
+    this.assertStatus(response, "getCurrentSecurityState");
+    // status, uint16 bitmask, EUI64
+    const offset = this.statusSize() + 2;
+    if (response.length < offset + 8) throw new Error("Invalid getCurrentSecurityState response");
+    return response.slice(offset, offset + 8);
   }
 
   public async startEnergyScan(

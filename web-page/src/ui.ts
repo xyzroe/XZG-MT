@@ -186,6 +186,7 @@ export const silabsScanDuration = document.getElementById("silabsScanDuration") 
 export const silabsChannel = document.getElementById("silabsChannel") as HTMLSelectElement | null;
 export const btnSilabsSniffStart = document.getElementById("btnSilabsSniffStart") as HTMLButtonElement | null;
 export const btnSilabsSniffStop = document.getElementById("btnSilabsSniffStop") as HTMLButtonElement | null;
+export const btnSilabsEui64Check = document.getElementById("btnSilabsEui64Check") as HTMLButtonElement | null;
 export const enterBslBtn = document.getElementById("enterBslBtn") as HTMLButtonElement | null;
 export const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
 export const pingBtn = document.getElementById("pingBtn") as HTMLButtonElement | null;
