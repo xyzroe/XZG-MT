@@ -1,3 +1,14 @@
+## v0.3.7
+
+- feat(sl): graphical energy scan (#112) by @xyzroe
+- fix(monitor): monitor-only mode on all families (#110) by @xyzroe
+- feat(sl): EUI64 mismatch repair (#111) by @xyzroe
+
+## 📘 Documentation
+
+- docs: credit egony's ti-python-sbl (#114) by @xyzroe
+- docs: replace the flaky credits widget (#113) by @xyzroe
+
 ## v0.3.6
 
 - fix(serial): keep port open when switching baud fails (#107) by @xyzroe
