@@ -584,6 +584,7 @@ export function updateUIForFamily() {
     setMultipleClasses([
       { el: implyGateWrap, show: false },
       { el: invertLevelWrap, show: false },
+      { el: findBaudWrap, show: false },
       { el: tcpSection, show: false },
       { el: serialSection, show: true, oldClass: "col-md-6", newClass: "col-md-12" },
       { el: autoBslWrap, show: false },
@@ -1002,8 +1003,9 @@ export function updateConnectionUI() {
     ieeeSection.classList.toggle("pe-none", !deviceActive);
   }
   if (silabsToolsSection) {
-    silabsToolsSection.classList.toggle("opacity-50", !anyActive);
-    silabsToolsSection.classList.toggle("pe-none", !anyActive);
+    silabsToolsSection.classList.toggle("opacity-50", !deviceActive);
+    silabsToolsSection.classList.toggle("pe-none", !deviceActive);
+    silabsToolsSection.setAttribute("aria-disabled", String(!deviceActive));
   }
   // Cloud controls reflect connection state
   if (netFwSelect) netFwSelect.disabled = !deviceActive;
