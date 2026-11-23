@@ -6,6 +6,7 @@ import { XmodemCRCPacket, XModemPacketType, XMODEM_BLOCK_SIZE } from "../utils/x
 import { changeBaud } from "../flasher";
 import { SpinelClient } from "./spinel";
 import { makeReset } from "../utils/control";
+import { parseBootloaderBanner, SL_CHIP_UNKNOWN } from "./sl-bootloader";
 import { planEui64Repair } from "./sl-eui64";
 
 // Re-export SpinelClient for backwards compatibility
@@ -338,7 +339,7 @@ export class SilabsTools {
 
     return {
       manufacturer: "Silabs",
-      chipName: "EFR32MG21", // Generic, could be parsed from app
+      chipName: SL_CHIP_UNKNOWN, // The bootloader menu has no part number; the real model is only known from application firmware
       revision: "Unknown",
       bootloaderVersion: blVersion,
     };
@@ -349,6 +350,32 @@ export class SilabsTools {
   //   // This is typically done via hardware reset before connecting
   //   // The actual implementation is in flasher.ts with setLines()
   // }
+
+  /**
+   * Resets the chip at the bootloader baud rate and reports the Gecko Bootloader version if its menu
+   * appears (i.e. there is no bootable application). Returns null when the application started.
+   */
+  private async sniffBootloaderAfterReset(implyGate: boolean, windowMs = 1500): Promise<string | null> {
+    await changeBaud(115200);
+    let text = "";
+    const handler = (d: Uint8Array) => {
+      text += Array.from(d, (b) => String.fromCharCode(b)).join("");
+      if (text.length > 4096) text = text.slice(-2048);
+    };
+    this.link.onData(handler);
+    try {
+      await makeReset(implyGate);
+      const end = Date.now() + windowMs;
+      while (Date.now() < end) {
+        await sleep(50);
+        const v = parseBootloaderBanner(text);
+        if (v) return v;
+      }
+      return null;
+    } finally {
+      this.link.offData?.(handler);
+    }
+  }
 
   public async getBootloaderVersion(timeoutMs: number = 2000, forceQuery: boolean = false): Promise<string> {
     this.ensureListener();
@@ -967,7 +994,14 @@ export class SilabsTools {
     doReset: boolean = true,
     implyGate: boolean = true,
     baudrateCandidates: number[] = [115200, 460800, 230400],
-  ): Promise<{ firmwareType: string; version: string; baudrate: number; deviceModel?: string }> {
+  ): Promise<{
+    firmwareType: string;
+    version: string;
+    baudrate: number;
+    deviceModel?: string;
+    bootloaderOnly?: boolean;
+    bootloaderVersion?: string;
+  }> {
     const tryBaudrates = baudrate === "auto" ? baudrateCandidates : [baudrate];
 
     // Define probe order based on firmware type
@@ -975,6 +1009,23 @@ export class SilabsTools {
       firmwareType === "auto" ? ["ezsp", "cpc", "spinel", "router"] : [firmwareType];
 
     const errors: string[] = [];
+
+    // A device with no application image stays in the Gecko Bootloader after reset and prints its menu.
+    // Detect that first: otherwise every firmware type below just times out (~30 s) and the user only
+    // sees "Failed to detect firmware" although the bootloader itself is perfectly usable for flashing.
+    if (doReset) {
+      const blVersion = await this.sniffBootloaderAfterReset(implyGate);
+      if (blVersion) {
+        this.logger(`Gecko Bootloader v${blVersion} is running and no application firmware started after reset`);
+        return {
+          firmwareType: "bootloader",
+          version: `No firmware (bootloader v${blVersion})`,
+          baudrate: 115200,
+          bootloaderOnly: true,
+          bootloaderVersion: blVersion,
+        };
+      }
+    }
 
     for (const br of tryBaudrates) {
       this.logger(`Probing at ${br} baud...`);

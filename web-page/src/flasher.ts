@@ -1,5 +1,6 @@
 // Imports
 
+import { slChipFromProbe } from "./tools/sl-bootloader";
 import { ESPLoader, Transport } from "esptool-js";
 
 import { SerialPort as SerialWrap } from "./transport/serial";
@@ -597,7 +598,7 @@ getVersionBtn?.addEventListener("click", async () => {
         implyGateToggle?.checked ?? true,
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-      if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+      if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
       await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
         log("Network FW list fetch failed: " + (e?.message || String(e))),
       );
@@ -1127,7 +1128,7 @@ startFlashBtn.addEventListener("click", async () => {
             implyGateToggle?.checked ?? true,
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-          if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+          if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
           await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
             log("Network FW list fetch failed: " + (e?.message || String(e))),
           );
@@ -2391,7 +2392,7 @@ async function runConnectSequence(): Promise<void> {
           implyGateToggle?.checked ?? true,
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-        if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+        if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
         await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
           log("Network FW list fetch failed: " + (e?.message || String(e))),
         );
