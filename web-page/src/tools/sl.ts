@@ -8,6 +8,7 @@ import { SpinelClient } from "./spinel";
 import { makeReset } from "../utils/control";
 import { parseBootloaderBanner, SL_CHIP_UNKNOWN } from "./sl-bootloader";
 import { planEui64Repair } from "./sl-eui64";
+import { parseVersionInfoBuild } from "./sl-version-info";
 
 // Re-export SpinelClient for backwards compatibility
 export { SpinelClient } from "./spinel";
@@ -1398,14 +1399,10 @@ class EzspAshClient {
       const getValuePayload = new Uint8Array([valueId]);
       const getValueResponse = await this.sendEzspCommand(getValueFrameId, getValuePayload, 4000);
 
-      // Response: [status, length, ...value_bytes]
-      if (getValueResponse.length >= 2 && getValueResponse[0] === 0x00) {
-        const valueLength = getValueResponse[1];
-        if (valueLength >= 7 && getValueResponse.length >= 2 + valueLength) {
-          // VALUE_VERSION_INFO format: [build, major, minor, patch, special, type, ...]
-          buildNumber = getValueResponse[2] | (getValueResponse[3] << 8);
-          console.log(`EZSP: Got build number from VALUE_VERSION_INFO: ${buildNumber}`);
-        }
+      // Response: [status (1 byte, 4 bytes for EZSP >= 14), length, ...value_bytes]
+      buildNumber = parseVersionInfoBuild(getValueResponse, this.protocolVersion);
+      if (buildNumber !== null) {
+        console.log(`EZSP: Got build number from VALUE_VERSION_INFO: ${buildNumber}`);
       }
     } catch (error) {
       console.warn("Failed to get VALUE_VERSION_INFO:", error);
