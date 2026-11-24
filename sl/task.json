@@ -45,13 +45,13 @@
         "dongleType": "ZBDongle-E",
         "signed": false,
         "zigbee_ncp": {
-          "firmwareType": "Zigbee"
+          "firmwareType": "Zigbee NCP"
         },
         "multipan": {
-          "firmwareType": "MultiPAN"
+          "firmwareType": "Multiprotocol RCP"
         },
         "openthread_rcp": {
-          "firmwareType": "OpenThread"
+          "firmwareType": "OpenThread RCP"
         },
         "zb_router": {
           "firmwareType": "Zigbee Router"
@@ -94,13 +94,53 @@
         "dongleType": "Dongle-LMG21",
         "signed": false,
         "zigbee_ncp": {
-          "firmwareType": "Zigbee"
+          "firmwareType": "Zigbee NCP"
         },
         "multipan": {
-          "firmwareType": "MultiPAN"
+          "firmwareType": "Multiprotocol RCP"
         },
         "openthread_rcp": {
-          "firmwareType": "OpenThread"
+          "firmwareType": "OpenThread RCP"
+        },
+        "zb_router": {
+          "firmwareType": "Zigbee Router"
+        }
+      }
+    ]
+  },
+  "EFR32MG24": {
+    "Sonoff ZBDongle-M": [
+      {
+        "json": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/FIRMWARE_LIST.json",
+        "dongleType": "Dongle-M",
+        "signed": false,
+        "zigbee_ncp": {
+          "firmwareType": "Zigbee NCP"
+        },
+        "multipan": {
+          "firmwareType": "Multiprotocol RCP"
+        },
+        "openthread_rcp": {
+          "firmwareType": "OpenThread RCP"
+        },
+        "zb_router": {
+          "firmwareType": "Zigbee Router"
+        }
+      }
+    ],
+    "Sonoff ZBDongle-PMG24": [
+      {
+        "json": "https://dongle.sonoff.tech/dongle-flasher/dongle-hardware/FIRMWARE_LIST.json",
+        "dongleType": "Dongle-PMG24",
+        "signed": false,
+        "zigbee_ncp": {
+          "firmwareType": "Zigbee NCP"
+        },
+        "multipan": {
+          "firmwareType": "Multiprotocol RCP"
+        },
+        "openthread_rcp": {
+          "firmwareType": "OpenThread RCP"
         },
         "zb_router": {
           "firmwareType": "Zigbee Router"
