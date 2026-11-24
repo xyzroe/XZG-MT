@@ -18,7 +18,7 @@ jobs:
       new_sha: ${{ steps.newsha.outputs.new_sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
           echo "Prepended xzg-multi-tool-addon/CHANGELOG.md with draft release notes."
 
       - name: Commit version bumps
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore(release): bump version to ${{ steps.setver.outputs.version }}"
           branch: main
@@ -111,7 +111,7 @@ jobs:
     needs: [version-bump]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.version-bump.outputs.new_sha }}
           fetch-depth: 0
@@ -126,9 +126,9 @@ jobs:
         id: short_sha
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
@@ -139,7 +139,7 @@ jobs:
         working-directory: web-page
 
       - name: Upload web-page artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-page-artifacts
           path: |
@@ -166,13 +166,13 @@ jobs:
     needs: [build-go, version-bump]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.version-bump.outputs.new_sha }}
           fetch-depth: 0
 
       - name: Download go artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: go-binaries
           path: dist-release
@@ -194,7 +194,7 @@ jobs:
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release and upload assets files (use draft body)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.version-bump.outputs.version }}
           name: v${{ needs.version-bump.outputs.version }}
@@ -209,7 +209,7 @@ jobs:
     needs: [version-bump, build-web-deploy]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.version-bump.outputs.new_sha }}
           fetch-depth: 0
@@ -224,7 +224,7 @@ jobs:
         id: short_sha
 
       - name: Download web-page artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-page-artifacts
           path: tmp/web-artifacts
@@ -239,7 +239,7 @@ jobs:
           ls -la bridge/web || true
 
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v7
         with:
           go-version: '1.21'
 
@@ -257,7 +257,7 @@ jobs:
           make build
 
       - name: Upload go binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: go-binaries
           path: |
@@ -273,13 +273,13 @@ jobs:
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.version-bump.outputs.new_sha }}
           fetch-depth: 0
 
       - name: Download web-page artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: web-page-artifacts
           path: tmp/web-artifacts
@@ -294,13 +294,13 @@ jobs:
           ls -la bridge/web || true
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -308,7 +308,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for bridge
         id: meta-go
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ghcr.io/${{ github.repository }}
@@ -322,7 +322,7 @@ jobs:
           echo "sha=$(echo ${GITHUB_SHA} | cut -c1-8)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push bridge Docker image (multi-arch)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./bridge/Dockerfile
