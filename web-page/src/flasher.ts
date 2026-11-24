@@ -1,5 +1,6 @@
 // Imports
 
+import { slChipFromProbe, checkGblMatchesChip } from "./tools/sl-bootloader";
 import { ESPLoader, Transport } from "esptool-js";
 
 import { SerialPort as SerialWrap } from "./transport/serial";
@@ -597,7 +598,7 @@ getVersionBtn?.addEventListener("click", async () => {
         implyGateToggle?.checked ?? true,
       );
       if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-      if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+      if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
       await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
         log("Network FW list fetch failed: " + (e?.message || String(e))),
       );
@@ -1127,7 +1128,9 @@ startFlashBtn.addEventListener("click", async () => {
             implyGateToggle?.checked ?? true,
           );
           if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-          if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+          if (result.bootloaderOnly)
+            log("Upload was accepted but no application started: the image is probably built for a different EFR32 series");
+          if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
           await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
             log("Network FW list fetch failed: " + (e?.message || String(e))),
           );
@@ -2391,7 +2394,7 @@ async function runConnectSequence(): Promise<void> {
           implyGateToggle?.checked ?? true,
         );
         if (firmwareVersionEl) firmwareVersionEl.value = result.version;
-        if (chipModelEl) chipModelEl.value = result.deviceModel ?? "EFR32MG21";
+        if (chipModelEl) chipModelEl.value = slChipFromProbe(result);
         await refreshNetworkFirmwareList(chipModelEl?.value || "").catch((e) =>
           log("Network FW list fetch failed: " + (e?.message || String(e))),
         );
@@ -2462,6 +2465,10 @@ async function flash(detectedTiFamily?: TiChipFamily | null) {
 
   if (family === "sl") {
     if (!sl_tools) throw "SilabsTools not initialized"; //sl_tools = new SilabsTools(getActiveLink());
+
+    // The bootloader silently ignores an image built for another EFR32 flash map: refuse a known mismatch
+    const imageWarning = checkGblMatchesChip(data, chipModelEl?.value || "");
+    if (imageWarning) log("Warning: " + imageWarning);
 
     log(`Flashing Silabs firmware: ${data.length} bytes`);
     fwProgressReset("Flashing Silabs...");

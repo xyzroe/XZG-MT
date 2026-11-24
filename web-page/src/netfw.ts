@@ -2,6 +2,7 @@ import { parseIntelHex } from "./utils/intelhex";
 
 import { netFwSelect, chipModelEl, log, bootloaderVersionEl } from "./ui";
 import { getSelectedFamily } from "./flasher";
+import { SL_CHIP_UNKNOWN } from "./tools/sl-bootloader";
 
 interface ZwFirmwareInfo {
   file: string;
@@ -133,6 +134,8 @@ export function filterFwByChipSL(man: SlZwManifest, chip: string) {
   };
   const deviceName = chipMap[chip] || chip;
   const deviceNameLower = deviceName.toLowerCase();
+  // Bootloader-only devices cannot report their chip: list every EFR32 firmware instead of guessing one model
+  const matchAll = chip === SL_CHIP_UNKNOWN;
   const result: Record<string, ZwFirmwareInfo[]> = {};
 
   for (const cat of categories) {
@@ -143,7 +146,7 @@ export function filterFwByChipSL(man: SlZwManifest, chip: string) {
       const subValue = catObj[sub];
 
       // First try: check if sub matches deviceName (root level)
-      if (sub.toLowerCase().includes(deviceNameLower)) {
+      if (matchAll || sub.toLowerCase().includes(deviceNameLower)) {
         const boards = subValue;
         for (const boardName of Object.keys(boards)) {
           const files = boards[boardName];
