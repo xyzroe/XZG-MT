@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseBootloaderBanner, slChipFromProbe, SL_CHIP_UNKNOWN } from "./sl-bootloader";
+import {
+  parseBootloaderBanner,
+  slChipFromProbe,
+  SL_CHIP_UNKNOWN,
+  gblFlashStartAddress,
+  gblFlashMap,
+  checkGblMatchesChip,
+} from "./sl-bootloader";
 
 const hex = (s: string) => Uint8Array.from(s.trim().split(/\s+/).map((h) => parseInt(h, 16)));
 
@@ -32,4 +39,32 @@ test("bootloader-only result never claims a chip model", () => {
   assert.equal(slChipFromProbe({ bootloaderOnly: true, deviceModel: "EFR32MG21" }), SL_CHIP_UNKNOWN);
   assert.equal(slChipFromProbe({ deviceModel: "Acme Stick" }), "Acme Stick");
   assert.equal(slChipFromProbe({}), "EFR32MG21");
+});
+
+// minimal GBL: header tag + one PROG_LZ4 tag whose body starts with the flash address
+function gbl(addr: number, progTag = 0xfd0303fd): Uint8Array {
+  const out = new Uint8Array(8 + 8 + 8 + 8);
+  const v = new DataView(out.buffer);
+  v.setUint32(0, 0x03a617eb, true);
+  v.setUint32(4, 8, true);
+  v.setUint32(16, progTag, true);
+  v.setUint32(20, 8, true);
+  v.setUint32(24, addr, true);
+  return out;
+}
+
+test("GBL flash start address selects the memory map (MG21 0x4000, MG24 0x08006000)", () => {
+  assert.equal(gblFlashStartAddress(gbl(0x4000)), 0x4000);
+  assert.equal(gblFlashMap(gbl(0x4000)), "flash@0");
+  assert.equal(gblFlashMap(gbl(0x08006000, 0xfe0101fe)), "flash@0x08000000");
+  assert.equal(gblFlashMap(Uint8Array.of(1, 2, 3)), null);
+  assert.equal(gblFlashMap(new Uint8Array(64)), null);
+});
+
+test("image for another chip family is refused, unknown chip only warns", () => {
+  assert.throws(() => checkGblMatchesChip(gbl(0x08006000), "SONOFF ZBDongle-E"), /flash@0x08000000/);
+  assert.throws(() => checkGblMatchesChip(gbl(0x4000), "EFR32MG24"), /flash@0/);
+  assert.equal(checkGblMatchesChip(gbl(0x4000), "SONOFF ZBDongle-E"), null);
+  assert.match(checkGblMatchesChip(gbl(0x4000), SL_CHIP_UNKNOWN) ?? "", /not detectable/);
+  assert.equal(checkGblMatchesChip(new Uint8Array(32), SL_CHIP_UNKNOWN), null);
 });
