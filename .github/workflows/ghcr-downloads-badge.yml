@@ -15,9 +15,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
 
@@ -33,7 +33,7 @@ jobs:
           python .github/scripts/ghcr_downloads.py > .github/badges/ghcr-downloads.json
 
       - name: Commit badge
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "chore: update GHCR downloads badge"
           file_pattern: ".github/badges/ghcr-downloads.json"

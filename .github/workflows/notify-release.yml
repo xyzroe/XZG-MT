@@ -57,7 +57,7 @@ jobs:
           fi
 
       - name: Upload release image
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-image
           path: release-image.png
@@ -74,7 +74,7 @@ jobs:
       TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
     steps:
       - name: Download release image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-image
 
@@ -99,7 +99,7 @@ jobs:
       DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
     steps:
       - name: Download release image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-image
 
