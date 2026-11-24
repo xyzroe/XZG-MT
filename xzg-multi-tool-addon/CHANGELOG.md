@@ -1,3 +1,11 @@
+## v0.3.8
+
+## 🐛 Bug Fixes
+
+- fix(silabs): read EZSP v14+ version info with 4-byte status (#119) by @xyzroe
+- fix(silabs): detect bootloader-only devices, stop guessing EFR32MG21, guard cross-chip flashing (#117) by @xyzroe
+- fix(ui): lock EZSP radio tools in monitor-only mode, hide Find baud for Telink (#115) by @xyzroe
+
 ## v0.3.7
 
 - feat(sl): graphical energy scan (#112) by @xyzroe
